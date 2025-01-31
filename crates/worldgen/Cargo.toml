@@ -1,12 +1,21 @@
 [package]
-name = "worldgen" # ToDo
+name = "worldgen" 
 version = "0.1.0"
 publish = false
-authors = ["<phoenix.mandala@pm.me>"] # ToDo: you are the author ;)
+authors = ["<phoenix.mandala@pm.me>"] 
 edition = "2021"
-crate-type = ["lib"]
+
+[features]
+dev = [
+    "bevy/dynamic_linking",
+]
 
 [dependencies]
 noise = "0.9.0"
-rand = { version = "0.9.0", features = ["serde"] }
 serde = { version = "1.0.217", features = ["derive"] }
+bevy = {workspace =  true}
+bevy_kira_audio = {workspace = true}
+bevy_asset_loader = {workspace = true}
+rand = {workspace = true}
+itertools = {workspace = true}
+log = {workspace = true}
