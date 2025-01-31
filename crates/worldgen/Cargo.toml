@@ -1,0 +1,12 @@
+[package]
+name = "worldgen" # ToDo
+version = "0.1.0"
+publish = false
+authors = ["<phoenix.mandala@pm.me>"] # ToDo: you are the author ;)
+edition = "2021"
+crate-type = ["lib"]
+
+[dependencies]
+noise = "0.9.0"
+rand = { version = "0.9.0", features = ["serde"] }
+serde = { version = "1.0.217", features = ["derive"] }
