@@ -1,15 +1,14 @@
 use bevy::{
     asset::RenderAssetUsages,
-    math::Vec3,
-    render::{
-        mesh::{Indices, Mesh, PrimitiveTopology},
-        render_resource::ShaderType,
-    },
+    color::{Color, ColorToComponents},
+    math::{Vec2, Vec3},
+    render::mesh::{Indices, Mesh, PrimitiveTopology},
 };
 use itertools::Itertools;
 
-use crate::WorldgenParameters;
-fn gen_strip(size: u32) -> Vec<u32> {
+/// size is width or length
+pub fn gen_strip(size: usize) -> Vec<u32> {
+    let size = size as u32;
     let mut strip = Vec::new();
     for row in 0..size - 1 {
         if row > 0 {
@@ -42,15 +41,9 @@ fn test_stip() {
     assert_eq!(strip, correct);
 }
 
-fn gen_positions(size: u32) -> Vec<Vec3> {
-    (0..size * size)
-        .map(|idx| Vec3::new((idx % size) as f32, rand::random(), (idx / size) as f32))
-        .collect_vec()
-}
-
 // when piecing together chunks we'll need to take the surrounding
 // chunks and set their edge normals and positions so that they're continuous
-fn gen_normals(positions: &[Vec3]) -> Vec<Vec3> {
+pub fn gen_normals(positions: &[Vec3]) -> Vec<Vec3> {
     positions
         .iter()
         .chunks(3)
@@ -73,6 +66,14 @@ fn gen_normals(positions: &[Vec3]) -> Vec<Vec3> {
         .collect()
 }
 
+/// Size is width or length
+pub fn gen_positions(size: usize) -> Vec<Vec3> {
+    (0..size * size)
+        .map(|idx| {
+            Vec3::new((idx % size) as f32, rand::random(), (idx / size) as f32)
+        })
+        .collect_vec()
+}
 #[test]
 fn test_size() {
     let positions = gen_positions(256);
@@ -80,29 +81,13 @@ fn test_size() {
     assert_eq!(positions.len(), normals.len());
 }
 
-pub fn gen_mesh(params: WorldgenParameters) -> Mesh {
-    let size = params.chunk_size;
-    let positions = gen_positions(size);
-    println!("positions size: {:?}", positions.size());
-    let normals = gen_normals(&positions);
-    println!("normals size: {:?}", normals.size());
-    let uvs = (0..size * size)
-        .map(|idx| [(idx % 64) as f32 / 255., (idx / 64) as f32 / 255.])
-        .collect_vec();
-    println!("uvs size: {:?}", uvs.size());
-
-    let strip = gen_strip(size);
-    println!("strip size: {:?}", strip.size());
-
-    // should also generate normals and uvs
-    let mut mesh = Mesh::new(
-        PrimitiveTopology::TriangleStrip,
-        RenderAssetUsages::RENDER_WORLD,
-    );
-    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
-    mesh.insert_indices(Indices::U32(strip));
-
-    mesh
+pub fn gen_uvs(size: usize) -> Vec<Vec2> {
+    // this will need to change based on the texture mapping
+    (0..size * size)
+        .map(|idx| {
+            let size = size as f32;
+            let idx = idx as f32;
+            Vec2::new((idx % size) / size, (idx / size) / size)
+        })
+        .collect_vec()
 }

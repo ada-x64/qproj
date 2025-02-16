@@ -1,5 +1,0 @@
-{
-    "rust-analyzer.runnables.extraArgs": [
-        "-F dev"
-    ]
-}
