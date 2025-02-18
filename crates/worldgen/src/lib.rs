@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::primitives::Aabb};
+use bevy::prelude::*;
 use chunk::ChunkGenerator;
 pub mod chunk;
 pub mod mesh;
@@ -6,17 +6,6 @@ pub mod mesh;
 #[derive(Resource, Copy, Clone, Debug, Default)]
 pub struct WorldgenParameters {
     chunk_generator: ChunkGenerator,
-}
-#[derive(Component)]
-struct ShowAxes;
-fn draw_axes(
-    mut gizmos: Gizmos,
-    query: Query<(&Transform, &Aabb), With<ShowAxes>>,
-) {
-    for (&transform, &aabb) in &query {
-        let length = aabb.half_extents.length();
-        gizmos.axes(transform, length);
-    }
 }
 pub struct WorldgenPlugin {
     pub spawn_immediately: bool,
@@ -53,8 +42,7 @@ impl WorldgenPlugin {
 }
 impl Plugin for WorldgenPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, Self::init)
-            .add_systems(Update, draw_axes);
+        app.add_systems(Startup, Self::init);
         if self.spawn_immediately {
             app.add_systems(Startup, Self::spawn_mesh.after(Self::init));
         }

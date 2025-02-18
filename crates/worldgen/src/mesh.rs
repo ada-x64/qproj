@@ -1,9 +1,4 @@
-use bevy::{
-    asset::RenderAssetUsages,
-    color::{Color, ColorToComponents},
-    math::{Vec2, Vec3},
-    render::mesh::{Indices, Mesh, PrimitiveTopology},
-};
+use bevy::math::{Vec2, Vec3};
 use itertools::Itertools;
 
 /// size is width or length

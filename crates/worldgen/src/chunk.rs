@@ -113,7 +113,7 @@ impl Chunk {
         x_offset: i32,
         y_offset: i32,
     ) -> Self {
-        let size = (generator.size + 2);
+        let size = generator.size + 2;
         let cells = (0..(usize::pow(size, 2)))
             .map(|idx| {
                 let x = (idx % size) as i32;

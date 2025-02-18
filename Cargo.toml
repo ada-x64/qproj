@@ -6,7 +6,7 @@ authors = ["<phoenix.mandala@pm.me>"]
 edition = "2021"
 
 [workspace]
-members = ["crates/worldgen"]
+members = ["crates/*"]
 
 [profile.dev.package."*"]
 opt-level = 3
@@ -34,6 +34,7 @@ strip = true
 dev = [
     "bevy/dynamic_linking",
 ]
+debug = ["debug_gizmos"]
 
 # All of Bevy's default features exept for the audio related ones (bevy_audio, vorbis), since they clash with bevy_kira_audio
 #   and android_shared_stdcxx/android-game-activity, since those are covered in `mobile`
@@ -89,3 +90,4 @@ bevy_flycam = "0.15.0"
 
 ## workspace crates
 worldgen = {path="crates/worldgen"}
+debug_gizmos = {path="crates/debug", optional=true}
