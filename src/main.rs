@@ -5,6 +5,7 @@ use bevy::{
     ecs::system::Commands,
     log::{tracing_subscriber::EnvFilter, LogPlugin},
     prelude::*,
+    winit::WinitSettings,
     DefaultPlugins,
 };
 use bevy_flycam::FlyCam;
@@ -60,7 +61,8 @@ fn main() {
         },
     ))
     .add_systems(Startup, spawn_light)
-    .add_systems(Update, light_follows_camera);
+    .add_systems(Update, light_follows_camera)
+    .insert_resource(WinitSettings::game());
 
     #[cfg(feature = "debug")]
     {

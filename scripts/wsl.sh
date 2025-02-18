@@ -1,5 +1,9 @@
-#!/bin/sh
-export RUST_BACKTRACE=1
-cargo build --target x86_64-pc-windows-gnu -F debug &&
-cd target/x86_64-pc-windows-gnu/debug &&
-exec ./bevy_game.exe "$@"
+#!/bin/bash
+
+TARGET_DIR="target/x86_64-pc-windows-gnu/debug"
+EXE="bevy_game.exe"
+
+. .env
+cargo build --target x86_64-pc-windows-gnu "$BUILD_FLAGS"
+echo "waiting for launch..."
+exec "$TARGET_DIR/$EXE"

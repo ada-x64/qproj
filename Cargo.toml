@@ -34,7 +34,7 @@ strip = true
 dev = [
     "bevy/dynamic_linking",
 ]
-debug = ["debug_gizmos"]
+debug = ["debug_gizmos", "worldgen/debug"]
 
 # All of Bevy's default features exept for the audio related ones (bevy_audio, vorbis), since they clash with bevy_kira_audio
 #   and android_shared_stdcxx/android-game-activity, since those are covered in `mobile`
@@ -68,13 +68,17 @@ bevy = { version = "0.15", default-features = false, features = [
     "smaa_luts",
     "sysinfo_plugin",
     "tonemapping_luts",
-    "x11",
+	"wayland"
 ] }
 bevy_kira_audio = { version = "0.22.0" }
 bevy_asset_loader = { version = "0.22" }
 rand = { version = "0.8.3" }
 itertools = "0.14.0"
 log = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"] }
+
+## workspace crates
+worldgen = {path="crates/worldgen"}
+debug_gizmos = {path="crates/debug" }
 
 [dependencies]
 bevy = {workspace = true}
@@ -88,6 +92,5 @@ winit = { version = "0.30", default-features = false }
 image = { version = "0.25", default-features = false }
 bevy_flycam = "0.15.0"
 
-## workspace crates
-worldgen = {path="crates/worldgen"}
-debug_gizmos = {path="crates/debug", optional=true}
+worldgen = {workspace = true}
+debug_gizmos = {workspace = true, optional = true}

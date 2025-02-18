@@ -9,6 +9,7 @@ edition = "2021"
 dev = [
     "bevy/dynamic_linking",
 ]
+debug = ["debug_gizmos"]
 
 [dependencies]
 noise = "0.9.0"
@@ -20,3 +21,4 @@ rand = {workspace = true}
 itertools = {workspace = true}
 log = {workspace = true}
 serde_json = "1.0.138"
+debug_gizmos = {workspace = true, optional = true}

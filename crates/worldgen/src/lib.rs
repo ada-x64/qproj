@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 use chunk::ChunkGenerator;
+#[cfg(feature = "debug")]
+use debug_gizmos::{DebugBundle, DebugLevel, ShowAxes};
 pub mod chunk;
 pub mod mesh;
 
@@ -31,6 +33,11 @@ impl WorldgenPlugin {
                 Mesh3d(meshes.add(mesh)),
                 MeshMaterial3d(materials.add(StandardMaterial::default())),
                 transform,
+                #[cfg(feature = "debug")]
+                DebugBundle {
+                    show_axes: ShowAxes(Some((DebugLevel(0), 3.0))),
+                    ..Default::default()
+                },
             ));
         })
         // let mesh = gen_mesh(gen_positions(16));
