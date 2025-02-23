@@ -34,7 +34,7 @@ strip = true
 dev = [
     "bevy/dynamic_linking",
 ]
-debug = ["debug_gizmos", "worldgen/debug"]
+debug = ["debug_gizmos", "worldgen/debug",]
 
 # All of Bevy's default features exept for the audio related ones (bevy_audio, vorbis), since they clash with bevy_kira_audio
 #   and android_shared_stdcxx/android-game-activity, since those are covered in `mobile`
@@ -90,7 +90,13 @@ log = {workspace = true}
 # keep the following in sync with Bevy's dependencies
 winit = { version = "0.30", default-features = false }
 image = { version = "0.25", default-features = false }
-bevy_flycam = "0.15.0"
 
+# local deps
+bevy_flycam = "0.15.0"
 worldgen = {workspace = true}
 debug_gizmos = {workspace = true, optional = true}
+
+# MSVC
+#https://bevy-cheatbook.github.io/setup/cross/linux-windows.html#bevy-caveats
+[target.'cfg(target_env="msvc")'.dependencies]
+blake3 = { version = "1.5", features = [ "pure" ] }

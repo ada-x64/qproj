@@ -1,0 +1,98 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'debug_gizmos'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--lib",
+          "--package=debug_gizmos"
+        ],
+        "filter": {
+          "name": "debug_gizmos",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'worldgen'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--lib",
+          "--package=worldgen"
+        ],
+        "filter": {
+          "name": "worldgen",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable 'bevy_game'",
+      ""
+      "program": "${workspaceFolder}/target/x86_64-pc-windows-msvc/debug/bevy_game.exe",
+      // "cargo": {
+      //   "args": [
+      //     "wsl"
+      //     // "build",
+      //     // "--bin=bevy_game",
+      //     // "--package=bevy_game",
+      //     // "--target=x86_64-pc-windows-msvc",
+      //     // "-F dev",
+      //     // "-F debug",
+      //     // "--config",
+      //     // "target.x86_64-pc-windows-msvc.linker=\"lld\"",
+      //     // "--config",
+      //     // "target.x86_64-pc-windows-msvc.rustflags=[\"-Lnative=${env:HOME}/.xwin/crt/lib/x86_64\", \"-Lnative=${env:HOME}/.xwin/sdk/lib/um/x86_64\", \"-Lnative=${env:HOME}/.xwin/sdk/lib/ucrt/x86_64\"]"
+      //   ],
+      //   "filter": {
+      //     "name": "bevy_game",
+      //     "kind": "bin"
+      //   }
+      // },
+      "args": [],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "NO_SERVE": "true",
+        "PATH": "${env:PATH}:${workspaceFolder}/scripts"
+      }
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in executable 'bevy_game'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bin=bevy_game",
+          "--package=bevy_game"
+        ],
+        "filter": {
+          "name": "bevy_game",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

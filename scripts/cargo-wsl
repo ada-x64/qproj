@@ -1,0 +1,36 @@
+#!/bin/bash
+. .env
+TEMP="$(wslpath -au "$(pwsh.exe -c 'echo $env:TEMP')")"
+HOSTPATH="${HOSTPATH:-$TEMP}" 
+TARGET_DIR="${TARGET_DIR:-"target/x86_64-pc-windows-msvc/debug"}"
+EXE="${EXE:-"bevy_game.exe"}"
+PORT="${PORT:-"1234"}"
+
+# for msvc build
+# https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022
+PATH="$PATH:/mnt/c/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.43.34808/bin/Hostx64/x64"
+RUSTFLAGS="target.x86_64-pc-windows-msvc.rustflags=[\"-Lnative=$HOME/.xwin/crt/lib/x86_64\", \"-Lnative=$HOME/.xwin/sdk/lib/um/x86_64\", \"-Lnative=$HOME/.xwin/sdk/lib/ucrt/x86_64\"]"
+ARGS="${@:2}"
+cargo build\
+  --target=x86_64-pc-windows-msvc\
+  -F dev\
+  -F debug\
+  --config 'target.x86_64-pc-windows-msvc.linker="lld"'\
+  --config "$RUSTFLAGS"\
+  $ARGS
+
+RES=$?
+if [ $RES -ne 0 ]; then
+  echo "Build failed. Do you have xwin installed?"
+  echo "See the bevy cheatbook for more info."
+  echo "https://bevy-cheatbook.github.io/setup/cross/linux-windows.html"
+  exit $RES
+fi
+
+if [ -n "$NO_SERVE" ]; then exit $RES; fi
+
+rsync -P "$TARGET_DIR/$EXE" "$HOSTPATH"
+ENV_VARS="RUST_LOG=$RUST_LOG,DEBUG_LEVEL=$DEBUG_LEVEL,RUST_BACKTRACE=$RUST_BACKTRACE,DIR=\$env:TEMP,EXE=$EXE"
+HOSTNAME="$(ip route show | grep -i default | awk '{ print $3}')"
+echo "pinging server..."
+echo "$ENV_VARS" | nc -t "$HOSTNAME" "$PORT"

@@ -5,13 +5,11 @@ use bevy::{
     ecs::system::Commands,
     log::{tracing_subscriber::EnvFilter, LogPlugin},
     prelude::*,
-    winit::WinitSettings,
     DefaultPlugins,
 };
 use bevy_flycam::FlyCam;
-use debug_gizmos::DebugPlugin;
 #[cfg(feature = "debug")]
-use debug_gizmos::{DebugBundle, DebugLevel, ShowAxes};
+use debug_gizmos::{DebugBundle, DebugLevel, DebugPlugin, ShowAxes};
 
 #[derive(Component)]
 struct CamLight;
@@ -61,8 +59,7 @@ fn main() {
         },
     ))
     .add_systems(Startup, spawn_light)
-    .add_systems(Update, light_follows_camera)
-    .insert_resource(WinitSettings::game());
+    .add_systems(Update, light_follows_camera);
 
     #[cfg(feature = "debug")]
     {

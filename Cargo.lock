@@ -606,6 +606,7 @@ dependencies = [
  "bevy_asset_loader",
  "bevy_flycam",
  "bevy_kira_audio",
+ "blake3",
  "debug_gizmos",
  "image",
  "itertools 0.14.0",
