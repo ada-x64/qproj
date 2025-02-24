@@ -1,0 +1,14 @@
+#!/bin/bash
+# This script installs xwin.
+# See the bevy cheatbook for more info.
+# https://bevy-cheatbook.github.io/setup/cross/linux-windows.html
+
+cargo install xwin --locked
+xwin --accept-license splat
+
+cat <<EOF
+
+Successfully set up.
+If you want to debug with windbg or renderdoc, make sure that they are in your path,\
+then run \`cargo wsl\` with \`WINDBG=true\` or \`RENDERDOC=true\`.
+EOF
