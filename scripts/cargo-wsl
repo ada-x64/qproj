@@ -14,20 +14,23 @@ NOSYNC=<boolean>    : Do not sync to the host environment.
 NORUN=<boolean>     : Do not run the final executable.
 HOSTPATH=<path>     : Directory for the final executable in "wslpath -au" style. Defaults to \$env:TEMP.
 TARGET_DIR=<path>   : Target directory for the build.
-EXE=<string>        : Name of the final executable. Should match cargo package name.
+PKG_NAME=<string>   : Name of the package to build.
 XWIN_DIR=<path>     : Absolute path for the xwin splat. Defaults to ./.xwin-cache/splat.
 WINDBG=<boolean>    : Run windbgx.exe to debug the application.
 RENDERDOC=<boolean> : Run qrenderdoc.exe to debug the application.
+WINDBG_EXE=<path>   : The windbg executable. Defaults to windbgx.exe
+RENDERDOC_EXE=<path>: The qrenderdoc executable. Defaults to qrenderdoc.exe
 EOF
   exit 0;
 fi;
 
+shopt -s globstar
 . .env
-TEMP="$(wslpath -au "$(pwsh.exe -c 'echo $env:TEMP')")" 
-TEMP="$(echo "$TEMP" | tr -d '\r\n')"
-HOSTPATH="${HOSTPATH:-$TEMP}" 
+PKG_NAME="${PKG_NAME:-"bevy_game"}"
 TARGET_DIR="${TARGET_DIR:-"target/x86_64-pc-windows-msvc/debug"}"
-EXE="${EXE:-"bevy_game.exe"}"
+TEMP="$(wslpath -au "$(pwsh.exe -c "echo \$env:TEMP")")" 
+TEMP="$(echo "$TEMP" | tr -d '\r\n')"
+HOSTPATH="${HOSTPATH:-$TEMP/$PKG_NAME}" 
 
 XWIN_DIR="${XWIN_DIR:-$(realpath ./.xwin-cache/splat)}"
 RUSTFLAGS="target.x86_64-pc-windows-msvc.rustflags=[\"-Lnative=$XWIN_DIR/crt/lib/x86_64\", \"-Lnative=$XWIN_DIR/sdk/lib/um/x86_64\", \"-Lnative=$XWIN_DIR/sdk/lib/ucrt/x86_64\"]"
@@ -48,27 +51,28 @@ if [ -z "$NOBUILD" ]; then
 fi
 
 if [ -z "$NOSYNC" ]; then
-  # we need to copy the debug symbols (.pdb) as well
-  set -e
-  rsync -avc --no-r "$TARGET_DIR"/* "$HOSTPATH"
+  rsync -avP --no-r "$TARGET_DIR"/* "$HOSTPATH"
 fi
 
 
 if [ -z "$NORUN" ]; then
-  WINPATH="$(wslpath -w "$HOSTPATH/$EXE")"
   if [ -n "$WINDBG" ]; then
-    if [ -n "$RENDERDOC" ]; then
-      pwsh.exe -c "\
-        \$APP=start -PassThru $WINPATH;\
-        \$ID=\$APP.ID;\
-        start \"renderdoccmd.exe\" \"-w inject --pid=\$ID\ -c ./.renderdoc/\";\
-        start \"windbgx.exe\" \"-p \$ID\";\
-        "
-    else
-      pwsh.exe -c "windbgx.exe $WINPATH"
-    fi
+    HOST_SRCPATH="$(
+      find ./crates ./src -name "*.rs" -type f -print0 \
+      | xargs -0 -I{} dirname {} \
+      | sort \
+      | uniq \
+      | xargs -I{} wslpath -aw {} \
+      | tr '\n' ';'
+    )"
+    HOST_EXE="$(wslpath -aw "$HOSTPATH/$PKG_NAME.exe")"
+    WINDBG_EXE=${WINDBG_EXE:-"windbgx.exe"}
+    WINDBG_CMD="$WINDBG_EXE -srcpath \"$HOST_SRCPATH\" \"$HOST_EXE\""
+    echo "$WINDBG_CMD"
+    pwsh.exe -c "$WINDBG_CMD"
   elif [ -n "$RENDERDOC" ]; then
-    pwsh.exe -c "qrenderdoc.exe $WINPATH" 
+    RENDERDOC_EXE=${RENDERDOC_EXE:-"qrenderdoc.exe"}
+    pwsh.exe -c "$RENDERDOC_EXE $WINPATH" 
   else
     pwsh.exe -c "$WINPATH"
   fi
