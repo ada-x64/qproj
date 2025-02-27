@@ -7,7 +7,7 @@ use itertools::Itertools;
 use noise::{NoiseFn, Perlin};
 use serde::{Deserialize, Serialize};
 
-use crate::mesh::{gen_normals, gen_strip, gen_uvs};
+use crate::mesh::{gen_list, gen_normals, gen_strip, gen_uvs};
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct Percent(f32);
@@ -113,6 +113,8 @@ impl Chunk {
         x_offset: i32,
         y_offset: i32,
     ) -> Self {
+        // accomodate for gap by adding +2
+        // creates overlap but worth it for consistency
         let size = generator.size + 2;
         let cells = (0..(usize::pow(size, 2)))
             .map(|idx| {
@@ -150,7 +152,7 @@ impl Chunk {
         let hue = rand::random::<f32>() * 360.;
         let positions = self.positions();
         Mesh::new(
-            PrimitiveTopology::TriangleStrip,
+            PrimitiveTopology::TriangleList,
             RenderAssetUsages::RENDER_WORLD,
         )
         .with_inserted_attribute(
@@ -159,7 +161,7 @@ impl Chunk {
                 .map(|_| Color::hsl(hue, 1., 0.5).to_linear().to_vec4())
                 .collect_vec(),
         )
-        .with_inserted_indices(Indices::U32(gen_strip(self.size)))
+        .with_inserted_indices(Indices::U32(gen_list(self.size)))
         .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, gen_uvs(self.size))
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_NORMAL,

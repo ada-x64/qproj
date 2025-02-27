@@ -4987,8 +4987,6 @@ name = "worldgen"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "bevy_asset_loader",
- "bevy_kira_audio",
  "debug_gizmos",
  "itertools 0.14.0",
  "log",

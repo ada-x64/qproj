@@ -1,4 +1,4 @@
-use bevy::math::{Vec2, Vec3};
+use bevy::prelude::*;
 use itertools::Itertools;
 
 /// size is width or length
@@ -34,6 +34,71 @@ fn test_stip() {
         ];
     // 0 4 1, 1 5 2, ...
     assert_eq!(strip, correct);
+}
+
+/// 2(n-1)^2 tris, 6(n-1)^2 indices
+pub fn gen_list(size: usize) -> Vec<u32> {
+    let size = size as u32;
+    let mut list = Vec::new();
+    for row in 0..size - 1 {
+        for col in 0..size - 1 {
+            let top_left = row * size + col;
+            let top_right = row * size + col + 1;
+            let bottom_left = (row + 1) * size + col;
+
+            list.push(top_left);
+            list.push(bottom_left);
+            list.push(top_right);
+
+            let bottom_right = (row + 1) * size + col + 1;
+
+            list.push(top_right);
+            list.push(bottom_left);
+            list.push(bottom_right);
+        }
+    }
+    list
+}
+
+#[test]
+fn test_list() {
+    let list = gen_list(4);
+    //  0  1  2  3
+    //  4  5  6  7
+    //  8  9 10 11
+    // 12 13 14 15
+    #[rustfmt::skip]
+    let correct = vec![
+        // Row 0, Col 0
+        0, 4, 1,
+        1, 4, 5,
+        // Row 0, Col 1
+        1, 5, 2,
+        2, 5, 6,
+        // Row 0, Col 2
+        2, 6, 3,
+        3, 6, 7,
+        // Row 1, Col 0
+        4, 8, 5,
+        5, 8, 9,
+        // Row 1, Col 1
+        5, 9, 6,
+        6, 9, 10,
+        // Row 1, Col 2
+        6, 10, 7,
+        7, 10, 11,
+        // Row 2, Col 0
+        8, 12, 9,
+        9, 12, 13,
+        // Row 2, Col 1
+        9, 13, 10,
+        10, 13, 14,
+        // Row 2, Col 2
+        10, 14, 11,
+        11, 14, 15
+    ];
+
+    assert_eq!(list, correct);
 }
 
 // when piecing together chunks we'll need to take the surrounding
