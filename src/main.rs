@@ -37,8 +37,8 @@ fn light_follows_camera(
 ) {
     for cam_transform in &cams {
         for mut light_transform in &mut lights {
-            // light_transform.set_if_neq(*cam_transform);
             light_transform.rotation = cam_transform.rotation;
+            light_transform.translation = cam_transform.translation;
         }
     }
 }

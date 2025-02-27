@@ -52,11 +52,13 @@ fi
 
 if [ -z "$NOSYNC" ]; then
   rsync -avP --no-r "$TARGET_DIR"/* "$HOSTPATH"
+  rsync -avP "assets"/* "$HOSTPATH/assets"
 fi
 
 
 if [ -z "$NORUN" ]; then
   HOST_EXE="$(wslpath -aw "$HOSTPATH/$PKG_NAME.exe")"
+  ENV_VARS="\$RUST_LOG='$RUST_LOG'; \$DEBUG_LEVEL='$DEBUG_LEVEL';"
   if [ -n "$WINDBG" ]; then
     HOST_SRCPATH="$(
       find ./crates ./src -name "*.rs" -type f -print0 \
@@ -67,15 +69,17 @@ if [ -z "$NORUN" ]; then
       | tr '\n' ';'
     )"
     WINDBG_EXE=${WINDBG_EXE:-"windbgx.exe"}
-    WINDBG_CMD="$WINDBG_EXE -srcpath \"$HOST_SRCPATH\" \"$HOST_EXE\""
+    WINDBG_CMD="$ENV_VARS $WINDBG_EXE -srcpath \"$HOST_SRCPATH\" \"$HOST_EXE\""
     echo "pwsh.exe -c \"$WINDBG_CMD\""
     pwsh.exe -c "$WINDBG_CMD"
   elif [ -n "$RENDERDOC" ]; then
     RENDERDOC_EXE=${RENDERDOC_EXE:-"qrenderdoc.exe"}
-    echo "pwsh.exe -c \"$RENDERDOC_EXE $HOST_EXE\""
-    pwsh.exe -c "$RENDERDOC_EXE $HOST_EXE" 
+    CMD="pwsh.exe -c \"{$ENV_VARS $RENDERDOC_EXE $HOST_EXE}\""
+    echo "pwsh.exe -c \"$CMD\""
+    pwsh.exe -c "$CMD"
   else
-    echo "pwsh.exe -c \"$HOST_EXE\""
-    pwsh.exe -c "$HOST_EXE"
+    CMD="$ENV_VARS $HOST_EXE"
+    echo "pwsh.exe -c \"$CMD\""
+    pwsh.exe -c "$CMD"
   fi
 fi

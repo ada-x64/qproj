@@ -1,8 +1,6 @@
 use bevy::{
-    app::{Plugin, Update},
-    ecs::{bundle::Bundle, component::Component, query::With, system::Query},
-    gizmos::gizmos::Gizmos,
-    transform::components::Transform,
+    diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin},
+    prelude::*,
 };
 
 #[derive(Default)]
@@ -40,14 +38,47 @@ fn draw_debug(
     });
 }
 
+#[derive(Component)]
+struct FPSText;
+
+fn startup(mut commands: Commands, assets: Res<AssetServer>) {
+    let fontpath = "fonts/FiraCodeNerdFont-Medium.ttf";
+    commands
+        .spawn((
+            FPSText,
+            Text::new("FPS: "),
+            TextFont {
+                font: assets.load(fontpath),
+                ..Default::default()
+            },
+        ))
+        .with_child((
+            TextSpan::default(),
+            TextFont {
+                font: assets.load(fontpath),
+                ..Default::default()
+            },
+            FPSText,
+        ));
+}
+
+fn update_fps(
+    diagnostics: Res<DiagnosticsStore>,
+    mut q: Query<&mut TextSpan, With<FPSText>>,
+) {
+    for mut span in &mut q {
+        if let Some(fps) = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS) {
+            if let Some(value) = fps.smoothed() {
+                // Update the value of the second section
+                **span = format!("{value:.2}");
+            }
+        }
+    }
+}
+
 impl Plugin for DebugPlugin {
     fn build(&self, app: &mut bevy::app::App) {
-        app.add_systems(
-            Update,
-            (
-                draw_debug,
-                //...
-            ),
-        );
+        app.add_systems(Startup, startup)
+            .add_systems(Update, (update_fps, draw_debug));
     }
 }
