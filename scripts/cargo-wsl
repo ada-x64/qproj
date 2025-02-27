@@ -58,7 +58,13 @@ fi
 
 if [ -z "$NORUN" ]; then
   HOST_EXE="$(wslpath -aw "$HOSTPATH/$PKG_NAME.exe")"
-  ENV_VARS="\$RUST_LOG='$RUST_LOG'; \$DEBUG_LEVEL='$DEBUG_LEVEL';"
+  START="\
+  Start-Process -NoNewWindow -Wait -Environment @{
+  RUST_LOG='$RUST_LOG'
+  DEBUG_LEVEL='$DEBUG_LEVEL'
+}"
+  TTY="$(wslpath -aw "$(tty)")"
+  REDIRECT="*> '$TTY'"
   if [ -n "$WINDBG" ]; then
     HOST_SRCPATH="$(
       find ./crates ./src -name "*.rs" -type f -print0 \
@@ -69,16 +75,17 @@ if [ -z "$NORUN" ]; then
       | tr '\n' ';'
     )"
     WINDBG_EXE=${WINDBG_EXE:-"windbgx.exe"}
-    WINDBG_CMD="$ENV_VARS $WINDBG_EXE -srcpath \"$HOST_SRCPATH\" \"$HOST_EXE\""
+    # todo: env vars?
+    WINDBG_CMD="$START -FilePath '$WINDBG_EXE' -ArgumentList @('-srcpath \"$HOST_SRCPATH\"', '$HOST_EXE') $REDIRECT"
     echo "pwsh.exe -c \"$WINDBG_CMD\""
     pwsh.exe -c "$WINDBG_CMD"
   elif [ -n "$RENDERDOC" ]; then
     RENDERDOC_EXE=${RENDERDOC_EXE:-"qrenderdoc.exe"}
-    CMD="pwsh.exe -c \"{$ENV_VARS $RENDERDOC_EXE $HOST_EXE}\""
+    CMD="$START -FilePath '$RENDERDOC_EXE' -ArgumentList @('$HOST_EXE') $REDIRECT"
     echo "pwsh.exe -c \"$CMD\""
     pwsh.exe -c "$CMD"
   else
-    CMD="$ENV_VARS $HOST_EXE"
+    CMD="$START -FilePath '$HOST_EXE' $REDIRECT"
     echo "pwsh.exe -c \"$CMD\""
     pwsh.exe -c "$CMD"
   fi
