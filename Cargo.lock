@@ -4992,6 +4992,7 @@ dependencies = [
  "log",
  "noise",
  "rand",
+ "rayon",
  "serde",
  "serde_json",
 ]

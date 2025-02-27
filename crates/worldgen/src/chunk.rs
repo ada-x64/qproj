@@ -151,6 +151,7 @@ impl Chunk {
     pub fn to_mesh(&self) -> Mesh {
         let hue = rand::random::<f32>() * 360.;
         let positions = self.positions();
+        let indices = gen_list(self.size);
         Mesh::new(
             PrimitiveTopology::TriangleList,
             RenderAssetUsages::RENDER_WORLD,
@@ -161,12 +162,12 @@ impl Chunk {
                 .map(|_| Color::hsl(hue, 1., 0.5).to_linear().to_vec4())
                 .collect_vec(),
         )
-        .with_inserted_indices(Indices::U32(gen_list(self.size)))
-        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, gen_uvs(self.size))
         .with_inserted_attribute(
             Mesh::ATTRIBUTE_NORMAL,
-            gen_normals(&positions),
+            gen_normals(&positions, &indices),
         )
+        .with_inserted_indices(Indices::U32(indices))
+        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, gen_uvs(self.size))
         .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
         // .with_generated_tangents()
     }

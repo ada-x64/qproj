@@ -101,29 +101,50 @@ fn test_list() {
     assert_eq!(list, correct);
 }
 
-// when piecing together chunks we'll need to take the surrounding
-// chunks and set their edge normals and positions so that they're continuous
-pub fn gen_normals(positions: &[Vec3]) -> Vec<Vec3> {
-    positions
-        .iter()
-        .chunks(3)
-        .into_iter()
-        .flat_map(|chunk| {
-            let vec = chunk.into_iter().copied().collect_vec();
-            if vec.len() < 3 {
-                return vec;
-            }
-            let [v1, v2, v3] = vec[..] else {
-                unreachable!()
-            };
-            let face_normal = (v2 - v1).cross(v3 - v1).normalize();
-            vec![
-                (v1 + face_normal).normalize(),
-                (v2 + face_normal).normalize(),
-                (v3 + face_normal).normalize(),
-            ]
-        })
-        .collect()
+pub fn gen_normals(positions: &[Vec3], indices: &[u32]) -> Vec<Vec3> {
+    let mut normals = vec![Vec3::ZERO; positions.len()];
+    let num_tris = indices.len() / 3;
+
+    // Process each triangle face
+    for face in 0..num_tris {
+        let base = face * 3;
+
+        // Get vertex indices for this triangle
+        let i1 = indices[base] as usize;
+        let i2 = indices[base + 1] as usize;
+        let i3 = indices[base + 2] as usize;
+
+        // Get vertex positions
+        let v1 = positions[i1];
+        let v2 = positions[i2];
+        let v3 = positions[i3];
+
+        // Calculate face normal using cross product
+        let edge1 = v2 - v1;
+        let edge2 = v3 - v1;
+        let face_normal = edge1.cross(edge2);
+
+        // Weight face normal by triangle area (proportional to cross product length)
+        // This is optional but gives better results for varied triangle sizes
+
+        // Accumulate face normal to each vertex
+        normals[i1] += face_normal;
+        normals[i2] += face_normal;
+        normals[i3] += face_normal;
+    }
+
+    // Normalize all vertex normals
+    normals.iter_mut().for_each(|n| {
+        if n.length_squared() > 1e-10 {
+            // Better epsilon check for zero vectors
+            *n = n.normalize();
+        } else {
+            // Default normal if vertex has no faces
+            *n = Vec3::new(0.0, 1.0, 0.0);
+        }
+    });
+
+    normals
 }
 
 /// Size is width or length
@@ -137,7 +158,8 @@ pub fn gen_positions(size: usize) -> Vec<Vec3> {
 #[test]
 fn test_size() {
     let positions = gen_positions(256);
-    let normals = gen_normals(&positions);
+    let list = gen_list(256);
+    let normals = gen_normals(&positions, &list);
     assert_eq!(positions.len(), normals.len());
 }
 

@@ -75,6 +75,7 @@ bevy_asset_loader = { version = "0.22" }
 rand = { version = "0.8.3" }
 itertools = "0.14.0"
 log = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"] }
+rayon = {version = "1.10"}
 
 ## workspace crates
 worldgen = {path="crates/worldgen"}
