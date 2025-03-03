@@ -76,10 +76,15 @@ rand = { version = "0.8.3" }
 itertools = "0.14.0"
 log = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"] }
 rayon = {version = "1.10"}
-
 ## workspace crates
 worldgen = {path="crates/worldgen"}
 debug_gizmos = {path="crates/debug" }
+
+# MSVC
+#https://bevy-cheatbook.github.io/setup/cross/linux-windows.html#bevy-caveats
+# [target.'cfg(target_env="msvc")'.dependencies]
+blake3 = { version = "1.5", features = [ "pure" ] }
+
 
 [dependencies]
 bevy = {workspace = true}
@@ -91,13 +96,9 @@ log = {workspace = true}
 # keep the following in sync with Bevy's dependencies
 winit = { version = "0.30", default-features = false }
 image = { version = "0.25", default-features = false }
+blake3 = {workspace = true}
 
 # local deps
 bevy_flycam = "0.15.0"
 worldgen = {workspace = true}
 debug_gizmos = {workspace = true, optional = true}
-
-# MSVC
-#https://bevy-cheatbook.github.io/setup/cross/linux-windows.html#bevy-caveats
-[target.'cfg(target_env="msvc")'.dependencies]
-blake3 = { version = "1.5", features = [ "pure" ] }

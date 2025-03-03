@@ -22,3 +22,8 @@ debug_gizmos = {workspace = true, optional = true}
 
 bevy_egui = "0.33"
 egui_node_graph2 = "0.7"
+
+# MSVC
+#https://bevy-cheatbook.github.io/setup/cross/linux-windows.html#bevy-caveats
+[target.'cfg(target_env="msvc")'.dependencies]
+blake3 = {workspace = true}

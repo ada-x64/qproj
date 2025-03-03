@@ -15,11 +15,18 @@ NORUN=<boolean>     : Do not run the final executable.
 HOSTPATH=<path>     : Directory for the final executable in "wslpath -au" style. Defaults to \$env:TEMP.
 TARGET_DIR=<path>   : Target directory for the build.
 PKG_NAME=<string>   : Name of the package to build.
+BIN_NAME=<string>   : Name of the binary to build.
 XWIN_DIR=<path>     : Absolute path for the xwin splat. Defaults to ./.xwin-cache/splat.
 WINDBG=<boolean>    : Run windbgx.exe to debug the application.
 RENDERDOC=<boolean> : Run qrenderdoc.exe to debug the application.
 WINDBG_EXE=<path>   : The windbg executable. Defaults to windbgx.exe
 RENDERDOC_EXE=<path>: The qrenderdoc executable. Defaults to qrenderdoc.exe
+
+Example:
+# Run the 'terrain-editor' bin from the 'tools' package.
+PKG_NAME='tools' BIN_NAME='terrain-editor' cargo wsl
+# Run windbg without building.
+NOBUILD=true NOSYNC=true WINDBG=true cargo wsl
 EOF
   exit 0;
 fi;
@@ -27,6 +34,7 @@ fi;
 shopt -s globstar
 . .env
 PKG_NAME="${PKG_NAME:-"bevy_game"}"
+BIN_NAME="${BIN_NAME:-"bevy_game"}"
 TARGET_DIR="${TARGET_DIR:-"target/x86_64-pc-windows-msvc/debug"}"
 TEMP="$(wslpath -au "$(pwsh.exe -c "echo \$env:TEMP")")" 
 TEMP="$(echo "$TEMP" | tr -d '\r\n')"
@@ -36,12 +44,16 @@ XWIN_DIR="${XWIN_DIR:-$(realpath ./.xwin-cache/splat)}"
 RUSTFLAGS="target.x86_64-pc-windows-msvc.rustflags=[\"-Lnative=$XWIN_DIR/crt/lib/x86_64\", \"-Lnative=$XWIN_DIR/sdk/lib/um/x86_64\", \"-Lnative=$XWIN_DIR/sdk/lib/ucrt/x86_64\"]"
 ARGS="${@:2}"
 if [ -z "$NOBUILD" ]; then
-  cargo build\
+  CMD="cargo build\
     --target=x86_64-pc-windows-msvc\
     -F debug\
-    --config 'target.x86_64-pc-windows-msvc.linker="lld"'\
-    --config "$RUSTFLAGS"\
-    $ARGS
+    --config 'target.x86_64-pc-windows-msvc.linker=\"lld\"'\
+    --config '$RUSTFLAGS'\
+    -p '$PKG_NAME'\
+    --bin '$BIN_NAME'\
+    $ARGS"
+  echo "$CMD"
+  eval "$CMD"
 
   RES=$?
   if [ $RES -ne 0 ]; then
@@ -57,7 +69,7 @@ fi
 
 
 if [ -z "$NORUN" ]; then
-  HOST_EXE="$(wslpath -aw "$HOSTPATH/$PKG_NAME.exe")"
+  HOST_EXE="$(wslpath -aw "$HOSTPATH/$BIN_NAME.exe")"
   START="\
   Start-Process -NoNewWindow -Wait -Environment @{
   RUST_LOG='$RUST_LOG'
