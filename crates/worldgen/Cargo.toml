@@ -12,7 +12,6 @@ dev = ["bevy/dynamic_linking"]
 
 [dependencies]
 bevy = {workspace = true}
-noise = "0.9.0"
 serde = { version = "1.0.217", features = ["derive"] }
 rand = {workspace = true}
 itertools = {workspace = true}
@@ -20,3 +19,9 @@ log = {workspace = true}
 serde_json = "1.0.138"
 debug_gizmos = {workspace = true, optional = true}
 rayon= {workspace = true}
+noise_gui = {workspace = true}
+noise = "0.8.2" #keep in sync with noise_gui
+ron = "0.8.1"
+anyhow = {workspace = true}
+derivative = {workspace = true}
+thiserror = {workspace = true}

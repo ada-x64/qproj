@@ -72,18 +72,19 @@ bevy = { version = "0.15", default-features = false, features = [
 ] }
 bevy_kira_audio = { version = "0.22.0" }
 bevy_asset_loader = { version = "0.22" }
+blake3 = { version = "1.5", features = [ "pure" ] }
 rand = { version = "0.8.3" }
 itertools = "0.14.0"
 log = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"] }
 rayon = {version = "1.10"}
+noise = "0.9.0"
+noise_gui = { git = "https://github.com/attackgoat/noise_gui.git", version = "0.1.0" }
+derivative = "2.2.0"
+anyhow = "1.0.97"
+thiserror = "2.0.12"
 ## workspace crates
 worldgen = {path="crates/worldgen"}
 debug_gizmos = {path="crates/debug" }
-
-# MSVC
-#https://bevy-cheatbook.github.io/setup/cross/linux-windows.html#bevy-caveats
-# [target.'cfg(target_env="msvc")'.dependencies]
-blake3 = { version = "1.5", features = [ "pure" ] }
 
 
 [dependencies]
