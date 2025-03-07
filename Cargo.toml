@@ -77,7 +77,6 @@ rand = { version = "0.8.3" }
 itertools = "0.14.0"
 log = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"] }
 rayon = {version = "1.10"}
-noise = "0.9.0"
 noise_gui = { git = "https://github.com/attackgoat/noise_gui.git", version = "0.1.0" }
 derivative = "2.2.0"
 anyhow = "1.0.97"
@@ -103,3 +102,6 @@ blake3 = {workspace = true}
 bevy_flycam = "0.15.0"
 worldgen = {workspace = true}
 debug_gizmos = {workspace = true, optional = true}
+
+[dev-dependencies]
+cargo-husky = {version="1", default-features=false, features=["run-for-all", "prepush-hook", "run-cargo-clippy", "run-cargo-fmt"] }

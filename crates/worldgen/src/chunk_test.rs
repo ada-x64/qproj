@@ -2,6 +2,7 @@ use itertools::Itertools;
 
 use crate::chunk::ChunkGenerator;
 
+#[allow(clippy::all)]
 #[test]
 fn test_chunks() {
     todo!();

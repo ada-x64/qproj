@@ -30,6 +30,37 @@
           "RENDERDOC": "true"
         }
       }
-    }
+    },
+    {
+      "label": "run tests",
+      "type": "shell",
+      "command": "./scripts/cargo-wsl",
+      "options": {
+        "env": {
+          "CARGO_CMD": "test",
+        }
+      }
+    },
+    {
+      "label": "run clippy",
+      "type": "shell",
+      "command": "./scripts/cargo-wsl",
+      "options": {
+        "env": {
+          "CARGO_CMD": "clippy",
+        }
+      }
+    },
+    {
+      "label": "run rustfmt",
+      "type": "shell",
+      "command": "./scripts/cargo-wsl",
+      "options": {
+        "env": {
+          "CARGO_CMD": "fmt",
+        }
+      }
+    },
+
   ]
 }

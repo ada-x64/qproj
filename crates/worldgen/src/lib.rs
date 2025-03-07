@@ -1,7 +1,4 @@
-use bevy::{
-    asset::{self, LoadState},
-    prelude::*,
-};
+use bevy::{asset::LoadState, prelude::*};
 use chunk::{iter_xy, Chunk, ChunkGenerator, Terrain};
 use expr::{Expr, ExprLoader};
 pub mod chunk;

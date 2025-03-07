@@ -1,5 +1,3 @@
-use std::env;
-
 use bevy::{
     app::{App, Startup},
     ecs::system::Commands,
@@ -10,6 +8,8 @@ use bevy::{
 use bevy_flycam::FlyCam;
 #[cfg(feature = "debug")]
 use debug_gizmos::{DebugBundle, DebugLevel, DebugPlugin, ShowAxes};
+#[cfg(feature = "debug")]
+use std::env;
 
 #[derive(Component)]
 struct CamLight;
