@@ -60,7 +60,7 @@ pub struct ChunkGenerator {
     /// Perlin noise scaling factor must be a float other than 1.
     /// The larger the number, the smoother the terrain.
     pub scaling_factor: f64,
-    /// A noise_gui Expr which generates the terrain.
+    /// A noise_expr Expr which generates the terrain.
     #[derivative(Debug = "ignore")]
     // pub noise_fn: BoxedNoiseFn,
     pub expr_handle: Option<Handle<Expr>>,

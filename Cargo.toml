@@ -77,13 +77,14 @@ rand = { version = "0.8.3" }
 itertools = "0.14.0"
 log = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"] }
 rayon = {version = "1.10"}
-noise_gui = { git = "https://github.com/attackgoat/noise_gui.git", version = "0.1.0" }
+noise_gui = { git = "https://github.com/ada-x64/noise_gui.git", branch="quell", package="noise_expr" }
 derivative = "2.2.0"
 anyhow = "1.0.97"
 thiserror = "2.0.12"
 ## workspace crates
 worldgen = {path="crates/worldgen"}
 debug_gizmos = {path="crates/debug" }
+player = {path="crates/player"}
 
 
 [dependencies]
@@ -99,9 +100,9 @@ image = { version = "0.25", default-features = false }
 blake3 = {workspace = true}
 
 # local deps
-bevy_flycam = "0.15.0"
 worldgen = {workspace = true}
 debug_gizmos = {workspace = true, optional = true}
+player = {workspace = true }
 
 [dev-dependencies]
 cargo-husky = {version="1", default-features=false, features=["run-for-all", "prepush-hook", "run-cargo-clippy", "run-cargo-fmt"] }
