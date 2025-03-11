@@ -49,7 +49,7 @@ pub fn startup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, startup);
+        // app.add_systems(Startup, startup);
         if self.enable_flycam {
             app.add_plugins(bevy_flycam::PlayerPlugin)
                 .add_systems(Startup, spawn_light)

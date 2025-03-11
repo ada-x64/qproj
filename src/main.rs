@@ -2,6 +2,7 @@ use bevy::{
     log::{tracing_subscriber::EnvFilter, LogPlugin},
     prelude::*,
 };
+use worldgen::WorldgenPluginSettings;
 
 #[bevy_main]
 fn main() {
@@ -13,13 +14,15 @@ fn main() {
             filter: EnvFilter::from_default_env().to_string(),
             ..Default::default()
         }),
-        worldgen::WorldgenPlugin {
-            spawn_immediately: true,
-        },
+        worldgen::WorldgenPlugin,
         player::PlayerPlugin {
             enable_flycam: true,
         },
-    ));
+    ))
+    .insert_resource(WorldgenPluginSettings {
+        spawn_immediately: true,
+        use_debug_colors: cfg!(feature = "debug"),
+    });
 
     #[cfg(feature = "debug")]
     {
@@ -27,7 +30,10 @@ fn main() {
         let level = std::env::var("DEBUG_LEVEL").unwrap_or_default();
         let debug_level = DebugLevel(level.parse().unwrap_or_default());
         debug!("DEBUG_LEVEL = {debug_level:?}");
-        app.add_plugins(DebugPlugin { debug_level });
+        app.add_plugins(DebugPlugin {
+            debug_level,
+            wireframes: true,
+        });
     }
 
     app.run();

@@ -1,3 +1,5 @@
+#[cfg(feature = "debug")]
+use bevy::pbr::wireframe::Wireframe;
 use bevy::{asset::LoadState, prelude::*};
 use chunk::{iter_xy, Chunk, ChunkGenerator, Terrain};
 use expr::{Expr, ExprLoader};
@@ -8,9 +10,12 @@ pub mod mesh;
 #[cfg(test)]
 mod chunk_test;
 
-pub struct WorldgenPlugin {
+#[derive(Resource, Default)]
+pub struct WorldgenPluginSettings {
     pub spawn_immediately: bool,
+    pub use_debug_colors: bool,
 }
+pub struct WorldgenPlugin;
 impl WorldgenPlugin {
     fn init(assets: Res<AssetServer>, mut generator: ResMut<ChunkGenerator>) {
         let handle = assets.load("terrain/complex-planet.terrain.ron");
@@ -38,6 +43,7 @@ impl WorldgenPlugin {
         mut commands: Commands,
         mut meshes: ResMut<Assets<Mesh>>,
         mut materials: ResMut<Assets<StandardMaterial>>,
+        plugin_settings: Res<WorldgenPluginSettings>,
         generator: Res<ChunkGenerator>,
         exprs: Res<Assets<Expr>>,
     ) {
@@ -65,9 +71,17 @@ impl WorldgenPlugin {
                         ))
                         .with_child((
                             Mesh3d(meshes.add(mesh)),
-                            MeshMaterial3d(
-                                materials.add(StandardMaterial::default()),
-                            ),
+                            MeshMaterial3d(materials.add(StandardMaterial {
+                                base_color: if plugin_settings.use_debug_colors
+                                {
+                                    Color::hsv(rand::random(), 1., 1.)
+                                } else {
+                                    Color::WHITE
+                                },
+                                ..Default::default()
+                            })),
+                            #[cfg(feature = "debug")]
+                            Wireframe,
                         ));
                 })
             });
@@ -82,6 +96,7 @@ impl Plugin for WorldgenPlugin {
             size: 32,
             seed: 0,
         })
+        .init_resource::<WorldgenPluginSettings>()
         .init_asset::<Expr>()
         .init_asset_loader::<ExprLoader>()
         .add_systems(Startup, Self::init)

@@ -1,11 +1,13 @@
 use bevy::{
     dev_tools::fps_overlay::{FpsOverlayConfig, FpsOverlayPlugin},
+    pbr::wireframe::{WireframeConfig, WireframePlugin},
     prelude::*,
 };
 
 #[derive(Default)]
 pub struct DebugPlugin {
     pub debug_level: DebugLevel,
+    pub wireframes: bool,
 }
 
 /// Visual debugging level for gizmos etc.
@@ -53,5 +55,13 @@ impl Plugin for DebugPlugin {
                 //...
             ),
         );
+
+        if self.wireframes {
+            app.add_plugins(WireframePlugin);
+            app.insert_resource(WireframeConfig {
+                global: true,
+                ..Default::default()
+            });
+        }
     }
 }

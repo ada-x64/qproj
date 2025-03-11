@@ -10,6 +10,8 @@ This is a game built with Bevy. It uses a workspace configuration to split depen
 
 If you're using WSL2, you should use the `cargo wsl` command below. This builds with MSVC, which can be a bit difficult to setup. If you don't want to do that, you can build with the windows GNU target, but you won't be able to debug. The linux build runs well on WSLg, but it has issues with cursor tracking, which makes the flycam unusable. Of course, if you're running Linux or MacOS natively, build for the default target and you should be fine. Just note that most people play games on Windows, and that you might have some issues without testing cross-platform compatibility.
 
+__NOTE: The below is not accurate.__ [Windbg _does_ support gnu-compiled debug symbols.](https://learn.microsoft.com/en-us/windows-hardware/drivers/debugger/linux-dwarf-symbols)
+
 ## Building for MSVC on WSL2 (Recommended)
 
 ### Using direnv for cargo commands
