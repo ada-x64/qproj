@@ -57,31 +57,36 @@ impl WorldgenPlugin {
         };
         let noise = expr.noise();
         let world_size = 4;
+        debug!("Generator settings: {generator:?}");
         commands
             .spawn((Terrain, Transform::default(), Visibility::Visible))
             .with_children(|builder| {
                 iter_xy(world_size).for_each(|(x, y)| {
+                    debug!("Making chunk at pos ({x},{y})");
                     let chunk = Chunk::new(&generator, &noise, x, y);
                     let mesh = chunk.to_mesh();
                     builder
                         .spawn((
                             generator.get_transform(x, y),
                             chunk,
-                            Visibility::Inherited,
+                            Visibility::Visible,
+                            Name::new(format!("chunk ({x},{y})")),
                         ))
                         .with_child((
                             Mesh3d(meshes.add(mesh)),
                             MeshMaterial3d(materials.add(StandardMaterial {
                                 base_color: if plugin_settings.use_debug_colors
                                 {
-                                    Color::hsv(rand::random(), 1., 1.)
+                                    Color::hsl(
+                                        360. * rand::random::<f32>(),
+                                        1.,
+                                        1.,
+                                    )
                                 } else {
                                     Color::WHITE
                                 },
                                 ..Default::default()
                             })),
-                            #[cfg(feature = "debug")]
-                            Wireframe,
                         ));
                 })
             });

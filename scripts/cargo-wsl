@@ -53,6 +53,7 @@ ARGS="${@:2}"
 if [ -z "$NOBUILD" ]; then
   CMD="cargo $CARGO_CMD\
     -F 'debug'\
+    -F 'inspector'\
     -p '$PKG_NAME'\
     --bin '$BIN_NAME'\
     $ARGS"

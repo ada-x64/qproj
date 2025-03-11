@@ -9,6 +9,7 @@ edition = "2021"
 # just to silence the warning
 debug = ["debug_gizmos"]
 dev = ["bevy/dynamic_linking"]
+inspector = ["bevy-inspector-egui"]
 
 [dependencies]
 bevy = {workspace = true}
@@ -26,3 +27,4 @@ anyhow = {workspace = true}
 derivative = {workspace = true}
 thiserror = {workspace = true}
 meshopt = "0.4.1"
+bevy-inspector-egui = {workspace = true, optional = true}

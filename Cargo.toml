@@ -35,6 +35,7 @@ dev = [
     "bevy/dynamic_linking",
 ]
 debug = ["debug_gizmos", "worldgen/debug", "bevy/bevy_dev_tools"]
+inspector = ["dep:inspector"]
 
 # All of Bevy's default features exept for the audio related ones (bevy_audio, vorbis), since they clash with bevy_kira_audio
 #   and android_shared_stdcxx/android-game-activity, since those are covered in `mobile`
@@ -81,10 +82,12 @@ noise_gui = { git = "https://github.com/ada-x64/noise_gui.git", branch="quell", 
 derivative = "2.2.0"
 anyhow = "1.0.97"
 thiserror = "2.0.12"
+bevy-inspector-egui = "0.29"
 ## workspace crates
 worldgen = {path="crates/worldgen"}
 debug_gizmos = {path="crates/debug" }
 player = {path="crates/player"}
+inspector = {path="crates/inspector"}
 
 
 [dependencies]
@@ -100,8 +103,9 @@ image = { version = "0.25", default-features = false }
 blake3 = {workspace = true}
 
 # local deps
-worldgen = {workspace = true}
 debug_gizmos = {workspace = true, optional = true}
+inspector = {workspace = true, optional = true}
+worldgen = {workspace = true}
 player = {workspace = true }
 
 [dev-dependencies]

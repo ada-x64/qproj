@@ -36,5 +36,10 @@ fn main() {
         });
     }
 
+    #[cfg(feature = "inspector")]
+    {
+        app.add_plugins(inspector::InspectorPlugin);
+    }
+
     app.run();
 }
