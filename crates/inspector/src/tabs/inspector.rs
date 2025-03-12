@@ -1,3 +1,7 @@
+//         •
+// ┏┓┏┓┏┓┏┓┓
+// ┗┫┣┛┛ ┗┛┃
+//--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use bevy::reflect::TypeRegistry;
 use bevy_egui::egui;
 use bevy_inspector_egui::bevy_inspector::{

@@ -1,5 +1,9 @@
+#          •
+#  ┏┓┏┓┏┓┏┓┓
+#  ┗┫┣┛┛ ┗┛┃
+# --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 [package]
-name = "bevy_game" # ToDo
+name = "bevy_game"
 version = "0.1.0"
 publish = false
 authors = ["<phoenix.mandala@pm.me>"] 
@@ -109,4 +113,4 @@ worldgen = {workspace = true}
 player = {workspace = true }
 
 [dev-dependencies]
-cargo-husky = {version="1", default-features=false, features=["run-for-all", "prepush-hook", "run-cargo-clippy", "run-cargo-fmt"] }
+cargo-husky = {version="1", default-features=false, features=["run-for-all", "prepush-hook", "run-cargo-clippy", "run-cargo-fmt", "user-hooks"] }

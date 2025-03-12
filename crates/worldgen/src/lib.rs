@@ -1,3 +1,7 @@
+//         •
+// ┏┓┏┓┏┓┏┓┓
+// ┗┫┣┛┛ ┗┛┃
+//--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use bevy::{asset::LoadState, prelude::*};
 use chunk::{iter_xy, Chunk, ChunkGenerator, Terrain};
 use expr::{Expr, ExprLoader};
