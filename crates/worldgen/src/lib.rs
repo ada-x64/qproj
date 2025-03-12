@@ -1,5 +1,3 @@
-#[cfg(feature = "debug")]
-use bevy::pbr::wireframe::Wireframe;
 use bevy::{asset::LoadState, prelude::*};
 use chunk::{iter_xy, Chunk, ChunkGenerator, Terrain};
 use expr::{Expr, ExprLoader};

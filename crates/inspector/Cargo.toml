@@ -16,5 +16,6 @@ bevy = {workspace =  true, features=["bevy_dev_tools"]}
 bevy_asset_loader = {workspace = true}
 log = {workspace = true}
 bevy-inspector-egui={workspace = true}
-bevy_egui = "0.33.0"
-egui_dock = "0.16.0"
+# bevy-inspector-egui uses egui v0.30
+bevy_egui = "0.32.0"
+egui_dock = "0.15.0"
