@@ -1,3 +1,5 @@
 #!/bin/sh
 
 ./scripts/headers.sh
+cargo clippy
+cargo fmt -- --check

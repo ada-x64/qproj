@@ -6,7 +6,7 @@
 name = "bevy_game"
 version = "0.1.0"
 publish = false
-authors = ["<phoenix.mandala@pm.me>"] 
+authors = ["<phoenix.mandala@pm.me>"]
 edition = "2021"
 
 [workspace]
@@ -35,9 +35,7 @@ codegen-units = 1
 strip = true
 
 [features]
-dev = [
-    "bevy/dynamic_linking",
-]
+dev = ["bevy/dynamic_linking"]
 debug = ["debug_gizmos", "worldgen/debug", "bevy/bevy_dev_tools"]
 inspector = ["dep:inspector"]
 
@@ -77,40 +75,45 @@ bevy = { version = "0.15", default-features = false, features = [
 ] }
 bevy_kira_audio = { version = "0.22.0" }
 bevy_asset_loader = { version = "0.22" }
-blake3 = { version = "1.5", features = [ "pure" ] }
+blake3 = { version = "1.5", features = ["pure"] }
 rand = { version = "0.8.3" }
 itertools = "0.14.0"
-log = { version = "0.4", features = ["max_level_debug", "release_max_level_warn"] }
-rayon = {version = "1.10"}
-noise_gui = { git = "https://github.com/ada-x64/noise_gui.git", branch="quell", package="noise_expr" }
+log = { version = "0.4", features = [
+    "max_level_debug",
+    "release_max_level_warn",
+] }
+rayon = { version = "1.10" }
+noise_gui = { git = "https://github.com/ada-x64/noise_gui.git", branch = "quell", package = "noise_expr" }
 derivative = "2.2.0"
 anyhow = "1.0.97"
 thiserror = "2.0.12"
 bevy-inspector-egui = "0.29"
 ## workspace crates
-worldgen = {path="crates/worldgen"}
-debug_gizmos = {path="crates/debug" }
-player = {path="crates/player"}
-inspector = {path="crates/inspector"}
+worldgen = { path = "crates/worldgen" }
+debug_gizmos = { path = "crates/debug" }
+player = { path = "crates/player" }
+inspector = { path = "crates/inspector" }
 
 
 [dependencies]
-bevy = {workspace = true}
-bevy_kira_audio = {workspace = true}
-bevy_asset_loader = {workspace = true}
-rand = {workspace = true}
-itertools = {workspace = true}
-log = {workspace = true}
+bevy = { workspace = true }
+bevy_kira_audio = { workspace = true }
+bevy_asset_loader = { workspace = true }
+rand = { workspace = true }
+itertools = { workspace = true }
+log = { workspace = true }
 # keep the following in sync with Bevy's dependencies
 winit = { version = "0.30", default-features = false }
 image = { version = "0.25", default-features = false }
-blake3 = {workspace = true}
+blake3 = { workspace = true }
 
 # local deps
-debug_gizmos = {workspace = true, optional = true}
-inspector = {workspace = true, optional = true}
-worldgen = {workspace = true}
-player = {workspace = true }
+debug_gizmos = { workspace = true, optional = true }
+inspector = { workspace = true, optional = true }
+worldgen = { workspace = true }
+player = { workspace = true }
 
 [dev-dependencies]
-cargo-husky = {version="1", default-features=false, features=["run-for-all", "prepush-hook", "run-cargo-clippy", "run-cargo-fmt", "user-hooks"] }
+cargo-husky = { version = "1", default-features = false, features = [
+    "user-hooks",
+] }

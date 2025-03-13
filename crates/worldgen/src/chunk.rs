@@ -7,13 +7,12 @@ use bevy::{
     prelude::*,
     render::mesh::{Indices, PrimitiveTopology},
 };
-use derivative::Derivative;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
-    expr::{Expr, NoiseBox},
+    expr::Expr,
     mesh::{gen_list, gen_normals, gen_uvs},
 };
 
@@ -52,27 +51,22 @@ pub enum ChunkError {
     AssetNotLoaded,
 }
 
-#[derive(Derivative, Resource)]
-#[derivative(Debug)]
-pub struct ChunkGenerator {
-    /// The length and width of the chunk
+#[derive(Default, Serialize, Deserialize, Component)]
+pub struct Chunk {
+    pub x_offset: i32,
+    pub y_offset: i32,
     pub size: usize,
-    /// Maximum elevation
-    pub max_elevation: f64,
-    /// The seed for the perlin noise generator
-    pub seed: u32,
-    /// Perlin noise scaling factor must be a float other than 1.
-    /// The larger the number, the smoother the terrain.
-    pub scaling_factor: f64,
-    /// A noise_expr Expr which generates the terrain.
-    #[derivative(Debug = "ignore")]
-    // pub noise_fn: BoxedNoiseFn,
-    pub expr_handle: Option<Handle<Expr>>,
+    pub cells: Vec<Cell>,
 }
-impl ChunkGenerator {
-    pub fn generate(&self, noise: &NoiseBox, x: i32, y: i32) -> Chunk {
-        Chunk::new(self, noise, x, y)
-    }
+
+#[derive(Clone)]
+pub struct ChunkGenerationData {
+    pub size: usize,
+    pub scale: f64,
+    pub max_elevation: f64,
+    pub expr: Expr,
+}
+impl ChunkGenerationData {
     pub fn get_transform(&self, x: i32, y: i32) -> Transform {
         Transform {
             translation: Vec3::new(
@@ -85,41 +79,30 @@ impl ChunkGenerator {
     }
 }
 
-/// Takes a size, squares it, and returns a map with (x,y) coordinates.
-pub fn iter_xy(size: i32) -> impl Iterator<Item = (i32, i32)> {
-    (0..size * size).map(move |idx| ((idx % size), (idx / size)))
-}
-
-#[derive(Default, Component)]
-pub struct Terrain;
-
-#[derive(Default, Serialize, Deserialize, Component)]
-pub struct Chunk {
-    pub x_offset: i32,
-    pub y_offset: i32,
-    pub size: usize,
-    pub cells: Vec<Cell>,
-}
-
 impl Chunk {
     pub fn new(
-        generator: &ChunkGenerator,
-        noise: &NoiseBox,
+        // generator: &ChunkGenerator,
+        // generator_size: usize,
+        // scale: f64,
+        // max_elevation: f64,
+        // noise: &NoiseBox,
+        gen_data: ChunkGenerationData,
         x_offset: i32,
         y_offset: i32,
     ) -> Self {
         // accomodate for gap by adding +2
         // creates overlap but worth it for consistency
-        let size = generator.size + 2;
+        let size = gen_data.size + 2;
+        let noise = gen_data.expr.noise();
         let cells = (0..(usize::pow(size, 2)))
             .map(|idx| {
                 let x = (idx % size) as i32;
                 let y = (idx / size) as i32;
-                let px = x + x_offset * generator.size as i32;
-                let py = y + y_offset * generator.size as i32;
-                let scale = generator.scaling_factor;
+                let px = x + x_offset * gen_data.size as i32;
+                let py = y + y_offset * gen_data.size as i32;
+                let scale = gen_data.scale;
                 let point = [px as f64 * scale, py as f64 * scale, 0.];
-                let elevation = noise.get(point) * generator.max_elevation;
+                let elevation = noise.get(point) * gen_data.max_elevation;
                 Cell {
                     elevation,
                     ..Default::default()

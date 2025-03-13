@@ -10,8 +10,13 @@ use debug_gizmos::{DebugBundle, DebugLevel, ShowAxes};
 #[derive(Component, Default, Debug)]
 pub struct Player;
 
-pub struct PlayerPlugin {
-    pub enable_flycam: bool,
+pub struct PlayerPlugin;
+impl Plugin for PlayerPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_plugins(bevy_flycam::PlayerPlugin)
+            .add_systems(Startup, spawn_light)
+            .add_systems(Update, light_follows_camera);
+    }
 }
 
 #[derive(Component)]
@@ -49,15 +54,4 @@ fn light_follows_camera(
 pub fn startup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     let mesh = meshes.add(Capsule3d::new(0.5, 1.));
     commands.spawn((Player, Mesh3d(mesh)));
-}
-
-impl Plugin for PlayerPlugin {
-    fn build(&self, app: &mut App) {
-        // app.add_systems(Startup, startup);
-        if self.enable_flycam {
-            app.add_plugins(bevy_flycam::PlayerPlugin)
-                .add_systems(Startup, spawn_light)
-                .add_systems(Update, light_follows_camera);
-        }
-    }
 }

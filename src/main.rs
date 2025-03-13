@@ -19,9 +19,7 @@ fn main() {
             ..Default::default()
         }),
         worldgen::WorldgenPlugin,
-        player::PlayerPlugin {
-            enable_flycam: true,
-        },
+        player::PlayerPlugin,
     ))
     .insert_resource(WorldgenPluginSettings {
         spawn_immediately: true,

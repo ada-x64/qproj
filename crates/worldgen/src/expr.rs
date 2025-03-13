@@ -7,12 +7,17 @@ use bevy::{
     prelude::*,
 };
 use noise::NoiseFn;
+use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
-#[derive(Asset, TypePath, Deref)]
+#[derive(Asset, TypePath, Deref, Clone)]
 pub struct Expr(noise_gui::Expr);
 
-pub type NoiseBox = Box<dyn NoiseFn<f64, 3>>;
+#[derive(Deref, DerefMut, Clone)]
+pub struct NoiseBox(pub Arc<Mutex<dyn TerrainNoise>>);
+
+pub trait TerrainNoise: NoiseFn<f64, 3> + Send + Sync {}
+impl<T> TerrainNoise for T where T: NoiseFn<f64, 3> + Send + Sync {}
 
 #[derive(Error, Debug)]
 pub enum ExprError {
