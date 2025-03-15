@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
-    expr::Expr,
+    generator::{ChunkGenerationData, Vec2i32},
     mesh::{gen_list, gen_normals, gen_uvs},
 };
 
@@ -51,45 +51,15 @@ pub enum ChunkError {
     AssetNotLoaded,
 }
 
-#[derive(Default, Serialize, Deserialize, Component)]
+#[derive(Default, Component)]
 pub struct Chunk {
-    pub x_offset: i32,
-    pub y_offset: i32,
+    pub pos: Vec2i32,
     pub size: usize,
     pub cells: Vec<Cell>,
 }
 
-#[derive(Clone)]
-pub struct ChunkGenerationData {
-    pub size: usize,
-    pub scale: f64,
-    pub max_elevation: f64,
-    pub expr: Expr,
-}
-impl ChunkGenerationData {
-    pub fn get_transform(&self, x: i32, y: i32) -> Transform {
-        Transform {
-            translation: Vec3::new(
-                (x * self.size as i32) as f32,
-                0.,
-                (y * self.size as i32) as f32,
-            ),
-            ..Default::default()
-        }
-    }
-}
-
 impl Chunk {
-    pub fn new(
-        // generator: &ChunkGenerator,
-        // generator_size: usize,
-        // scale: f64,
-        // max_elevation: f64,
-        // noise: &NoiseBox,
-        gen_data: ChunkGenerationData,
-        x_offset: i32,
-        y_offset: i32,
-    ) -> Self {
+    pub fn new(gen_data: ChunkGenerationData, pos: Vec2i32) -> Self {
         // accomodate for gap by adding +2
         // creates overlap but worth it for consistency
         let size = gen_data.size + 2;
@@ -98,8 +68,8 @@ impl Chunk {
             .map(|idx| {
                 let x = (idx % size) as i32;
                 let y = (idx / size) as i32;
-                let px = x + x_offset * gen_data.size as i32;
-                let py = y + y_offset * gen_data.size as i32;
+                let px = x + pos.x * gen_data.size as i32;
+                let py = y + pos.y * gen_data.size as i32;
                 let scale = gen_data.scale;
                 let point = [px as f64 * scale, py as f64 * scale, 0.];
                 let elevation = noise.get(point) * gen_data.max_elevation;
@@ -109,12 +79,7 @@ impl Chunk {
                 }
             })
             .collect_vec();
-        Self {
-            x_offset,
-            y_offset,
-            cells,
-            size,
-        }
+        Self { pos, cells, size }
     }
     pub fn positions(&self) -> Vec<Vec3> {
         self.cells

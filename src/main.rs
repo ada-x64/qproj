@@ -6,7 +6,22 @@ use bevy::{
     log::{tracing_subscriber::EnvFilter, LogPlugin},
     prelude::*,
 };
-use worldgen::WorldgenPluginSettings;
+use player::{bevy_flycam::FlyCam, Player};
+use worldgen::{util::SpawnAroundTracker, WorldgenPluginSettings};
+
+fn setup(
+    mut commands: Commands,
+    mut query: Single<(&mut Transform, Entity), With<FlyCam>>,
+) {
+    commands.entity(query.1).insert((
+        Player,
+        SpawnAroundTracker,
+        Name::new("Player"),
+    ));
+    query.0.translation.y = 200.;
+    query.0.look_at(Vec3::ZERO, Vec3::Y);
+    debug!("Post setup! Added player and spawnaroundtracker");
+}
 
 #[bevy_main]
 fn main() {
@@ -24,7 +39,8 @@ fn main() {
     .insert_resource(WorldgenPluginSettings {
         spawn_immediately: true,
         use_debug_colors: cfg!(feature = "debug"),
-    });
+    })
+    .add_systems(PostStartup, setup);
 
     #[cfg(feature = "debug")]
     {
@@ -34,7 +50,7 @@ fn main() {
         debug!("DEBUG_LEVEL = {debug_level:?}");
         app.add_plugins(DebugPlugin {
             debug_level,
-            wireframes: true,
+            wireframes: false,
         });
     }
 

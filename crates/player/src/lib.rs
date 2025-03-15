@@ -3,6 +3,7 @@
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use bevy::prelude::*;
+pub use bevy_flycam;
 use bevy_flycam::FlyCam;
 #[cfg(feature = "debug")]
 use debug_gizmos::{DebugBundle, DebugLevel, ShowAxes};
