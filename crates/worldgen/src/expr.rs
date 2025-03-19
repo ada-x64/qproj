@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
 #[derive(Asset, TypePath, Deref, Clone)]
-pub struct Expr(noise_gui::Expr);
+pub struct Expr(pub noise_gui::Expr);
 
 #[derive(Deref, DerefMut, Clone)]
 pub struct NoiseBox(pub Arc<Mutex<dyn TerrainNoise>>);

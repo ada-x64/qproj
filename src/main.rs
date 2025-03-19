@@ -26,6 +26,7 @@ fn setup(
 #[bevy_main]
 fn main() {
     let mut app = App::new();
+    debug!("MAIN");
 
     // use RUST_LOG
     app.add_plugins((

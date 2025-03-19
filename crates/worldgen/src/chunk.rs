@@ -8,7 +8,9 @@ use bevy::{
     render::mesh::{Indices, PrimitiveTopology},
 };
 use itertools::Itertools;
+use meshopt::{SimplifyOptions, VertexDataAdapter};
 use serde::{Deserialize, Serialize};
+use std::mem::offset_of;
 use thiserror::Error;
 
 use crate::{
@@ -56,10 +58,11 @@ pub struct Chunk {
     pub pos: Vec2i32,
     pub size: usize,
     pub cells: Vec<Cell>,
+    pub lod: f32,
 }
 
 impl Chunk {
-    pub fn new(gen_data: ChunkGenerationData, pos: Vec2i32) -> Self {
+    pub fn new(gen_data: ChunkGenerationData, pos: Vec2i32, lod: f32) -> Self {
         // accomodate for gap by adding +2
         // creates overlap but worth it for consistency
         let size = gen_data.size + 2;
@@ -79,39 +82,79 @@ impl Chunk {
                 }
             })
             .collect_vec();
-        Self { pos, cells, size }
+        Self {
+            pos,
+            cells,
+            size,
+            lod,
+        }
     }
-    pub fn positions(&self) -> Vec<Vec3> {
+    pub fn verts(&self) -> Vec<meshopt::Vertex> {
         self.cells
             .iter()
             .enumerate()
             .map(|(idx, c)| {
                 let x = idx % self.size;
                 let y = idx / self.size;
-                Vec3::new(x as f32, c.elevation as f32, y as f32)
+                meshopt::Vertex {
+                    p: [x as f32, c.elevation as f32, y as f32],
+                    ..Default::default()
+                }
             })
             .collect_vec()
     }
     pub fn to_mesh(&self) -> Mesh {
-        let positions = self.positions();
-        let indices = gen_list(self.size);
+        let verts = self.verts();
+        let mut indices = gen_list(self.size);
+
+        // TODO: Calling any meshopt FFI silently crashes the game on Windows.
+        // Do a windbg session on this.
+        let adapter = meshopt::VertexDataAdapter::new(
+            meshopt::typed_to_bytes(&verts),
+            std::mem::size_of::<meshopt::Vertex>(),
+            offset_of!(meshopt::Vertex, p),
+        )
+        .unwrap();
+        let verts = meshopt::optimize_vertex_fetch(&mut indices, &verts);
+        let indices = meshopt::simplify(
+            &indices,
+            &adapter,
+            (verts.len() as f32 * self.lod).round() as usize,
+            0.001,
+            SimplifyOptions::LockBorder,
+            None,
+        );
+        let verts = verts
+            .into_iter()
+            .map(|v| Vec3::from_array(v.p))
+            .collect_vec();
+
         Mesh::new(
             PrimitiveTopology::TriangleList,
             RenderAssetUsages::RENDER_WORLD,
         )
-        .with_inserted_attribute(
-            Mesh::ATTRIBUTE_COLOR,
-            (0..positions.len())
-                .map(|_| Color::hsv(0., 0., 0.75).to_linear().to_vec4())
-                .collect_vec(),
-        )
-        .with_inserted_attribute(
-            Mesh::ATTRIBUTE_NORMAL,
-            gen_normals(&positions, &indices),
-        )
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, verts)
         .with_inserted_indices(Indices::U32(indices))
         .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, gen_uvs(self.size))
-        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, positions)
-        // .with_generated_tangents()
+        .with_computed_smooth_normals()
+        .with_generated_tangents()
+        .expect("could not generate tangets")
     }
+}
+
+#[test]
+fn f() {
+    Chunk::new(
+        ChunkGenerationData {
+            expr: crate::expr::Expr(noise_gui::Expr::Value(
+                noise_gui::Variable::Anonymous(13),
+            )),
+            size: 32,
+            scale: 0.001,
+            max_elevation: 100.,
+        },
+        Vec2i32::new(0, 0),
+        1.,
+    )
+    .to_mesh();
 }

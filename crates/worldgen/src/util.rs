@@ -61,3 +61,10 @@ pub struct Initialized;
 
 #[derive(Component)]
 pub struct ComputeChunk(pub Task<CommandQueue>);
+
+pub fn euclidean_dist(p1: Vec2i32, p2: Vec2i32) -> f32 {
+    let dx = p1.x - p2.x;
+    let dy = p1.y - p2.y;
+    let sum = (dx * dx) + (dy * dy);
+    f32::sqrt(sum as f32)
+}

@@ -14,8 +14,8 @@ use expr::{Expr, ExprLoader};
 use generator::{ChunkGenerationData, ChunkGenerator, Vec2i32};
 use itertools::Itertools;
 use util::{
-    iter_radius_xy, iter_xy, Callback, CallbackTriggered, ComputeChunk,
-    Initialized, SpawnAround, SpawnAroundTracker, Terrain,
+    euclidean_dist, iter_radius_xy, iter_xy, Callback, CallbackTriggered,
+    ComputeChunk, Initialized, SpawnAround, SpawnAroundTracker, Terrain,
 };
 pub mod chunk;
 mod expr;
@@ -98,7 +98,7 @@ impl WorldgenPlugin {
         task_child_id: Entity,
     ) -> CommandQueue {
         let transform = data.get_transform(pos);
-        let chunk = Chunk::new(data, pos);
+        let chunk = Chunk::new(data, pos, 1.);
         let mesh = chunk.to_mesh();
         // debug!("MADE CHUNK AT ({pos})");
         let mut command_queue = CommandQueue::default();
@@ -118,8 +118,9 @@ impl WorldgenPlugin {
                     chunk,
                     Visibility::Visible,
                     Name::new(format!("chunk ({pos})")),
+                    Mesh3d(mesh),
+                    MeshMaterial3d(default_material),
                 ))
-                .with_child((Mesh3d(mesh), MeshMaterial3d(default_material)))
                 .id();
 
             let terrain_id = world
@@ -146,42 +147,44 @@ impl WorldgenPlugin {
         exprs: Res<Assets<Expr>>,
         chunks: Query<(Entity, &Chunk)>,
     ) {
-        // debug!("SPAWN_AROUND");
         if generator.terrain_entt.is_none() {
             warn!("Tried to spawn_around when terrain_entt is none!");
             return;
         }
-        let radius = generator.active_radius;
-        // TODO:
-        // want to zip up two vecs,
-        // one with chunks to despawn and one with chunks to spawn
-        // the rest are ignored
-        // do this by zipping up the iter_radius_xy iter with
-        // the chunk query and filter_mapping so that you get
-        // the required values
-        let mut to_populate = iter_xy(radius, trigger.pos)
-            .sorted_by(|pos1, pos2| {
-                let (px1, py1) = (pos1.x, pos1.y);
-                let (px2, py2) = (pos2.x, pos2.y);
-                let (tx, ty) = (trigger.pos.x, trigger.pos.y);
-                let dist1 = px1 * px1 + py1 * py1 - tx * tx - ty * ty;
-                let dist2 = px2 * px2 + py2 * py2 - tx * tx - ty * ty;
-                std::cmp::Ord::cmp(&dist1, &dist2)
+        let mut to_populate = iter_xy(generator.active_radius, trigger.pos)
+            .sorted_by(|p1, p2| {
+                let d1 = euclidean_dist(*p1, trigger.pos);
+                let d2 = euclidean_dist(*p2, trigger.pos);
+                std::cmp::PartialOrd::partial_cmp(&d1, &d2).unwrap()
             })
             .collect_vec();
-        let to_delete = chunks.iter().filter_map(|(entt, chunk)| {
+        let to_modify = chunks.iter().filter_map(|(entt, chunk)| {
             if let Some((idx, _pos)) =
                 to_populate.iter().find_position(|pos| **pos == chunk.pos)
             {
                 to_populate.swap_remove(idx);
-                None
+                let dist = euclidean_dist(chunk.pos, trigger.pos);
+                if dist > generator.lod_cutoff as f32 {
+                    Some((entt, chunk, Some(dist)))
+                } else {
+                    None
+                }
             } else {
-                Some(entt)
+                Some((entt, chunk, None))
             }
         });
 
-        to_delete.for_each(|chunk| {
-            commands.entity(chunk).despawn_recursive();
+        let pool = AsyncComputeTaskPool::get();
+        to_modify.for_each(|(entt, chunk, maybe_dist)| {
+            if let Some(dist) = maybe_dist {
+                // generator.get_data(&exprs);
+                // pool.spawn(|| {
+                //     commands.entity(entt).remove::<Mesh3d>().insert();
+                // })
+                // TODO
+            } else {
+                commands.entity(entt).despawn_recursive();
+            }
         });
 
         to_populate.into_iter().for_each(|pos| {
@@ -190,7 +193,6 @@ impl WorldgenPlugin {
                 .expect("Couldn't create generator data");
             let mut task_child = commands.spawn_empty();
             let task_child_id = task_child.id();
-            let pool = AsyncComputeTaskPool::get();
             let task = pool.spawn(Self::spawn_chunk(pos, data, task_child_id));
             task_child.insert(ComputeChunk(task));
             let terrain = generator.terrain_entt.expect("No terrain entity!");

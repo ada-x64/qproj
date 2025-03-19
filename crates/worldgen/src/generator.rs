@@ -2,10 +2,11 @@
 // ┏┓┏┓┏┓┏┓┓
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
-use bevy::{prelude::*, utils::HashMap};
+use bevy::{math::ops::powf, prelude::*, utils::HashMap};
+#[cfg(feature = "inspector")]
 use bevy_inspector_egui::prelude::*;
 
-use crate::expr::Expr;
+use crate::{expr::Expr, util::euclidean_dist};
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash, Reflect)]
 pub struct Vec2i32 {
@@ -53,6 +54,14 @@ pub struct ChunkGenerator {
     pub scaling_factor: f64,
     /// A noise_expr Expr which generates the terrain.
     pub expr: Option<Handle<Expr>>,
+
+    /// How quickly the LOD decreases.
+    /// Formula: `size / lod_scale^(dist - lod_cutoff)`
+    pub lod_scale: f32,
+    /// How many chunks from the player character the LOD begins to decay.
+    /// Formula: `size / lod_scale^(dist - lod_cutoff)`
+    pub lod_cutoff: i32,
+
     pub default_material: Option<Handle<StandardMaterial>>,
     pub terrain_entt: Option<Entity>,
     pub current_chunk: Option<Vec2i32>,
@@ -66,9 +75,11 @@ impl Default for ChunkGenerator {
             max_elevation: 100.,
             active_radius: 4,
             scaling_factor: 0.001,
-            size: 32,
+            size: 64,
             seed: 0,
             current_chunk: None,
+            lod_scale: 1.5,
+            lod_cutoff: 2,
         }
     }
 }
@@ -90,6 +101,14 @@ impl ChunkGenerator {
         let x = (pos.x.round() / self.size as f32) as i32;
         let y = (pos.y.round() / self.size as f32) as i32;
         Vec2i32::new(x, y)
+    }
+    /// Calculates the number of vertices given the distance from the player.
+    pub fn get_num_verts(&self, dist: i32) -> usize {
+        if dist > self.lod_cutoff {
+            self.size / (2 * (dist - self.lod_cutoff)) as usize
+        } else {
+            1
+        }
     }
 }
 
