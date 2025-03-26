@@ -68,3 +68,11 @@ pub fn euclidean_dist(p1: Vec2i32, p2: Vec2i32) -> f32 {
     let sum = (dx * dx) + (dy * dy);
     f32::sqrt(sum as f32)
 }
+
+/// Triggers when the terrain struct has been initialized with its assets
+#[derive(Event)]
+pub struct TerrainIntialized;
+
+/// Triggers when all chunks to be updated or spawned in `spawnAround` are complete
+#[derive(Event)]
+pub struct ChunksLoaded;

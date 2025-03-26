@@ -3,21 +3,19 @@
 #  ┗┫┣┛┛ ┗┛┃
 # --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 [package]
-name = "debug_gizmos" 
+name = "debug_gizmos"
 version = "0.1.0"
 publish = false
-authors = ["<phoenix.mandala@pm.me>"] 
-edition = "2021"
+authors = ["<phoenix.mandala@pm.me>"]
+edition = "2024"
 
 [features]
-dev = [
-    "bevy/dynamic_linking",
-]
+dev = ["bevy/dynamic_linking"]
 
 [dependencies]
-bevy = {workspace =  true, features=["bevy_dev_tools"]}
-bevy_kira_audio = {workspace = true}
-bevy_asset_loader = {workspace = true}
-rand = {workspace = true}
-itertools = {workspace = true}
-log = {workspace = true}
+bevy = { workspace = true, features = ["bevy_dev_tools"] }
+bevy_kira_audio = { workspace = true }
+bevy_asset_loader = { workspace = true }
+rand = { workspace = true }
+itertools = { workspace = true }
+log = { workspace = true }

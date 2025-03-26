@@ -2,5 +2,6 @@
 #  ┏┓┏┓┏┓┏┓┓
 #  ┗┫┣┛┛ ┗┛┃
 # --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
-wrap_comments = true
-max_width = 80
+[toolchain]
+channel = "stable"
+targets = ["x86_64-pc-windows-gnu", "x86_64-unknown-linux-gnu"]

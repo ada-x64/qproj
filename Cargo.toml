@@ -7,7 +7,7 @@ name = "bevy_game"
 version = "0.1.0"
 publish = false
 authors = ["<phoenix.mandala@pm.me>"]
-edition = "2021"
+edition = "2024"
 
 [workspace]
 members = ["crates/*"]
@@ -93,6 +93,7 @@ worldgen = { path = "crates/worldgen" }
 debug_gizmos = { path = "crates/debug" }
 player = { path = "crates/player" }
 inspector = { path = "crates/inspector" }
+avian3d = "0.2"
 
 
 [dependencies]
@@ -102,6 +103,7 @@ bevy_asset_loader = { workspace = true }
 rand = { workspace = true }
 itertools = { workspace = true }
 log = { workspace = true }
+avian3d = { workspace = true }
 # keep the following in sync with Bevy's dependencies
 winit = { version = "0.30", default-features = false }
 image = { version = "0.25", default-features = false }

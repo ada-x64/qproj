@@ -1,6 +1,11 @@
 {
   "rust-analyzer.cargo.features": [
-    "debug", "dev", "inspector"
+    "debug", "inspector"
   ],
   "rust-analyzer.cargo.target": "x86_64-pc-windows-gnu",
+  "rust-analyzer.check.command": "clippy",
+  "rust-analyzer.check.extraArgs": [
+    "--no-deps",
+    "--locked",
+  ],
 }

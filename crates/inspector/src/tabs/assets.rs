@@ -32,7 +32,7 @@ pub fn render_tab(
 
         ui.collapsing(format!("{asset_name} ({})", handles.len()), |ui| {
             for handle in handles {
-                let selected = match *tab_viewer.selection {
+                let selected = match tab_viewer.selection {
                     InspectorSelection::Asset(_, _, selected_id) => {
                         selected_id == handle
                     }
@@ -43,7 +43,7 @@ pub fn render_tab(
                     .selectable_label(selected, format!("{:?}", handle))
                     .clicked()
                 {
-                    *tab_viewer.selection = InspectorSelection::Asset(
+                    tab_viewer.selection = InspectorSelection::Asset(
                         asset_type_id,
                         asset_name.to_string(),
                         handle,

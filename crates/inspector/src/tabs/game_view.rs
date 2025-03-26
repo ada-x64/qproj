@@ -3,14 +3,21 @@
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use bevy::{prelude::*, render::camera::Viewport, window::PrimaryWindow};
-use bevy_egui::{egui, EguiContextSettings};
+use bevy_egui::{EguiContextSettings, egui};
 
 use crate::state::UiState;
 
 use super::TabViewer;
 
 pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
-    *viewer.viewport_rect = ui.clip_rect();
+    let enabled = viewer.enabled();
+    let btn_text = if enabled { "▶️" } else { "⏹️" };
+    ui.horizontal(|ui| {
+        if ui.add(egui::Button::new(btn_text)).clicked() {
+            viewer.set_enabled(!enabled);
+        }
+    });
+    viewer.viewport_rect = ui.clip_rect();
 }
 
 #[derive(Component)]
@@ -57,5 +64,7 @@ pub fn set_camera_viewport(
             physical_size,
             depth: 0.0..1.0,
         });
+    } else {
+        warn!("Attempted to set camera viewport beyond render target size.")
     }
 }

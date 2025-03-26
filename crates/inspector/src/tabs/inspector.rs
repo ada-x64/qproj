@@ -17,8 +17,9 @@ pub fn render_tab(
     ui: &mut egui::Ui,
     type_registry: &TypeRegistry,
 ) {
-    match *viewer.selection {
+    match viewer.state.selection {
         InspectorSelection::Entities => match viewer
+            .state
             .selected_entities
             .as_slice()
         {

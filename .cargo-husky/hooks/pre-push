@@ -1,5 +1,10 @@
 #!/bin/sh
 
+. ./.env
+
 ./scripts/headers.sh
-cargo clippy
+if [ "$(git branch --show-current)" != "master" ]; then
+  ALLOWED="-A unused -A unused_dependencies -A dead_code"
+fi
+cargo clippy --no-deps --locked --workspace -F debug -F inspector -- $ALLOWED
 cargo fmt -- --check
