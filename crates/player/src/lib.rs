@@ -6,8 +6,6 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_tnua::prelude::*;
 use bevy_tnua_avian3d::{TnuaAvian3dPlugin, TnuaAvian3dSensorShape};
-#[cfg(feature = "debug")]
-use debug_gizmos::{DebugBundle, DebugLevel, ShowAxes};
 use worldgen::util::SpawnAroundTracker;
 
 #[derive(Component, Default, Debug)]
