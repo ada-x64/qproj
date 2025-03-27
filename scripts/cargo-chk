@@ -1,0 +1,10 @@
+#!/bin/bash
+
+. ./.env
+
+CHECK="--check"
+if [[ $* == *--fix*  ]]; then FIX="--fix"; CHECK=""; fi
+
+./scripts/headers.sh
+cargo clippy --no-deps --locked --workspace -F debug -F inspector $FIX -- $ALLOWED
+cargo fmt -- $CHECK
