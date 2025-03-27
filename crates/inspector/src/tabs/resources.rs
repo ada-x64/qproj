@@ -27,13 +27,13 @@ pub fn render_tab(
     resources.sort_by(|(name_a, _), (name_b, _)| name_a.cmp(name_b));
 
     for (resource_name, type_id) in resources {
-        let selected = match *tab_viewer.selection {
+        let selected = match tab_viewer.selection {
             InspectorSelection::Resource(selected, _) => selected == type_id,
             _ => false,
         };
 
         if ui.selectable_label(selected, resource_name).clicked() {
-            *tab_viewer.selection = InspectorSelection::Resource(
+            tab_viewer.selection = InspectorSelection::Resource(
                 type_id,
                 resource_name.to_string(),
             );

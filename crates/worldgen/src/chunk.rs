@@ -8,14 +8,14 @@ use bevy::{
     render::mesh::{Indices, PrimitiveTopology},
 };
 use itertools::Itertools;
-use meshopt::{SimplifyOptions, VertexDataAdapter};
+use meshopt::SimplifyOptions;
 use serde::{Deserialize, Serialize};
 use std::mem::offset_of;
 use thiserror::Error;
 
 use crate::{
     generator::{ChunkGenerationData, Vec2i32},
-    mesh::{gen_list, gen_normals, gen_uvs},
+    mesh::{gen_list, gen_uvs},
 };
 
 #[derive(Default, Serialize, Deserialize)]
@@ -65,7 +65,7 @@ impl Chunk {
     pub fn new(gen_data: ChunkGenerationData, pos: Vec2i32, lod: f32) -> Self {
         // accomodate for gap by adding +2
         // creates overlap but worth it for consistency
-        let size = gen_data.size + 2;
+        let size = gen_data.size + 1;
         let noise = gen_data.expr.noise();
         let cells = (0..(usize::pow(size, 2)))
             .map(|idx| {

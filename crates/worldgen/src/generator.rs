@@ -2,11 +2,11 @@
 // ┏┓┏┓┏┓┏┓┓
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
-use bevy::{math::ops::powf, prelude::*, utils::HashMap};
+use bevy::prelude::*;
 #[cfg(feature = "inspector")]
 use bevy_inspector_egui::prelude::*;
 
-use crate::{expr::Expr, util::euclidean_dist};
+use crate::expr::Expr;
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash, Reflect)]
 pub struct Vec2i32 {

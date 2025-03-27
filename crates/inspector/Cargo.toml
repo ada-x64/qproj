@@ -3,23 +3,23 @@
 #  ┗┫┣┛┛ ┗┛┃
 # --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 [package]
-name = "inspector" 
+name = "inspector"
 version = "0.1.0"
 publish = false
-authors = ["<phoenix.mandala@pm.me>"] 
-edition = "2021"
+authors = ["<phoenix.mandala@pm.me>"]
+edition = "2024"
 
 [features]
-dev = [
-    "bevy/dynamic_linking",
-]
+dev = ["bevy/dynamic_linking"]
 debug = []
 
 [dependencies]
-bevy = {workspace =  true, features=["bevy_dev_tools"]}
-bevy_asset_loader = {workspace = true}
-log = {workspace = true}
-bevy-inspector-egui={workspace = true}
+bevy = { workspace = true, features = ["bevy_dev_tools"] }
+bevy_asset_loader = { workspace = true }
+log = { workspace = true }
+bevy-inspector-egui = { workspace = true }
+avian3d = { workspace = true }
 # bevy-inspector-egui uses egui v0.30
 bevy_egui = "0.32.0"
 egui_dock = "0.15.0"
+bevy_flycam = "0.15"

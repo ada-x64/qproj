@@ -2,10 +2,11 @@
 // ┏┓┏┓┏┓┏┓┓
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
+use avian3d::prelude::*;
 use bevy::{
     ecs::world::CommandQueue,
     prelude::*,
-    tasks::{block_on, futures_lite::future, AsyncComputeTaskPool},
+    tasks::{AsyncComputeTaskPool, block_on, futures_lite::future},
 };
 #[cfg(feature = "inspector")]
 use bevy_inspector_egui::InspectorOptions;
@@ -14,8 +15,8 @@ use expr::{Expr, ExprLoader};
 use generator::{ChunkGenerationData, ChunkGenerator, Vec2i32};
 use itertools::Itertools;
 use util::{
-    euclidean_dist, iter_radius_xy, iter_xy, Callback, CallbackTriggered,
-    ComputeChunk, Initialized, SpawnAround, SpawnAroundTracker, Terrain,
+    Callback, CallbackTriggered, ComputeChunk, Initialized, SpawnAround,
+    SpawnAroundTracker, Terrain, TerrainIntialized, euclidean_dist, iter_xy,
 };
 pub mod chunk;
 mod expr;
@@ -40,6 +41,7 @@ impl WorldgenPlugin {
         mut generator: ResMut<ChunkGenerator>,
         mut materials: ResMut<Assets<StandardMaterial>>,
         mut commands: Commands,
+        // settings: Res<WorldgenPluginSettings>,
     ) {
         let expr = assets.load("terrain/complex-planet.terrain.ron");
         generator.expr = Some(expr);
@@ -78,6 +80,7 @@ impl WorldgenPlugin {
             commands
                 .entity(generator.terrain_entt.unwrap())
                 .insert(Initialized);
+            commands.trigger(TerrainIntialized);
             debug!("TERRAIN INITIALIZED");
         }
     }
@@ -120,6 +123,7 @@ impl WorldgenPlugin {
                     Name::new(format!("chunk ({pos})")),
                     Mesh3d(mesh),
                     MeshMaterial3d(default_material),
+                    RigidBody::Static,
                 ))
                 .id();
 
@@ -175,8 +179,8 @@ impl WorldgenPlugin {
         });
 
         let pool = AsyncComputeTaskPool::get();
-        to_modify.for_each(|(entt, chunk, maybe_dist)| {
-            if let Some(dist) = maybe_dist {
+        to_modify.for_each(|(entt, _chunk, maybe_dist)| {
+            if let Some(_dist) = maybe_dist {
                 // generator.get_data(&exprs);
                 // pool.spawn(|| {
                 //     commands.entity(entt).remove::<Mesh3d>().insert();
@@ -203,12 +207,9 @@ impl WorldgenPlugin {
     fn trigger_spawn_around(
         mut commands: Commands,
         mut generator: ResMut<ChunkGenerator>,
-        tf: Single<(&SpawnAroundTracker, &Transform)>,
-        terrain: Query<&Terrain, With<Initialized>>,
+        tf: Query<(&SpawnAroundTracker, &Transform)>,
     ) {
-        if terrain.get_single().is_err() {
-            return;
-        }
+        let Ok(tf) = tf.get_single() else { return };
         let pos = generator.world_pos_to_chunk_pos(tf.1.translation.xz());
         let trigger = generator.current_chunk.map(|c| pos != c).unwrap_or(true);
         if trigger {

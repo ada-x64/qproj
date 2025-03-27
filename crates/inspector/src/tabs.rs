@@ -4,11 +4,12 @@
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use bevy::prelude::*;
 use bevy_egui::egui;
-use bevy_inspector_egui::bevy_inspector::hierarchy::{
-    hierarchy_ui, SelectedEntities,
-};
+use bevy_inspector_egui::bevy_inspector::hierarchy::hierarchy_ui;
 
-use crate::state::InspectorSelection;
+use crate::{
+    InspectorEnabled,
+    state::{InspectorSelection, UiState},
+};
 
 pub mod assets;
 pub mod game_view;
@@ -24,12 +25,25 @@ pub enum Tab {
     Assets,
     NoiseEditor,
 }
+
+#[derive(Deref, DerefMut)]
 pub struct TabViewer<'a> {
+    #[deref]
+    pub state: &'a mut UiState,
     pub world: &'a mut World,
-    pub selected_entities: &'a mut SelectedEntities,
-    pub selection: &'a mut InspectorSelection,
-    pub viewport_rect: &'a mut egui::Rect,
 }
+impl TabViewer<'_> {
+    pub fn enabled(&mut self) -> bool {
+        UiState::enabled(self.world)
+    }
+    pub fn set_enabled(&mut self, val: bool) {
+        self.world
+            .query::<&mut InspectorEnabled>()
+            .single_mut(self.world)
+            .0 = val;
+    }
+}
+
 impl egui_dock::TabViewer for TabViewer<'_> {
     type Tab = Tab;
 
@@ -48,10 +62,13 @@ impl egui_dock::TabViewer for TabViewer<'_> {
             Tab::GameView => game_view::render_tab(self, ui),
             Tab::Inspector => inspector::render_tab(self, ui, &type_registry),
             Tab::Hierarchy => {
-                let selected =
-                    hierarchy_ui(self.world, ui, self.selected_entities);
+                let selected = hierarchy_ui(
+                    self.world,
+                    ui,
+                    &mut self.state.selected_entities,
+                );
                 if selected {
-                    *self.selection = InspectorSelection::Entities;
+                    self.selection = InspectorSelection::Entities;
                 }
             }
             Tab::Resources => resources::render_tab(self, ui, &type_registry),

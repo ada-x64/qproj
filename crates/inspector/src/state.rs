@@ -4,12 +4,18 @@
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use std::any::TypeId;
 
-use bevy::{asset::UntypedAssetId, prelude::*};
-use bevy_egui::egui;
+use bevy::{
+    asset::{LoadedFolder, UntypedAssetId},
+    prelude::*,
+};
+use bevy_egui::egui::{self};
 use bevy_inspector_egui::bevy_inspector::hierarchy::SelectedEntities;
-use egui_dock::{DockArea, DockState, NodeIndex, Style};
+use egui_dock::{DockArea, NodeIndex, Style};
 
-use crate::tabs::{Tab, TabViewer};
+use crate::{
+    InspectorEnabled,
+    tabs::{Tab, TabViewer},
+};
 
 #[derive(Eq, PartialEq)]
 pub enum InspectorSelection {
@@ -18,24 +24,16 @@ pub enum InspectorSelection {
     Asset(TypeId, String, UntypedAssetId),
 }
 
-#[derive(Resource)]
-pub struct UiState {
-    // Idea:
-    // As long as the inspector is open, the game is in InspectorMode.
-    // Game time is paused and main systems are suspended.
-    // Once the user hits "play" the ui will either become disabled or
-    // the gameview tab will go fullscreen until the simulation is stopped with ESC.
-    // This is basically how it is with Unity.
-    // InspectorCamera is a flycam.
-    // Will need to switch between game states in the main application.
-    pub inspector_enabled: bool,
-    pub dock_state: DockState<Tab>,
-    pub viewport_rect: egui::Rect,
-    pub selection: InspectorSelection,
-    pub selected_entities: SelectedEntities,
+#[derive(Resource, Deref, DerefMut)]
+pub struct DockState(egui_dock::DockState<Tab>);
+impl DockState {
+    pub fn new(tabs: Vec<Tab>) -> Self {
+        Self(egui_dock::DockState::new(tabs))
+    }
 }
-impl UiState {
-    pub fn new() -> Self {
+impl Default for DockState {
+    fn default() -> Self {
+        // TODO ? Load layout from disk
         // Set up dock tree.
         let mut dock_state =
             DockState::new(vec![Tab::GameView, Tab::NoiseEditor]);
@@ -49,30 +47,42 @@ impl UiState {
             0.8,
             vec![Tab::Resources, Tab::Assets],
         );
-
-        Self {
-            inspector_enabled: true,
-            dock_state,
-            viewport_rect: egui::Rect::NOTHING,
-            selection: InspectorSelection::Entities,
-            selected_entities: SelectedEntities::default(),
-        }
-    }
-    pub fn ui(&mut self, world: &mut World, ctx: &mut egui::Context) {
-        let mut tab_viewer = TabViewer {
-            world,
-            viewport_rect: &mut self.viewport_rect,
-            selected_entities: &mut self.selected_entities,
-            selection: &mut self.selection,
-        };
-        DockArea::new(&mut self.dock_state)
-            .style(Style::from_egui(ctx.style().as_ref()))
-            .show(ctx, &mut tab_viewer);
+        dock_state
     }
 }
 
-impl Default for UiState {
-    fn default() -> Self {
-        Self::new()
+#[derive(Resource)]
+pub struct UiState {
+    // Idea:
+    // As long as the inspector is open, the game is in InspectorMode.
+    // Game time is paused and main systems are suspended.
+    // Once the user hits "play" the ui will either become disabled or
+    // the gameview tab will go fullscreen until the simulation is stopped with ESC.
+    // This is basically how it is with Unity.
+    // InspectorCamera is a flycam.
+    // Will need to switch between game states in the main application.
+    pub viewport_rect: egui::Rect,
+    pub selection: InspectorSelection,
+    pub selected_entities: SelectedEntities,
+    pub assets: Handle<LoadedFolder>,
+}
+impl UiState {
+    pub fn new(assets: Handle<LoadedFolder>) -> Self {
+        Self {
+            viewport_rect: egui::Rect::NOTHING,
+            selection: InspectorSelection::Entities,
+            selected_entities: SelectedEntities::default(),
+            assets,
+        }
+    }
+    pub fn ui(&mut self, world: &mut World, ctx: &mut egui::Context) {
+        world.resource_scope::<DockState, _>(|world, mut dock_state| {
+            DockArea::new(&mut dock_state.0)
+                .style(Style::from_egui(ctx.style().as_ref()))
+                .show(ctx, &mut TabViewer { state: self, world });
+        });
+    }
+    pub fn enabled(world: &mut World) -> bool {
+        world.query::<&InspectorEnabled>().single(world).0
     }
 }

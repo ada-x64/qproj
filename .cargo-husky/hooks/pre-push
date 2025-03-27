@@ -1,5 +1,6 @@
 #!/bin/sh
 
-./scripts/headers.sh
-cargo clippy
-cargo fmt -- --check
+if [ "$(git branch --show-current)" != "master" ]; then
+  ALLOWED="-A unused -A unused_imports -A dead_code"
+fi
+$ALLOWED ./scripts/cargo-chk

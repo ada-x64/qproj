@@ -3,25 +3,28 @@
 #  ┗┫┣┛┛ ┗┛┃
 # --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 [package]
-name = "player" 
+name = "player"
 version = "0.1.0"
 publish = false
-authors = ["<phoenix.mandala@pm.me>"] 
-edition = "2021"
+authors = ["<phoenix.mandala@pm.me>"]
+edition = "2024"
 
 [features]
 debug = ["debug_gizmos"]
 dev = ["bevy/dynamic_linking"]
 
 [dependencies]
-bevy = {workspace = true}
+bevy = { workspace = true }
 serde = { version = "1.0.217", features = ["derive"] }
-rand = {workspace = true}
-itertools = {workspace = true}
-log = {workspace = true}
+rand = { workspace = true }
+itertools = { workspace = true }
+log = { workspace = true }
 serde_json = "1.0.138"
-debug_gizmos = {workspace = true, optional = true}
-anyhow = {workspace = true}
-derivative = {workspace = true}
-thiserror = {workspace = true}
-bevy_flycam = "0.15.0"
+debug_gizmos = { workspace = true, optional = true }
+anyhow = { workspace = true }
+derivative = { workspace = true }
+thiserror = { workspace = true }
+avian3d = { workspace = true }
+bevy-tnua-avian3d = "0.3.1"
+bevy-tnua = "0.22"
+worldgen = { workspace = true }
