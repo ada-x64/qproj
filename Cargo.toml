@@ -37,7 +37,7 @@ strip = true
 [features]
 dev = ["bevy/dynamic_linking"]
 debug = ["debug_gizmos", "worldgen/debug", "bevy/bevy_dev_tools"]
-inspector = ["dep:inspector", "worldgen/inspector"]
+inspector = ["dep:inspector", "worldgen/inspector", "player/inspector"]
 
 # All of Bevy's default features exept for the audio related ones (bevy_audio, vorbis), since they clash with bevy_kira_audio
 #   and android_shared_stdcxx/android-game-activity, since those are covered in `mobile`
@@ -88,15 +88,17 @@ derivative = "2.2.0"
 anyhow = "1.0.97"
 thiserror = "2.0.12"
 bevy-inspector-egui = "0.29"
-## workspace crates
+avian3d = "0.2"
+
+## crates in the workspace
 worldgen = { path = "crates/worldgen" }
 debug_gizmos = { path = "crates/debug" }
 player = { path = "crates/player" }
 inspector = { path = "crates/inspector" }
-avian3d = "0.2"
 
 
 [dependencies]
+# general deps
 bevy = { workspace = true }
 bevy_kira_audio = { workspace = true }
 bevy_asset_loader = { workspace = true }
@@ -104,6 +106,7 @@ rand = { workspace = true }
 itertools = { workspace = true }
 log = { workspace = true }
 avian3d = { workspace = true }
+
 # keep the following in sync with Bevy's dependencies
 winit = { version = "0.30", default-features = false }
 image = { version = "0.25", default-features = false }
