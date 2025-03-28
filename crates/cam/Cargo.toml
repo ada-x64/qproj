@@ -3,16 +3,16 @@
 #  ┗┫┣┛┛ ┗┛┃
 # --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 [package]
-name = "player"
+name = "cam"
 version = "0.1.0"
 publish = false
 authors = ["<phoenix.mandala@pm.me>"]
 edition = "2024"
 
 [features]
-debug = ["debug_gizmos"]
+debug = []                     # debug_gizmos
 dev = ["bevy/dynamic_linking"]
-inspector = ["dep:inspector"]
+inspector = []                 # dep:inspector
 
 [dependencies]
 bevy = { workspace = true }
@@ -21,9 +21,3 @@ log = { workspace = true }
 anyhow = { workspace = true }
 derivative = { workspace = true }
 thiserror = { workspace = true }
-avian3d = { workspace = true }
-debug_gizmos = { workspace = true, optional = true }
-bevy-tnua-avian3d = "0.3.1"
-bevy-tnua = "0.22"
-worldgen = { workspace = true }
-inspector = { workspace = true, optional = true }

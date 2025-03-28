@@ -113,17 +113,19 @@ impl WorldgenPlugin {
                 .clone()
                 .expect("default_material was none!");
 
-            let mesh = world.resource_mut::<Assets<Mesh>>().add(mesh);
-
+            let collider = Collider::trimesh_from_mesh(&mesh)
+                .expect("Could not create chunk collider");
+            let mesh_handle = world.resource_mut::<Assets<Mesh>>().add(mesh);
             let chunk_entt = world
                 .spawn((
                     transform,
                     chunk,
                     Visibility::Visible,
-                    Name::new(format!("chunk ({pos})")),
-                    Mesh3d(mesh),
-                    MeshMaterial3d(default_material),
+                    Name::new(format!("chunk {pos}")),
+                    collider,
                     RigidBody::Static,
+                    MeshMaterial3d(default_material),
+                    Mesh3d(mesh_handle),
                 ))
                 .id();
 
