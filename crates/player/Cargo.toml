@@ -12,20 +12,20 @@ edition = "2024"
 [features]
 debug = ["q_debug"]
 dev = ["bevy/dynamic_linking"]
+inspector = ["q_inspector"]
 
 [dependencies]
 bevy = { workspace = true }
-serde = { version = "1.0.217", features = ["derive"] }
-rand = { workspace = true }
 itertools = { workspace = true }
 log = { workspace = true }
-serde_json = "1.0.138"
 anyhow = { workspace = true }
 derivative = { workspace = true }
 thiserror = { workspace = true }
 avian3d = { workspace = true }
 bevy-tnua-avian3d = "0.3.1"
 bevy-tnua = "0.22"
+bevy_dolly = { workspace = true }
 
-q_worldgen = { workspace = true }
 q_debug = { workspace = true, optional = true }
+q_worldgen = { workspace = true }
+q_inspector = { workspace = true, optional = true }

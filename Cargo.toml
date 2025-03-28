@@ -3,7 +3,7 @@
 #  ┗┫┣┛┛ ┗┛┃
 # --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 [package]
-name = "bevy_game"
+name = "qproj"
 version = "0.1.0"
 publish = false
 authors = ["<phoenix.mandala@pm.me>"]
@@ -43,6 +43,9 @@ inspector = ["q_inspector", "q_worldgen/inspector"]
 # All of Bevy's default features exept for the audio related ones (bevy_audio, vorbis), since they clash with bevy_kira_audio
 #   and android_shared_stdcxx/android-game-activity, since those are covered in `mobile`
 [workspace.dependencies]
+
+meshopt = "0.4.1"
+
 bevy = { version = "0.15", default-features = false, features = [
     "animation",
     "bevy_asset",
@@ -91,8 +94,6 @@ thiserror = "2.0.12"
 bevy-inspector-egui = "0.29"
 avian3d = "0.2"
 bevy_dolly = "0.0.5"
-meshopt = "0.4.1"
-
 ## crates in the workspace
 q_worldgen = { path = "crates/worldgen" }
 q_debug = { path = "crates/debug" }
@@ -101,6 +102,7 @@ q_inspector = { path = "crates/inspector" }
 
 
 [dependencies]
+# general deps
 bevy = { workspace = true }
 bevy_kira_audio = { workspace = true }
 bevy_asset_loader = { workspace = true }
@@ -108,6 +110,7 @@ rand = { workspace = true }
 itertools = { workspace = true }
 log = { workspace = true }
 avian3d = { workspace = true }
+
 # keep the following in sync with Bevy's dependencies
 winit = { version = "0.30", default-features = false }
 image = { version = "0.25", default-features = false }

@@ -3,13 +3,10 @@
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use bevy::prelude::*;
-use bevy_egui::egui;
-use bevy_inspector_egui::bevy_inspector::hierarchy::hierarchy_ui;
+use bevy_egui::egui::{self, Id};
+use bevy_inspector_egui::bevy_inspector::{Filter, ui_for_entities_filtered};
 
-use crate::{
-    InspectorEnabled,
-    state::{InspectorSelection, UiState},
-};
+use crate::state::{InspectorState, UiState};
 
 pub mod assets;
 pub mod game_view;
@@ -38,9 +35,8 @@ impl TabViewer<'_> {
     }
     pub fn set_enabled(&mut self, val: bool) {
         self.world
-            .query::<&mut InspectorEnabled>()
-            .single_mut(self.world)
-            .0 = val;
+            .resource_mut::<NextState<InspectorState>>()
+            .set(val.into());
     }
 }
 
@@ -62,14 +58,22 @@ impl egui_dock::TabViewer for TabViewer<'_> {
             Tab::GameView => game_view::render_tab(self, ui),
             Tab::Inspector => inspector::render_tab(self, ui, &type_registry),
             Tab::Hierarchy => {
-                let selected = hierarchy_ui(
-                    self.world,
+                // let selected = hierarchy_ui(
+                //     self.world,
+                //     ui,
+                //     &mut self.state.selected_entities,
+                // );
+                // if selected {
+                //     self.selection = InspectorSelection::Entities;
+                // }
+                let filter = Filter::<With<Transform>>::from_ui_fuzzy(
                     ui,
-                    &mut self.state.selected_entities,
+                    Id::new("fuzzy-filter"),
                 );
-                if selected {
-                    self.selection = InspectorSelection::Entities;
-                }
+                ui_for_entities_filtered(self.world, ui, true, &filter);
+                // if selected {
+                //     self.selection = InspectorSelection::Entities;
+                // }
             }
             Tab::Resources => resources::render_tab(self, ui, &type_registry),
             Tab::Assets => assets::render_tab(self, ui, &type_registry),

@@ -14,7 +14,9 @@ temp = None
 try:
     temp = (
         subprocess.check_output(
-            "wslpath -au $(pwsh.exe -c 'echo $env:TEMP')", shell=True
+            "wslpath -au $(pwsh.exe -c 'echo $env:TEMP')",
+            shell=True,
+            stderr=subprocess.DEVNULL,
         )
         .decode("ascii")
         .replace("\r\n", "")
@@ -30,7 +32,15 @@ env_vars = {
     },
     "HOSTPATH": {
         "description": 'Directory for the final executable in "wslpath -au" style.',
-        "default": temp,
+        "default": temp or "",
+    },
+    "SYNC_HOST": {
+        "description": "Destination for the final executable. Must be in Unix format.",
+        "default": temp or "",
+    },
+    "SYNC_PING_ADDRESS": {
+        "description": "Websocket address to ping with list of transferred files.",
+        "default": None,
     },
     "CARGO_BUILD_TARGET": {
         "description": "Build target for Cargo.",
@@ -116,9 +126,11 @@ for key in env_vars:
     env_vars[key] = os.environ.get(key) or env_vars[key].get("default")
 
 pkg_name = "bevy_game"
+bin_name = "bevy_game.exe"
 with open("Cargo.toml", "rb") as f:
     toml = tomllib.load(f)
     pkg_name = toml.get("package").get("name")
+    bin_name = pkg_name + ".exe"
 
 profile = (
     "release"
@@ -209,6 +221,9 @@ else:
 
 
 # HASH #########################################################################
+hashfile_path = os.path.join(target_dir, ".hash")
+
+
 def do_hash(build_files):
     # generate checksum
     mismatched = ()
@@ -226,7 +241,6 @@ def do_hash(build_files):
                 hashfile += f"{path} {hash}\n"
 
     # check the checksum
-    hashfile_path = os.path.join(target_dir, ".hash")
     if os.path.exists(hashfile_path):
         with open(hashfile_path) as f:
             zipped = zip(hashfile.splitlines(), f.readlines())
@@ -256,37 +270,58 @@ def do_hash(build_files):
 
 # SYNC #########################################################################
 if not args.no_sync:
-    exec_path = os.path.join(target_dir, pkg_name + ".exe")
+    exec_path = os.path.join(target_dir, bin_name)
     build_files = [start_path, exec_path]
 
     if args.no_hash:
         print("Not hashing.")
-        mismatched = build_files
+        files_to_sync = build_files
         for root, subdirs, files in os.walk("assets"):
             for file in files:
                 path = os.path.join(root, file)
-                mismatched.append(path)
+                files_to_sync.append(path)
     else:
-        mismatched = do_hash(build_files)
+        files_to_sync = do_hash(build_files)
     if args.verbose > 1:
-        print("Mismatched files:", mismatched)
+        print("Mismatched files:", files_to_sync)
 
     # sync
-    for local_file in mismatched:
+    files_to_sync.append(hashfile_path)
+    destination = os.path.join(env_vars["HOSTPATH"], pkg_name)
+    sync_script = ""
+
+    for local_file in files_to_sync:
         remote_file = local_file.replace(target_dir + "/", "")
-        destination = os.path.join(env_vars["HOSTPATH"], pkg_name, remote_file)
+        filepath = os.path.join(destination, remote_file)
         if ssh_connection:
+            sync_script += f"mkdir {os.path.dirname(filepath)}\n"
+            sync_script += f"put -R {local_file} {filepath}\n"
+        else:
+            sync_script += f"mkdir -p {os.path.dirname(filepath)}\n"
+            sync_script += f"cp {local_file} {filepath}\n"
+
+    if ssh_connection:
+        host = env_vars["SYNC_HOST"]
+        if not host:
             user = os.environ.get("USER")
-            ssh_connection = ssh_connection.split()
+            ssh_connection = ssh_connection.split(" ")
             ip = ssh_connection[0]
             port = ssh_connection[1]
-            destination = f"scp://{user}@{ip}:{port}/{destination}"
-            print_and_run(
-                ["scp", env_vars["SCP_FLAGS"] or "", local_file, destination]
-            )
-        else:
-            print_and_run(["mkdir", "-p", os.path.dirname(destination)])
-            print_and_run(["cp", local_file, destination])
+            host = f"{user}@{ip}:{port}"
+
+        sync_script = f"sftp sftp://{host}/{env_vars["HOSTPATH"]} <<EOF\n{sync_script}\nEOF"
+        print_and_run(sync_script, True)
+    else:
+        print_and_run(["bash", "-c", sync_script])
+
+    if env_vars["SYNC_PING_ADDRESS"]:
+        remote_files = map(
+            lambda f: f.replace(target_dir + "/", ""), files_to_sync
+        )
+        print_and_run(
+            f'echo qproj sent {" ".join(remote_files)} | websocat {env_vars["SYNC_PING_ADDRESS"]}',
+            shell=True,
+        )
 else:
     print("Not syncing.")
 

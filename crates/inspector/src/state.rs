@@ -12,10 +12,28 @@ use bevy_egui::egui::{self};
 use bevy_inspector_egui::bevy_inspector::hierarchy::SelectedEntities;
 use egui_dock::{DockArea, NodeIndex, Style};
 
-use crate::{
-    InspectorEnabled,
-    tabs::{Tab, TabViewer},
-};
+use crate::tabs::{Tab, TabViewer};
+
+#[derive(States, Debug, Copy, Clone, PartialEq, Eq, Hash)]
+
+pub enum InspectorState {
+    /// Awaiting setup
+    Init,
+    /// Describes the UI state where: Inspector editing is active and the game is paused.
+    Enabled,
+    /// Describes the UI state where: Inspector editing is inactive and the game is being played.
+    Disabled,
+}
+impl From<bool> for InspectorState {
+    fn from(value: bool) -> Self {
+        if value { Self::Enabled } else { Self::Disabled }
+    }
+}
+impl From<InspectorState> for bool {
+    fn from(value: InspectorState) -> Self {
+        matches!(value, InspectorState::Enabled)
+    }
+}
 
 #[derive(Eq, PartialEq)]
 pub enum InspectorSelection {
@@ -83,6 +101,6 @@ impl UiState {
         });
     }
     pub fn enabled(world: &mut World) -> bool {
-        world.query::<&InspectorEnabled>().single(world).0
+        (*world.resource::<State<InspectorState>>().get()).into()
     }
 }

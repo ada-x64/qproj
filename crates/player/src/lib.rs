@@ -4,12 +4,22 @@
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use avian3d::prelude::*;
 use bevy::prelude::*;
+use bevy_dolly::prelude::*;
 use bevy_tnua::prelude::*;
 use bevy_tnua_avian3d::{TnuaAvian3dPlugin, TnuaAvian3dSensorShape};
 use q_worldgen::util::SpawnAroundTracker;
 
 #[derive(Component, Default, Debug)]
 pub struct Player;
+
+#[derive(SystemSet, Debug, Hash, Eq, PartialEq, Copy, Clone)]
+pub enum PlayerSet {
+    Active,
+    Inactive,
+}
+
+#[derive(Component, Default, Debug)]
+pub struct PlayerCam;
 
 pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
@@ -18,35 +28,16 @@ impl Plugin for PlayerPlugin {
             TnuaControllerPlugin::new(FixedUpdate),
             TnuaAvian3dPlugin::new(FixedUpdate),
         ))
-        .add_systems(Startup, startup)
         .add_systems(
             FixedUpdate,
             apply_controls.in_set(TnuaUserControlsSystemSet),
-        );
+        )
+        .add_systems(Update, (update_camera).in_set(PlayerSet::Active));
     }
 }
 
-// #[derive(Component)]
-// struct CamLight;
-
-// fn spawn_light(mut commands: Commands) {
-//     commands.spawn((
-//         SpotLight {
-//             range: 1000.,
-//             shadows_enabled: true,
-//             ..Default::default()
-//         },
-//         CamLight,
-//         Transform::default(),
-//         #[cfg(feature = "debug")]
-//         DebugBundle {
-//             show_axes: ShowAxes(Some((DebugLevel(0), 3.))),
-//             ..Default::default()
-//         },
-//     ));
-// }
-
-fn startup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
+pub fn spawn(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
+    let pos = Vec3::new(0., 0., 0.);
     let mesh = meshes.add(Capsule3d::new(0.5, 1.));
     commands.spawn((
         Player,
@@ -58,7 +49,16 @@ fn startup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
         TnuaAvian3dSensorShape(Collider::cylinder(0.49, 0.)),
         LockedAxes::ROTATION_LOCKED,
         SpawnAroundTracker,
+        Transform::from_translation(pos),
     ));
+    commands.spawn((PlayerCam, MovableLookAt::from_position_target(pos)));
+}
+
+pub fn update_camera(
+    player_tf: Single<&Transform, With<Player>>,
+    mut cam: Single<&mut MovableLookAt, With<PlayerCam>>,
+) {
+    cam.set_position_target(player_tf.translation, player_tf.rotation);
 }
 
 fn apply_controls(
@@ -90,6 +90,7 @@ fn apply_controls(
     controller.basis(TnuaBuiltinWalk {
         // The `desired_velocity` determines how the character will move.
         desired_velocity: direction.normalize_or_zero() * 10.0,
+        desired_forward: Dir3::new(direction.normalize_or_zero()).ok(),
         // The `float_height` must be greater (even if by little) from the distance between the
         // character's center and the lowest point of its collider.
         float_height: 1.5,

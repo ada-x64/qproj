@@ -5,30 +5,29 @@
 use bevy::{prelude::*, render::camera::Viewport, window::PrimaryWindow};
 use bevy_egui::{EguiContextSettings, egui};
 
-use crate::state::UiState;
+use crate::{cam::InspectorCam, state::UiState};
 
 use super::TabViewer;
 
 pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
     let enabled = viewer.enabled();
-    let btn_text = if enabled { "▶️" } else { "⏹️" };
+    let btn_text = if enabled { "\u{25B6}" } else { "\u{23f9}" };
     ui.horizontal(|ui| {
         if ui.add(egui::Button::new(btn_text)).clicked() {
             viewer.set_enabled(!enabled);
         }
     });
     viewer.viewport_rect = ui.clip_rect();
+    // TODO: If game view clicked, grab cursor. (See cam::toggle_grab_cursor)
+    // If cursor is grabbed, ESC un-grabs it.
 }
-
-#[derive(Component)]
-pub struct InspectorCamera;
 
 // make camera only render to view not obstructed by UI
 pub fn set_camera_viewport(
     ui_state: Res<UiState>,
     primary_window: Query<&mut Window, With<PrimaryWindow>>,
     egui_settings: Query<&EguiContextSettings>,
-    mut cameras: Query<&mut Camera, With<InspectorCamera>>,
+    mut cameras: Query<&mut Camera, With<InspectorCam>>,
 ) {
     let Ok(mut cam) = cameras.get_single_mut() else {
         return;
