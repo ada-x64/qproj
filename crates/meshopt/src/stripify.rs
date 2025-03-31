@@ -1,3 +1,7 @@
+//         •
+// ┏┓┏┓┏┓┏┓┓
+// ┗┫┣┛┛ ┗┛┃
+//--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use crate::{ffi, Error, Result};
 
 /// Converts a previously vertex cache optimized triangle list to triangle

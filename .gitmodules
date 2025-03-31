@@ -1,3 +1,0 @@
-[submodule "crates/worldgen/meshoptimizer"]
-	path = crates/meshopt/meshoptimizer
-	url = https://github.com/zeux/meshoptimizer

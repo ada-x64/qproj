@@ -1,3 +1,7 @@
+//         •
+// ┏┓┏┓┏┓┏┓┓
+// ┗┫┣┛┛ ┗┛┃
+//--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use crate::{ffi, DecodePosition, VertexDataAdapter, VertexStream};
 
 /// Generate index buffer that can be used for more efficient rendering when only a subset of the vertex

@@ -1,3 +1,7 @@
+//         •
+// ┏┓┏┓┏┓┏┓┓
+// ┗┫┣┛┛ ┗┛┃
+//--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 /// A type alias for handling errors throughout meshopt
 pub type Result<T> = std::result::Result<T, Error>;
 
