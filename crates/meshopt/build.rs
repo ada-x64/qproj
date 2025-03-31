@@ -88,6 +88,6 @@ fn main() {
     let bindings = bindings.generate().expect("Unable to generate bindings!");
 
     bindings
-        .write_to_file(std::path::Path::new("src/ffi.rs"))
+        .write_to_file(std::path::Path::new("gen/bindings.rs"))
         .expect("Unable to write bindings!");
 }

@@ -1,7 +1,6 @@
 name: Cargo Build & Test
 
 on:
-  push:
   pull_request:
 
 env: 
@@ -10,6 +9,9 @@ env:
 jobs:
   build_and_test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [x86-64-pc-windows-msvc, x86_64-unknown-linux-gnu ] #TODO: MacOS?
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1

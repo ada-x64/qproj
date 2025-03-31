@@ -32,9 +32,11 @@ impl Meshlets {
     fn meshlet_from_ffi(&self, meshlet: &ffi::meshopt_Meshlet) -> Meshlet<'_> {
         Meshlet {
             vertices: &self.vertices[meshlet.vertex_offset as usize
-                ..meshlet.vertex_offset as usize + meshlet.vertex_count as usize],
+                ..meshlet.vertex_offset as usize
+                    + meshlet.vertex_count as usize],
             triangles: &self.triangles[meshlet.triangle_offset as usize
-                ..meshlet.triangle_offset as usize + meshlet.triangle_count as usize * 3],
+                ..meshlet.triangle_offset as usize
+                    + meshlet.triangle_count as usize * 3],
         }
     }
 
@@ -64,8 +66,13 @@ pub fn build_meshlets(
     max_triangles: usize,
     cone_weight: f32,
 ) -> Meshlets {
-    let meshlet_count =
-        unsafe { ffi::meshopt_buildMeshletsBound(indices.len(), max_vertices, max_triangles) };
+    let meshlet_count = unsafe {
+        ffi::meshopt_buildMeshletsBound(
+            indices.len(),
+            max_vertices,
+            max_triangles,
+        )
+    };
     let mut meshlets: Vec<ffi::meshopt_Meshlet> =
         vec![unsafe { ::std::mem::zeroed() }; meshlet_count];
 
@@ -89,8 +96,10 @@ pub fn build_meshlets(
     };
 
     let last_meshlet = meshlets[count - 1];
-    meshlet_verts
-        .truncate(last_meshlet.vertex_offset as usize + last_meshlet.vertex_count as usize);
+    meshlet_verts.truncate(
+        last_meshlet.vertex_offset as usize
+            + last_meshlet.vertex_count as usize,
+    );
     meshlet_tris.truncate(
         last_meshlet.triangle_offset as usize
             + ((last_meshlet.triangle_count as usize * 3 + 3) & !3),
@@ -133,7 +142,10 @@ pub fn build_meshlets(
 /// to do frustum/occlusion culling, the formula that doesn't use the apex may be preferable.
 ///
 /// `index_count` should be <= 256*3 (the function assumes clusters of limited size)
-pub fn compute_cluster_bounds(indices: &[u32], vertices: &VertexDataAdapter<'_>) -> Bounds {
+pub fn compute_cluster_bounds(
+    indices: &[u32],
+    vertices: &VertexDataAdapter<'_>,
+) -> Bounds {
     unsafe {
         ffi::meshopt_computeClusterBounds(
             indices.as_ptr(),
@@ -182,7 +194,10 @@ pub fn compute_cluster_bounds_decoder<T: DecodePosition>(
     }
 }
 
-pub fn compute_meshlet_bounds(meshlet: Meshlet<'_>, vertices: &VertexDataAdapter<'_>) -> Bounds {
+pub fn compute_meshlet_bounds(
+    meshlet: Meshlet<'_>,
+    vertices: &VertexDataAdapter<'_>,
+) -> Bounds {
     unsafe {
         ffi::meshopt_computeMeshletBounds(
             meshlet.vertices.as_ptr(),

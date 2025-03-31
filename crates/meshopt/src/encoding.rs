@@ -2,7 +2,7 @@
 // ┏┓┏┓┏┓┏┓┓
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
-use crate::{error_or, ffi, utilities::rcp_safe, Result};
+use crate::{Result, error_or, ffi, utilities::rcp_safe};
 use std::mem;
 
 /// Encodes index data into an array of bytes that is generally much smaller (<1.5 bytes/triangle)
@@ -10,8 +10,13 @@ use std::mem;
 ///
 /// For maximum efficiency the index buffer being encoded has to be optimized for vertex cache and
 /// vertex fetch first.
-pub fn encode_index_buffer(indices: &[u32], vertex_count: usize) -> Result<Vec<u8>> {
-    let bounds = unsafe { ffi::meshopt_encodeIndexBufferBound(indices.len(), vertex_count) };
+pub fn encode_index_buffer(
+    indices: &[u32],
+    vertex_count: usize,
+) -> Result<Vec<u8>> {
+    let bounds = unsafe {
+        ffi::meshopt_encodeIndexBufferBound(indices.len(), vertex_count)
+    };
     let mut result: Vec<u8> = vec![0; bounds];
     let size = unsafe {
         ffi::meshopt_encodeIndexBuffer(
@@ -61,8 +66,12 @@ pub fn decode_index_buffer<T: Clone + Default + Sized>(
 /// This function works for a single vertex stream; for multiple vertex streams,
 /// call `encode_vertex_buffer` for each stream.
 pub fn encode_vertex_buffer<T>(vertices: &[T]) -> Result<Vec<u8>> {
-    let bounds =
-        unsafe { ffi::meshopt_encodeVertexBufferBound(vertices.len(), mem::size_of::<T>()) };
+    let bounds = unsafe {
+        ffi::meshopt_encodeVertexBufferBound(
+            vertices.len(),
+            mem::size_of::<T>(),
+        )
+    };
     let mut result: Vec<u8> = vec![0; bounds];
     let size = unsafe {
         ffi::meshopt_encodeVertexBuffer(
@@ -127,15 +136,16 @@ pub struct EncodeObject {
 
 pub fn calc_pos_offset_and_scale(positions: &[f32]) -> ([f32; 3], f32) {
     const MAX: f32 = f32::MAX;
-    let pos_offset = positions
-        .chunks(3)
-        .fold([MAX, MAX, MAX], |result, position| {
-            [
-                result[0].min(position[0]),
-                result[1].min(position[1]),
-                result[2].min(position[2]),
-            ]
-        });
+    let pos_offset =
+        positions
+            .chunks(3)
+            .fold([MAX, MAX, MAX], |result, position| {
+                [
+                    result[0].min(position[0]),
+                    result[1].min(position[1]),
+                    result[2].min(position[2]),
+                ]
+            });
 
     let pos_scale = positions.chunks(3).fold(0f32, |result, position| {
         result
@@ -170,7 +180,9 @@ pub fn calc_uv_offset_and_scale(coords: &[f32]) -> ([f32; 2], [f32; 2]) {
     (uv_offset, uv_scale)
 }
 
-pub fn calc_uv_offset_and_scale_inverse(coords: &[f32]) -> ([f32; 2], [f32; 2]) {
+pub fn calc_uv_offset_and_scale_inverse(
+    coords: &[f32],
+) -> ([f32; 2], [f32; 2]) {
     let (uv_offset, uv_scale) = calc_uv_offset_and_scale(coords);
     let uv_scale_inverse = [rcp_safe(uv_scale[0]), rcp_safe(uv_scale[1])];
     (uv_offset, uv_scale_inverse)

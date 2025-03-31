@@ -2,7 +2,7 @@
 // ┏┓┏┓┏┓┏┓┓
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
-use crate::{ffi, DecodePosition, VertexDataAdapter};
+use crate::{DecodePosition, VertexDataAdapter, ffi};
 use std::mem;
 
 pub type VertexCacheStatistics = ffi::meshopt_VertexCacheStatistics;
@@ -38,7 +38,12 @@ pub fn analyze_vertex_fetch(
     vertex_size: usize,
 ) -> VertexFetchStatistics {
     unsafe {
-        ffi::meshopt_analyzeVertexFetch(indices.as_ptr(), indices.len(), vertex_count, vertex_size)
+        ffi::meshopt_analyzeVertexFetch(
+            indices.as_ptr(),
+            indices.len(),
+            vertex_count,
+            vertex_size,
+        )
     }
 }
 
@@ -65,7 +70,10 @@ pub fn analyze_overdraw_decoder<T: DecodePosition>(
 
 /// Returns overdraw statistics using a software rasterizer.
 /// Results may not match actual GPU performance.
-pub fn analyze_overdraw(indices: &[u32], vertices: &VertexDataAdapter<'_>) -> OverdrawStatistics {
+pub fn analyze_overdraw(
+    indices: &[u32],
+    vertices: &VertexDataAdapter<'_>,
+) -> OverdrawStatistics {
     unsafe {
         ffi::meshopt_analyzeOverdraw(
             indices.as_ptr(),

@@ -2,7 +2,7 @@
 // ┏┓┏┓┏┓┏┓┓
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
-use crate::{ffi, DecodePosition, VertexDataAdapter, VertexStream};
+use crate::{DecodePosition, VertexDataAdapter, VertexStream, ffi};
 
 /// Generate index buffer that can be used for more efficient rendering when only a subset of the vertex
 /// attributes is necessary.
@@ -12,7 +12,10 @@ use crate::{ffi, DecodePosition, VertexDataAdapter, VertexStream};
 ///
 /// This makes it possible to use the index buffer for Z pre-pass or shadowmap rendering, while using
 /// the original index buffer for regular rendering.
-pub fn generate_shadow_indices(indices: &[u32], vertices: &VertexDataAdapter<'_>) -> Vec<u32> {
+pub fn generate_shadow_indices(
+    indices: &[u32],
+    vertices: &VertexDataAdapter<'_>,
+) -> Vec<u32> {
     let vertex_data = vertices.reader.get_ref();
     let vertex_data = vertex_data.as_ptr().cast::<u8>();
     let positions = unsafe { vertex_data.add(vertices.position_offset) };

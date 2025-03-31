@@ -2,7 +2,7 @@
 // ┏┓┏┓┏┓┏┓┓
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
-use crate::{ffi, Error, Result};
+use crate::{Error, Result, ffi};
 
 /// Converts a previously vertex cache optimized triangle list to triangle
 /// strip, stitching strips using restart index.
@@ -12,7 +12,11 @@ use crate::{ffi, Error, Result};
 ///
 /// The `restart_index` should be 0xffff or 0xffffffff depending on index size,
 /// or 0 to use degenerate triangles.
-pub fn stripify(indices: &[u32], vertex_count: usize, restart_index: u32) -> Result<Vec<u32>> {
+pub fn stripify(
+    indices: &[u32],
+    vertex_count: usize,
+    restart_index: u32,
+) -> Result<Vec<u32>> {
     let mut result: Vec<u32> = vec![0; indices.len() / 3 * 4];
     let index_count = unsafe {
         ffi::meshopt_stripify(

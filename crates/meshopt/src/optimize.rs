@@ -2,7 +2,7 @@
 // ┏┓┏┓┏┓┏┓┓
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
-use crate::{ffi, DecodePosition, VertexDataAdapter};
+use crate::{DecodePosition, VertexDataAdapter, ffi};
 use std::mem;
 
 /// Reorders indices to reduce the number of GPU vertex shader invocations.
@@ -26,7 +26,10 @@ pub fn optimize_vertex_cache(indices: &[u32], vertex_count: usize) -> Vec<u32> {
 ///
 /// If index buffer contains multiple ranges for multiple draw calls,
 /// this function needs to be called on each range individually.
-pub fn optimize_vertex_cache_in_place(indices: &mut [u32], vertex_count: usize) {
+pub fn optimize_vertex_cache_in_place(
+    indices: &mut [u32],
+    vertex_count: usize,
+) {
     unsafe {
         ffi::meshopt_optimizeVertexCache(
             indices.as_mut_ptr(),
@@ -96,7 +99,10 @@ pub fn optimize_vertex_cache_fifo_in_place(
 /// use `optimize_vertex_fetch_remap` + `remap_vertex_buffer` for each stream.
 ///
 /// `indices` is used both as an input and as an output index buffer.
-pub fn optimize_vertex_fetch<T: Clone + Default>(indices: &mut [u32], vertices: &[T]) -> Vec<T> {
+pub fn optimize_vertex_fetch<T: Clone + Default>(
+    indices: &mut [u32],
+    vertices: &[T],
+) -> Vec<T> {
     let mut result: Vec<T> = vec![T::default(); vertices.len()];
     let next_vertex = unsafe {
         ffi::meshopt_optimizeVertexFetch(
@@ -120,7 +126,10 @@ pub fn optimize_vertex_fetch<T: Clone + Default>(indices: &mut [u32], vertices: 
 /// use `optimize_vertex_fetch_remap` + `remap_vertex_buffer` for each stream.
 ///
 /// `indices` and `vertices` are used both as an input and as an output buffer.
-pub fn optimize_vertex_fetch_in_place<T>(indices: &mut [u32], vertices: &mut [T]) -> usize {
+pub fn optimize_vertex_fetch_in_place<T>(
+    indices: &mut [u32],
+    vertices: &mut [T],
+) -> usize {
     unsafe {
         ffi::meshopt_optimizeVertexFetch(
             vertices.as_mut_ptr().cast(),
@@ -138,7 +147,10 @@ pub fn optimize_vertex_fetch_in_place<T>(indices: &mut [u32], vertices: &mut [T]
 ///
 /// The resulting remap table should be used to reorder vertex/index buffers
 /// using `optimize_remap_vertex_buffer`/`optimize_remap_index_buffer`.
-pub fn optimize_vertex_fetch_remap(indices: &[u32], vertex_count: usize) -> Vec<u32> {
+pub fn optimize_vertex_fetch_remap(
+    indices: &[u32],
+    vertex_count: usize,
+) -> Vec<u32> {
     let mut result: Vec<u32> = vec![0; vertex_count];
     let next_vertex = unsafe {
         ffi::meshopt_optimizeVertexFetchRemap(

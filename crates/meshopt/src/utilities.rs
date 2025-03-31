@@ -12,7 +12,12 @@ pub fn any_as_u8_slice<T: Sized>(p: &T) -> &[u8] {
 
 #[inline(always)]
 pub fn typed_to_bytes<T: Sized>(typed: &[T]) -> &[u8] {
-    unsafe { std::slice::from_raw_parts(typed.as_ptr().cast(), std::mem::size_of_val(typed)) }
+    unsafe {
+        std::slice::from_raw_parts(
+            typed.as_ptr().cast(),
+            std::mem::size_of_val(typed),
+        )
+    }
 }
 
 pub fn convert_indices_32_to_16(indices: &[u32]) -> Result<Vec<u16>> {
@@ -126,11 +131,7 @@ pub fn quantize_float(v: f32, n: i32) -> f32 {
 
 #[inline(always)]
 pub fn rcp_safe(v: f32) -> f32 {
-    if v.abs() as u32 == 0 {
-        0f32
-    } else {
-        1f32 / v
-    }
+    if v.abs() as u32 == 0 { 0f32 } else { 1f32 / v }
 }
 
 pub struct VertexDataAdapter<'a> {
@@ -197,14 +198,17 @@ impl<'a> VertexDataAdapter<'a> {
 }
 
 impl Read for VertexDataAdapter<'_> {
-    fn read(&mut self, buf: &mut [u8]) -> std::result::Result<usize, std::io::Error> {
+    fn read(
+        &mut self,
+        buf: &mut [u8],
+    ) -> std::result::Result<usize, std::io::Error> {
         self.reader.read(buf)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{typed_to_bytes, Vertex, VertexDataAdapter};
+    use crate::{Vertex, VertexDataAdapter, typed_to_bytes};
     use memoffset::offset_of;
 
     #[test]
