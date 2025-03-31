@@ -1,0 +1,1 @@
+This is a modified version of [meshopt-rs](https://docs.rs/meshopt), licensed under APACHE/MIT.
