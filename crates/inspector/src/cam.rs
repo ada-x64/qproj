@@ -1,3 +1,7 @@
+//         •
+// ┏┓┏┓┏┓┏┓┓
+// ┗┫┣┛┛ ┗┛┃
+//--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use bevy::{input::mouse::MouseMotion, prelude::*, window::PrimaryWindow};
 use bevy_dolly::prelude::*;
 

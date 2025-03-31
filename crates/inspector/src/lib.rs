@@ -22,7 +22,6 @@ impl Plugin for InspectorPlugin {
         app.add_plugins((
             DefaultInspectorConfigPlugin,
             bevy_egui::EguiPlugin,
-            DollyCursorGrab,
         ))
         .init_resource::<DockState>()
         .insert_resource(UiState::new(assets))

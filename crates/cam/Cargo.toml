@@ -1,0 +1,23 @@
+#          •
+#  ┏┓┏┓┏┓┏┓┓
+#  ┗┫┣┛┛ ┗┛┃
+# --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
+[package]
+name = "cam"
+version = "0.1.0"
+publish = false
+authors = ["<phoenix.mandala@pm.me>"]
+edition = "2024"
+
+[features]
+debug = []                     # debug_gizmos
+dev = ["bevy/dynamic_linking"]
+inspector = []                 # dep:inspector
+
+[dependencies]
+bevy = { workspace = true }
+itertools = { workspace = true }
+log = { workspace = true }
+anyhow = { workspace = true }
+derivative = { workspace = true }
+thiserror = { workspace = true }
