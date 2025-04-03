@@ -26,7 +26,7 @@ function doit() {
 }
 
 p="//"
-files=$(find ./ -not -path "./target/*" -name "*.rs")
+files=$(find ./ -not -path "./target/*" -not -path "**/gen/*" -name "*.rs")
 doit
 
 p="# "

@@ -1,6 +1,2 @@
 #!/bin/sh
-
-if [ "$(git branch --show-current)" != "master" ]; then
-  ALLOWED="-A unused -A unused_imports -A dead_code"
-fi
-$ALLOWED ./scripts/cargo-chk
+./scripts/cargo-chk

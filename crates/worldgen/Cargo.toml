@@ -30,6 +30,6 @@ ron = "0.8.1"
 anyhow = { workspace = true }
 derivative = { workspace = true }
 thiserror = { workspace = true }
-meshopt = "0.4.1"
+meshopt = { workspace = true }
 bevy-inspector-egui = { workspace = true, optional = true }
 avian3d = { workspace = true }

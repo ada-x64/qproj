@@ -96,6 +96,7 @@ impl Chunk {
             .map(|(idx, c)| {
                 let x = idx % self.size;
                 let y = idx / self.size;
+                // Vec3(x as f32, c.elevation as f32, y as f32)
                 meshopt::Vertex {
                     p: [x as f32, c.elevation as f32, y as f32],
                     ..Default::default()
@@ -107,8 +108,6 @@ impl Chunk {
         let verts = self.verts();
         let mut indices = gen_list(self.size);
 
-        // TODO: Calling any meshopt FFI silently crashes the game on Windows.
-        // Do a windbg session on this.
         let adapter = meshopt::VertexDataAdapter::new(
             meshopt::typed_to_bytes(&verts),
             std::mem::size_of::<meshopt::Vertex>(),

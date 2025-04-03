@@ -2,10 +2,18 @@
   "rust-analyzer.cargo.features": [
     "debug", "inspector"
   ],
-  "rust-analyzer.cargo.target": "x86_64-pc-windows-gnu",
+  "rust-analyzer.cargo.target": "x86_64-pc-windows-msvc",
   "rust-analyzer.check.command": "clippy",
   "rust-analyzer.check.extraArgs": [
     "--no-deps",
     "--locked",
   ],
+  // https://jake-shadle.github.io/xwin/#4-override-cc-defaults
+  "rust-analyzer.cargo.extraEnv": {
+    "PATH": "${env:PATH}:${workspaceFolder}/.bin",
+    "CC_x86_64_pc_windows_msvc": "clang-cl",
+    "CXX_x86_64_pc_windows_msvc": "clang-cl",
+    "AR_x86_64_pc_windows_msvc": "llvm-lib",
+    "CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS": "-Lnative=${workspaceFolder}/.xwin-cache/splat/crt/lib/x86_64 -Lnative=${workspaceFolder}/.xwin-cache/splat/sdk/lib/um/x86_64 -Lnative=${workspaceFolder}/.xwin-cache/splat/sdk/lib/ucrt/x86_64",
+  }
 }

@@ -37,7 +37,7 @@ shopt -s globstar
 . .env
 PKG_NAME="${PKG_NAME:-"bevy_game"}"
 BIN_NAME="${BIN_NAME:-"bevy_game"}"
-TARGET_DIR="${TARGET_DIR:-"target/x86_64-pc-windows-gnu/debug"}"
+TARGET_DIR="${TARGET_DIR:-"target/x86_64-pc-windows-msvc/debug"}"
 TEMP="$(wslpath -au "$(pwsh.exe -c "echo \$env:TEMP")")" 
 TEMP="$(echo "$TEMP" | tr -d '\r\n')"
 HOSTPATH="${HOSTPATH:-$TEMP/$PKG_NAME}" 

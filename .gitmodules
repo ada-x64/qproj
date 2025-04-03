@@ -1,0 +1,4 @@
+[submodule "crates/meshopt/meshoptimizer"]
+	path = crates/meshopt/meshoptimizer
+	url = https://github.com/zeux/meshoptimizer
+	branch = tags/v0.23
