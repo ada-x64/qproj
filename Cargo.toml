@@ -95,6 +95,7 @@ anyhow = "1.0.97"
 thiserror = "2.0.12"
 bevy-inspector-egui = "0.29"
 avian3d = "0.2"
+bevy_dolly = "0.0.5"
 
 ## crates in the workspace
 worldgen = { path = "crates/worldgen" }

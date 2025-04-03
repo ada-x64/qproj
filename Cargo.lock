@@ -1766,6 +1766,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "cam"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bevy",
+ "derivative",
+ "itertools 0.14.0",
+ "log",
+ "thiserror 2.0.12",
+]
+
+[[package]]
 name = "cargo-husky"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
