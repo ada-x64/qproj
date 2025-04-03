@@ -19,7 +19,7 @@ if [[ $XWIN || $FORCE || ! -d ".xwin-cache" ]]; then
 fi
 
 # from https://jake-shadle.github.io/xwin/#4-override-cc-defaults
-if [[ -z $CI && ($BIN || $FORCE || ! -d ".bin") ]]; then
+if [[ $BIN || $FORCE || ! -d ".bin" ]]; then
     rm -rf .bin
     mkdir .bin > /dev/null
     CLANG="$(which clang-cl | which clang)"
@@ -32,9 +32,9 @@ if [[ -z $CI && ($BIN || $FORCE || ! -d ".bin") ]]; then
     ln -s "$LLVM_AR" .bin/llvm-lib
     ln -s "$LLD_LINK" .bin/lld-link
     set -e
-    clang-cl -v;
-    llvm-lib -v;
-    lld-link --version;
+    ./.bin/clang-cl -v;
+    ./.bin/llvm-lib -v;
+    ./.bin/lld-link --version;
     set +e
 fi
 

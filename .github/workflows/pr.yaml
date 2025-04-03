@@ -8,7 +8,7 @@ env:
 
 jobs:
   build_and_test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         target: [x86_64-pc-windows-msvc] #, x86_64-unknown-linux-gnu ] #TODO: MacOS?
@@ -17,19 +17,13 @@ jobs:
 
       - name: Install bevy build deps
         run: sudo apt update &&
-          sudo apt install -y pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0 
+          sudo apt install -y pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0 llvm clang lld
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           target: ${{matrix.target}}
           components: rustfmt,clippy
           rustflags: ""
-
-      - name: Install LLVM and Clang
-        uses: KyleMayes/install-llvm-action@v2.0.6
-        with:
-          version: 18
-          env: true
         
       - name: cache xwin
         uses: actions/cache@v4
@@ -38,8 +32,8 @@ jobs:
           path: .xwin-cache
           key: ${{ runner.OS }}-xwin-cache # doesn't need to hash
 
-      - run: "./scripts/cargo-setup -x"
-        if: ${{matrix.target}} == x86_64-pc-windows-msvc && steps.cache-xwin.outputs.cache-hit != 'true'
+      - run: "./scripts/cargo-setup"
+        if: ${{matrix.target}} == x86_64-pc-windows-msvc 
 
       - run: curl -sfL https://direnv.net/install.sh | bash
       - run: direnv allow
@@ -48,9 +42,9 @@ jobs:
       
       - name: cargo chk
         run: ./scripts/cargo-chk
-      # TOOD: This isn't linking. Missing symbols from meshopt crate. Mysterious and not worth
+      # TODO: This isn't linking. Missing symbols from meshopt crate. Mysterious and not worth
       # investigating until later.
-      # - name: cargo build (${{matrix.target}})
-      #   run: cargo build --release --target=${{matrix.target}}
+      - name: cargo build (${{matrix.target}})
+        run: cargo build --release --target=${{matrix.target}}
       # TODO add tests
       # TODO zip up bin and assets, upload artefact
