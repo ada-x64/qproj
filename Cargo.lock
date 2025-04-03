@@ -3427,16 +3427,10 @@ dependencies = [
 name = "meshopt"
 version = "0.1.0"
 dependencies = [
- "anyhow",
- "bevy",
  "bindgen 0.71.1",
  "bitflags 2.9.0",
- "blake3",
  "cc",
- "derivative",
  "float-cmp",
- "itertools 0.14.0",
- "log",
  "thiserror 2.0.12",
 ]
 

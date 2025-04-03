@@ -12,16 +12,7 @@ edition = "2024"
 [lints.rust]
 non_camel_case_types = "allow"
 
-[features]
-dev = ["bevy/dynamic_linking"]
-
 [dependencies]
-bevy = { workspace = true }
-itertools = { workspace = true }
-log = { workspace = true }
-blake3 = { workspace = true }
-anyhow = { workspace = true }
-derivative = { workspace = true }
 thiserror = { workspace = true }
 float-cmp = "0.10"
 bitflags = "2.4"

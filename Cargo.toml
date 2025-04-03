@@ -44,6 +44,7 @@ dev = [
 ]
 debug = ["debug_gizmos", "worldgen/debug", "bevy/bevy_dev_tools"]
 inspector = ["dep:inspector", "worldgen/inspector", "player/inspector"]
+default = ["debug", "inspector"]
 
 # All of Bevy's default features exept for the audio related ones (bevy_audio, vorbis), since they clash with bevy_kira_audio
 #   and android_shared_stdcxx/android-game-activity, since those are covered in `mobile`
@@ -95,6 +96,7 @@ anyhow = "1.0.97"
 thiserror = "2.0.12"
 bevy-inspector-egui = "0.29"
 avian3d = "0.2"
+bevy_dolly = "0.0.5"
 
 ## crates in the workspace
 worldgen = { path = "crates/worldgen" }
