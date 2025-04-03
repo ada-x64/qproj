@@ -11,6 +11,9 @@ use worldgen::util::SpawnAroundTracker;
 #[derive(Component, Default, Debug)]
 pub struct Player;
 
+#[derive(Component, Default, Debug)]
+pub struct PlayerCam;
+
 pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
@@ -25,26 +28,6 @@ impl Plugin for PlayerPlugin {
         );
     }
 }
-
-// #[derive(Component)]
-// struct CamLight;
-
-// fn spawn_light(mut commands: Commands) {
-//     commands.spawn((
-//         SpotLight {
-//             range: 1000.,
-//             shadows_enabled: true,
-//             ..Default::default()
-//         },
-//         CamLight,
-//         Transform::default(),
-//         #[cfg(feature = "debug")]
-//         DebugBundle {
-//             show_axes: ShowAxes(Some((DebugLevel(0), 3.))),
-//             ..Default::default()
-//         },
-//     ));
-// }
 
 fn startup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
     let mesh = meshes.add(Capsule3d::new(0.5, 1.));
@@ -90,6 +73,7 @@ fn apply_controls(
     controller.basis(TnuaBuiltinWalk {
         // The `desired_velocity` determines how the character will move.
         desired_velocity: direction.normalize_or_zero() * 10.0,
+        desired_forward: Dir3::new(direction.normalize_or_zero()).ok(),
         // The `float_height` must be greater (even if by little) from the distance between the
         // character's center and the lowest point of its collider.
         float_height: 1.5,
