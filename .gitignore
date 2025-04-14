@@ -4,4 +4,4 @@
 build
 .xwin-cache
 .bin
-.env.local
+.env.*
