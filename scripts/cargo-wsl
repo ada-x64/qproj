@@ -1,6 +1,6 @@
 #!/bin/bash
 if [ "$2" = "-h" ] || [ "$2" = "--help" ]; then
-  cat <<EOF 
+  cat <<EOF
 cargo wsl [-h --help] <ARGS>
 This script builds and runs the game assuming you are running in a wsl environment.
 System dependencies: xwin, rsync.
@@ -30,29 +30,39 @@ PKG_NAME='tools' BIN_NAME='terrain-editor' cargo wsl
 # Run windbg without building.
 NOBUILD=true NOSYNC=true WINDBG=true cargo wsl
 EOF
-  exit 0;
-fi;
+  exit 0
+fi
 
 shopt -s globstar
 . .env
 PKG_NAME="${PKG_NAME:-"bevy_game"}"
 BIN_NAME="${BIN_NAME:-"bevy_game"}"
 TARGET_DIR="${TARGET_DIR:-"target/x86_64-pc-windows-msvc/debug"}"
-TEMP="$(wslpath -au "$(pwsh.exe -c "echo \$env:TEMP")")" 
-TEMP="$(echo "$TEMP" | tr -d '\r\n')"
-HOSTPATH="${HOSTPATH:-$TEMP/$PKG_NAME}" 
 if [ -n "$CARGO_CMD" ]; then
   NORUN="true"
   NOSYNC="true"
 fi
 CARGO_CMD="${CARGO_CMD:-"build"}"
 
+if [ -n "$SSH_CONNECTION" ]; then
+  SSH_PORT=${SSH_PORT:-$(echo "$SSH_CONNECTION" | cut -d ' ' -f 2)}
+  SSH_IP=${SSH_IP:-$(echo "$SSH_CONNECTION" | cut -d ' ' -f 1)}
+  SSH_USER=${SSH_USER:-$(whoami)}
+  SSH_PATH=${SSH_PATH:-"C:/Users/$SSH_USER/$PKG_NAME"}
+  SSH_DEST="scp://$SSH_USER@$SSH_IP:$SSH_PORT/$SSH_PATH"
+  echo "SSH CLIENT CONNECTED."
+  echo "DESTINATION: $SSH_DEST"
+else
+  TEMP="$(wslpath -au "$(pwsh.exe -c "echo \$env:TEMP")")"
+  TEMP="$(echo "$TEMP" | tr -d '\r\n')"
+  HOSTPATH="${HOSTPATH:-$TEMP/$PKG_NAME}"
+fi
+
 # Config from .env
 # includes RUSTFLAGS and LINKER
 ARGS="${@:2}"
 if [ -z "$NOBUILD" ]; then
-  CMD="cargo $CARGO_CMD\
-    -F 'debug'\
+  CMD="cargo $CARGO_CMD    -F 'debug'\
     -F 'inspector'\
     -p '$PKG_NAME'\
     --bin '$BIN_NAME'\
@@ -68,12 +78,25 @@ if [ -z "$NOBUILD" ]; then
 fi
 
 if [ -z "$NOSYNC" ]; then
-  rsync -avP --no-r "$TARGET_DIR"/* "$HOSTPATH"
-  rsync -avP "assets"/* "$HOSTPATH/assets"
+  if [ -n "$SSH_CONNECTION" ]; then
+    START="\
+  Start-Process -Wait -Environment @{
+  RUST_LOG='$RUST_LOG'
+  DEBUG_LEVEL='$DEBUG_LEVEL'
+} -FilePath '$SSH_PATH/$BIN_NAME.exe'"
+    echo "$START" >"$TARGET_DIR/start.ps1"
+    # rsync -avP -e "ssh -p $SSH_PORT" --no-r "$TARGET_DIR"/* "$SSH_DEST"
+    # rsync -avP -e "ssh -p $SSH_PORT" "assets"/* "$SSH_DEST"
+    zip -r "$TARGET_DIR/$BIN_NAME.zip" "$TARGET_DIR/$BIN_NAME.exe" "$TARGET_DIR/start.ps1" .env .env.local assets/
+    scp -r "$TARGET_DIR/$BIN_NAME.zip" "$SSH_DEST"
+    if [ -n "$SSH_EXTRA_COMMAND" ]; then bash -c "$SSH_EXTRA_COMMAND"; fi
+  else
+    rsync -avP --no-r "$TARGET_DIR"/* "$HOSTPATH"
+    rsync -avP "assets"/* "$HOSTPATH/assets"
+  fi
 fi
 
-
-if [ -z "$NORUN" ]; then
+if [ -z "$NORUN" ] && [ -z "$SSH_CONNECTION" ]; then
   HOST_EXE="$(wslpath -aw "$HOSTPATH/$BIN_NAME.exe")"
   START="\
   Start-Process -NoNewWindow -Wait -Environment @{
@@ -84,12 +107,12 @@ if [ -z "$NORUN" ]; then
   REDIRECT="*> '$TTY'"
   if [ -n "$WINDBG" ]; then
     HOST_SRCPATH="$(
-      find ./crates ./src -name "*.rs" -type f -print0 \
-      | xargs -0 -I{} dirname {} \
-      | sort \
-      | uniq \
-      | xargs -I{} wslpath -aw {} \
-      | tr '\n' ';'
+      find ./crates ./src -name "*.rs" -type f -print0 |
+        xargs -0 -I{} dirname {} |
+        sort |
+        uniq |
+        xargs -I{} wslpath -aw {} |
+        tr '\n' ';'
     )"
     WINDBG_EXE=${WINDBG_EXE:-"windbgx.exe"}
     # todo: env vars?
@@ -106,4 +129,5 @@ if [ -z "$NORUN" ]; then
     echo "pwsh.exe -c \"$CMD\""
     pwsh.exe -c "$CMD"
   fi
+
 fi
