@@ -38,23 +38,24 @@ shopt -s globstar
 PKG_NAME="${PKG_NAME:-"bevy_game"}"
 BIN_NAME="${BIN_NAME:-"bevy_game"}"
 TARGET_DIR="${TARGET_DIR:-"target/x86_64-pc-windows-msvc/debug"}"
-TEMP="$(wslpath -au "$(pwsh.exe -c "echo \$env:TEMP")")"
-TEMP="$(echo "$TEMP" | tr -d '\r\n')"
-HOSTPATH="${HOSTPATH:-$TEMP/$PKG_NAME}"
 if [ -n "$CARGO_CMD" ]; then
   NORUN="true"
   NOSYNC="true"
 fi
 CARGO_CMD="${CARGO_CMD:-"build"}"
 
-SSH_PORT=${SSH_PORT:-$(echo "$SSH_CONNECTION" | cut -d ' ' -f 2)}
-SSH_IP=${SSH_IP:-$(echo "$SSH_CONNECTION" | cut -d ' ' -f 1)}
-SSH_USER=${SSH_USER:-$(whoami)}
-SSH_PATH="C:/Users/$SSH_USER/$PKG_NAME"
-SSH_DEST="scp://$SSH_USER@$SSH_IP:$SSH_PORT/$SSH_PATH"
 if [ -n "$SSH_CONNECTION" ]; then
+  SSH_PORT=${SSH_PORT:-$(echo "$SSH_CONNECTION" | cut -d ' ' -f 2)}
+  SSH_IP=${SSH_IP:-$(echo "$SSH_CONNECTION" | cut -d ' ' -f 1)}
+  SSH_USER=${SSH_USER:-$(whoami)}
+  SSH_PATH=${SSH_PATH:-"C:/Users/$SSH_USER/$PKG_NAME"}
+  SSH_DEST="scp://$SSH_USER@$SSH_IP:$SSH_PORT/$SSH_PATH"
   echo "SSH CLIENT CONNECTED."
   echo "DESTINATION: $SSH_DEST"
+else
+  TEMP="$(wslpath -au "$(pwsh.exe -c "echo \$env:TEMP")")"
+  TEMP="$(echo "$TEMP" | tr -d '\r\n')"
+  HOSTPATH="${HOSTPATH:-$TEMP/$PKG_NAME}"
 fi
 
 # Config from .env
@@ -86,8 +87,9 @@ if [ -z "$NOSYNC" ]; then
     echo "$START" >"$TARGET_DIR/start.ps1"
     # rsync -avP -e "ssh -p $SSH_PORT" --no-r "$TARGET_DIR"/* "$SSH_DEST"
     # rsync -avP -e "ssh -p $SSH_PORT" "assets"/* "$SSH_DEST"
-    # DYLIBS=$(echo $(find $TARGET_DIR -name "*.dll"))
-    scp -r "$TARGET_DIR/$BIN_NAME.exe" $DYLIBS "$TARGET_DIR/start.ps1" .env .env.local assets/ "$SSH_DEST"
+    zip -r "$TARGET_DIR/$BIN_NAME.zip" "$TARGET_DIR/$BIN_NAME.exe" "$TARGET_DIR/start.ps1" .env .env.local assets/
+    scp -r "$TARGET_DIR/$BIN_NAME.zip" "$SSH_DEST"
+    if [ -n "$SSH_EXTRA_COMMAND" ]; then bash -c "$SSH_EXTRA_COMMAND"; fi
   else
     rsync -avP --no-r "$TARGET_DIR"/* "$HOSTPATH"
     rsync -avP "assets"/* "$HOSTPATH/assets"
