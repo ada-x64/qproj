@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import shutil
 import subprocess
 
 parser = argparse.ArgumentParser()
@@ -9,17 +10,33 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "-x", "--xwin", action="store_true", help="Install and splat xwin cache."
 )
+parser.add_argument(
+    "-b", "--bin", action="store_true", help="Link binaries."
+)
+parser.add_argument(
+    "-D", "--no-deps", action="store_true", help="Do not use apt to install dependencies."
+)
+parser.add_argument(
+    "-f", "--force", action="store_true", help="Ignore existing setup and rebuild."
+)
 
-if xwin and not os.path.exists(".xwin-cache"):
+args=parser.parse_args()
+print(args)
+
+if not args.no_deps:
+    subprocess.run("sudo apt install -y pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0 llvm clang lld", shell=True)
+
+if args.xwin and (args.force or not os.path.exists(".xwin-cache")):
+    try: os.rmdir(".xwin")
+    except: pass
     subprocess.run(["cargo", "install", "xwin", "--locked"])
     subprocess.run(["xwin", "--accept-license", "splat"])
 
-if bin and not os.path.exists(".bin"):
-    os.rmdir(".bin")
-    os.mkdir(".bin")
-    clang = subprocess.check_output("which clang-cl | which clang", shell=True)
-    llvm_ar = subprocess.check_output("which llvm-lib | which llvm-ar", shell=True)
-    lld_link = subprocess.check_output("which lld_link", shell=True)
+if args.bin and (args.force or not os.path.exists(".bin")):
+    shutil.rmtree(".bin", ignore_errors=True)
+    clang = shutil.which("clang-cl") or shutil.which("clang")
+    llvm_ar = shutil.which("llvm-lib") or shutil.which("llvm-ar")
+    lld_link = shutil.which("lld-link")
     if not clang:
         print("WARN: Cannot find clang!")
     if not llvm_ar:
@@ -27,22 +44,23 @@ if bin and not os.path.exists(".bin"):
     if not lld_link:
         print("WARN: Cannot find lld_link!")
 
-    os.symlink("")
-    subprocess.check_call(["./.bin/"])
+    os.mkdir(".bin")
+    os.symlink(f"{clang}", ".bin/clang-cl")
+    os.symlink(f"{llvm_ar}", ".bin/llvm-lib")
+    os.symlink(f"{lld_link}", ".bin/lld-link")
+    subprocess.check_call(["./.bin/clang-cl", "-v"])
+    subprocess.check_call(["./.bin/llvm-lib", '-v'])
+    subprocess.check_call(["./.bin/lld-link", '--version'])
 
-    subprocess.run(
-        """
-        if [[ -z $CLANG ]]; then echo "WARN: Cannot find clang!"; fi
-        if [[ -z $LLVM_AR ]]; then echo "WARN: Cannot find llvm-ar!"; fi
-        if [[ -z $LLD_LINK ]]; then echo "WARN: Cannot find lld-link!"; fi
-        ln -s "$CLANG" .bin/clang-cl
-        ln -s "$LLVM_AR" .bin/llvm-lib
-        ln -s "$LLD_LINK" .bin/lld-link
-        set -e
-        ./.bin/clang-cl -v
-        ./.bin/llvm-lib -v
-        ./.bin/lld-link --version
-        set +e
-        """,
-        shell=True,
-    )
+IMPORTANT="\x1b[1m!IMPORTANT!\x1b[22m"
+print("""
+-------------------------------------------------------------------------------
+\x1b[1mSuccessfully set up.\x1b[22m
+To build, run `cargo wsl.`
+
+{IMPORTANT} You will need to set Clang as your C(++) compiler. If you are on a
+Debian-based distro, run the following:
+
+    update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100;
+    update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100;
+""".format(IMPORTANT=IMPORTANT))
