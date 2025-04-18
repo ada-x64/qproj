@@ -5,3 +5,4 @@ build
 .xwin-cache
 .bin
 .env.*
+.venv

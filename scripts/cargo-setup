@@ -20,33 +20,51 @@ fi
 
 # from https://jake-shadle.github.io/xwin/#4-override-cc-defaults
 if [[ $BIN || $FORCE || ! -d ".bin" ]]; then
-    rm -rf .bin
-    mkdir .bin > /dev/null
-    CLANG="$(which clang-cl | which clang)"
-    LLVM_AR="$(which llvm-lib | which llvm-ar)"
-    LLD_LINK="$(which lld-link)"
-    if [[ -z $CLANG ]]; then echo "WARN: Cannot find clang!"; fi
-    if [[ -z $LLVM_AR ]]; then echo "WARN: Cannot find llvm-ar!"; fi
-    if [[ -z $LLD_LINK ]]; then echo "WARN: Cannot find lld-link!"; fi
-    ln -s "$CLANG" .bin/clang-cl
-    ln -s "$LLVM_AR" .bin/llvm-lib
-    ln -s "$LLD_LINK" .bin/lld-link
-    set -e
-    ./.bin/clang-cl -v;
-    ./.bin/llvm-lib -v;
-    ./.bin/lld-link --version;
-    set +e
+  rm -rf .bin
+  mkdir .bin >/dev/null
+  CLANG="$(which clang-cl | which clang)"
+  LLVM_AR="$(which llvm-lib | which llvm-ar)"
+  LLD_LINK="$(which lld-link)"
+  if [[ -z $CLANG ]]; then echo "WARN: Cannot find clang!"; fi
+  if [[ -z $LLVM_AR ]]; then echo "WARN: Cannot find llvm-ar!"; fi
+  if [[ -z $LLD_LINK ]]; then echo "WARN: Cannot find lld-link!"; fi
+  ln -s "$CLANG" .bin/clang-cl
+  ln -s "$LLVM_AR" .bin/llvm-lib
+  ln -s "$LLD_LINK" .bin/lld-link
+  set -e
+  ./.bin/clang-cl -v
+  ./.bin/llvm-lib -v
+  ./.bin/lld-link --version
+  set +e
 fi
 
-cat <<EOF
-Successfully set up.
-If you want to debug with windbg or renderdoc, make sure that they are in your path,\
-then run \`cargo wsl\` with \`WINDBG=true\` or \`RENDERDOC=true\`.
+if [[ ! -d ".venv" ]]; then
+  python3 -m venv .venv
+  . .venv/bin/activate
+  python3 -m pip install -r requirements.txt
+fi
 
-!IMPORTANT! If you are running a Debian-based distro, you will need to set Clang as your C(++) compiler.\
-Run the following:\
-\
-    update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100;\
-    update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100;\
+IMPORTANT="\x1b[1m!IMPORTANT!\x1b[22m"
+
+echo -e "$(
+  cat <<EOF
+Successfully set up.
+To build, run \`cargo wsl\`.
+
+$IMPORTANT If you are running a Debian-based distro, you will need to set Clang
+as your C(++) compiler. Run the following:
+
+    update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100;
+    update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100;
+
+$IMPORTANT Make sure to activate the virutal environment. If you are using
+direnv, this should now be done automatically.
+
+  . .venv/bin/activate
 
 EOF
+)"
+
+if [[ -z "$DIRENV_FILE" ]]; then
+  echo -e "\x1b[1m!WARN!\x1b[22m I highly recommend you install direnv.\nhttps://direnv.net/docs/installation.html"
+fi
