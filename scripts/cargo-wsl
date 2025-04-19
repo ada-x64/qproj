@@ -1,133 +1,263 @@
-#!/bin/bash
-if [ "$2" = "-h" ] || [ "$2" = "--help" ]; then
-  cat <<EOF
-cargo wsl [-h --help] <ARGS>
-This script builds and runs the game assuming you are running in a wsl environment.
-System dependencies: xwin, rsync.
-Recommended dependencies: windbgx, renderdoc.
-Be sure to run \`cargo setup\` before running this script!
-<ARGS> are passed directly to cargo.
+#!.venv/bin/python3
 
-Accepts the following environment variables:
-NOBUILD=<boolean>   : Do not build the executable.
-NOSYNC=<boolean>    : Do not sync to the host environment.
-NORUN=<boolean>     : Do not run the final executable.
-HOSTPATH=<path>     : Directory for the final executable in "wslpath -au" style. Defaults to \$env:TEMP.
-TARGET_DIR=<path>   : Target directory for the build.
-PKG_NAME=<string>   : Name of the package to build.
-BIN_NAME=<string>   : Name of the binary to build.
-XWIN_DIR=<path>     : Absolute path for the xwin splat. Defaults to ./.xwin-cache/splat.
-WINDBG=<boolean>    : Run windbgx.exe to debug the application.
-RENDERDOC=<boolean> : Run qrenderdoc.exe to debug the application.
-WINDBG_EXE=<path>   : The windbg executable. Defaults to windbgx.exe
-RENDERDOC_EXE=<path>: The qrenderdoc executable. Defaults to qrenderdoc.exe
-CARGO_CMD=<string>  : The cargo command to execute. Defaults to "build."
-                      Setting this variable will automatically set NOSYNC=true NORUN=true
+import argparse
+import os
+import subprocess
+import sys
+import xxhash
+import tomllib
+import common
 
-Example:
-# Run the 'terrain-editor' bin from the 'tools' package.
-PKG_NAME='tools' BIN_NAME='terrain-editor' cargo wsl
-# Run windbg without building.
-NOBUILD=true NOSYNC=true WINDBG=true cargo wsl
-EOF
-  exit 0
-fi
+# SETUP #######################################################################
 
-shopt -s globstar
-. .env
-PKG_NAME="${PKG_NAME:-"bevy_game"}"
-BIN_NAME="${BIN_NAME:-"bevy_game"}"
-TARGET_DIR="${TARGET_DIR:-"target/x86_64-pc-windows-msvc/debug"}"
-if [ -n "$CARGO_CMD" ]; then
-  NORUN="true"
-  NOSYNC="true"
-fi
-CARGO_CMD="${CARGO_CMD:-"build"}"
+temp = None
+try:
+    temp = (
+        subprocess.check_output(
+            "wslpath -au $(pwsh.exe -c 'echo $env:TEMP')", shell=True
+        )
+        .decode("ascii")
+        .replace("\r\n", "")
+    )
+except:
+    if not os.environ.get("HOSTPATH"):
+        print("WARN: wsl not detected and HOSTPATH not set.")
 
-if [ -n "$SSH_CONNECTION" ]; then
-  SSH_PORT=${SSH_PORT:-$(echo "$SSH_CONNECTION" | cut -d ' ' -f 2)}
-  SSH_IP=${SSH_IP:-$(echo "$SSH_CONNECTION" | cut -d ' ' -f 1)}
-  SSH_USER=${SSH_USER:-$(whoami)}
-  SSH_PATH=${SSH_PATH:-"C:/Users/$SSH_USER/$PKG_NAME"}
-  SSH_DEST="scp://$SSH_USER@$SSH_IP:$SSH_PORT/$SSH_PATH"
-  echo "SSH CLIENT CONNECTED."
-  echo "DESTINATION: $SSH_DEST"
-else
-  TEMP="$(wslpath -au "$(pwsh.exe -c "echo \$env:TEMP")")"
-  TEMP="$(echo "$TEMP" | tr -d '\r\n')"
-  HOSTPATH="${HOSTPATH:-$TEMP/$PKG_NAME}"
-fi
+env_vars = {
+    # "WINDBG_EXE": {
+    #     "description": "The windbg executable.",
+    #     "default": "windbg.exe",
+    # },
+    # "RENDERDOC_EXE": {
+    #     "description": "The qrenderdoc executable.",
+    #     "default": "qrenderdoc.exe",
+    # },
+    "CARGO_CMD": {
+        "description": "The cargo command to execute.",
+        "default": "build",
+    },
+    "HOSTPATH": {
+        "description": 'Directory for the final executable in "wslpath -au" style.',
+        "default": temp,
+    },
+    "CARGO_BUILD_TARGET": {
+        "description": "Build target for Cargo.",
+        "default": "debug",
+    },
+    "SCP_FLAGS": {
+        "description": "If SSH is detected, these flags will be added to the SCP command when syncing build files.",
+        "default": None,
+    },
+}
 
-# Config from .env
-# includes RUSTFLAGS and LINKER
-ARGS="${@:2}"
-if [ -z "$NOBUILD" ]; then
-  CMD="cargo $CARGO_CMD    -F 'debug'\
-    -F 'inspector'\
-    -p '$PKG_NAME'\
-    --bin '$BIN_NAME'\
-    $ARGS"
-  echo "$CMD"
-  eval "$CMD"
+# PARSE #######################################################################
 
-  RES=$?
-  if [ $RES -ne 0 ]; then
-    echo Build failed. Did you run \`cargo setup\`?
-    exit $RES
-  fi
-fi
+epilog = "Accepts the following environment variables:\n"
+for name, values in env_vars.items():
+    epilog += f"{name}:\t{values.get('description')}\n\t\tDefaults to {values.get('default')}\n"
 
-if [ -z "$NOSYNC" ]; then
-  if [ -n "$SSH_CONNECTION" ]; then
-    START="\
-  Start-Process -Wait -Environment @{
-  RUST_LOG='$RUST_LOG'
-  DEBUG_LEVEL='$DEBUG_LEVEL'
-} -FilePath '$SSH_PATH/$BIN_NAME.exe'"
-    echo "$START" >"$TARGET_DIR/start.ps1"
-    # rsync -avP -e "ssh -p $SSH_PORT" --no-r "$TARGET_DIR"/* "$SSH_DEST"
-    # rsync -avP -e "ssh -p $SSH_PORT" "assets"/* "$SSH_DEST"
-    zip -r "$TARGET_DIR/$BIN_NAME.zip" "$TARGET_DIR/$BIN_NAME.exe" "$TARGET_DIR/start.ps1" .env .env.local assets/
-    scp -r "$TARGET_DIR/$BIN_NAME.zip" "$SSH_DEST"
-    if [ -n "$SSH_EXTRA_COMMAND" ]; then bash -c "$SSH_EXTRA_COMMAND"; fi
-  else
-    rsync -avP --no-r "$TARGET_DIR"/* "$HOSTPATH"
-    rsync -avP "assets"/* "$HOSTPATH/assets"
-  fi
-fi
+env = os.environ
+parser = argparse.ArgumentParser(
+    prog="cargo wsl",
+    description="Builds the project assuming you're on WSL.",
+    epilog=epilog,
+    formatter_class=argparse.RawTextHelpFormatter,
+)
+parser.add_argument(
+    "-b", "--no-build", action="store_true", help="Do not build the project."
+)
+parser.add_argument(
+    "-s", "--no-sync", action="store_true", help="Do not sync the project."
+)
+parser.add_argument(
+    "-H", "--no-hash", action="store_true", help="Do not check for changes."
+)
+parser.add_argument(
+    "-r", "--no-run", action="store_true", help="Do not run the project."
+)
+parser.add_argument("wsl", help="(dummy argument)")
+# parser.add_argument(
+#     "-W",
+#     "--windbg",
+#     action="store_true",
+#     help="Run windbg after building.",
+# )
+# parser.add_argument(
+#     "-R",
+#     "--renderdoc",
+#     action="store_true",
+#     help="Run renderdoc after building.",
+# )
+parser.add_argument(
+    "-f",
+    "--features",
+    nargs="*",
+    help="Feature flags passed to cargo.",
+    default=["debug", "inspector"],
+)
+parser.add_argument(
+    "-v", "--verbose", action="count", help="Run verbosely.", default=0
+)
 
-if [ -z "$NORUN" ] && [ -z "$SSH_CONNECTION" ]; then
-  HOST_EXE="$(wslpath -aw "$HOSTPATH/$BIN_NAME.exe")"
-  START="\
-  Start-Process -NoNewWindow -Wait -Environment @{
-  RUST_LOG='$RUST_LOG'
-  DEBUG_LEVEL='$DEBUG_LEVEL'
-}"
-  TTY="$(wslpath -aw "$(tty)")"
-  REDIRECT="*> '$TTY'"
-  if [ -n "$WINDBG" ]; then
-    HOST_SRCPATH="$(
-      find ./crates ./src -name "*.rs" -type f -print0 |
-        xargs -0 -I{} dirname {} |
-        sort |
-        uniq |
-        xargs -I{} wslpath -aw {} |
-        tr '\n' ';'
-    )"
-    WINDBG_EXE=${WINDBG_EXE:-"windbgx.exe"}
-    # todo: env vars?
-    WINDBG_CMD="$START -FilePath '$WINDBG_EXE' -ArgumentList @('-srcpath \"$HOST_SRCPATH\"', '$HOST_EXE') $REDIRECT"
-    echo "pwsh.exe -c \"$WINDBG_CMD\""
-    pwsh.exe -c "$WINDBG_CMD"
-  elif [ -n "$RENDERDOC" ]; then
-    RENDERDOC_EXE=${RENDERDOC_EXE:-"qrenderdoc.exe"}
-    CMD="$START -FilePath '$RENDERDOC_EXE' -ArgumentList @('$HOST_EXE') $REDIRECT"
-    echo "pwsh.exe -c \"$CMD\""
-    pwsh.exe -c "$CMD"
-  else
-    CMD="$START -FilePath '$HOST_EXE' $REDIRECT"
-    echo "pwsh.exe -c \"$CMD\""
-    pwsh.exe -c "$CMD"
-  fi
+args = common.parse_with_forward(parser, "cargo")
 
-fi
+
+def print_and_run(cmd):
+    common.print_and_run(cmd, args.verbose)
+
+
+for key in env_vars:
+    env_vars[key] = os.environ.get(key) or env_vars[key].get("default")
+
+pkg_name = "bevy_game"
+with open("Cargo.toml", "rb") as f:
+    toml = tomllib.load(f)
+    pkg_name = toml.get("package").get("name")
+
+profile = (
+    "release"
+    if "-r" in args.forward or "--release" in args.forward
+    else "debug"
+)
+target_dir = os.path.join("target", env_vars["CARGO_BUILD_TARGET"], profile)
+
+
+if args.verbose > 2:
+    print(f"ARGS:\n{args}")
+    print(f"ENV_VARS:\n{env_vars}")
+
+ssh_connection = os.environ.get("SSH_CONNECTION")
+if ssh_connection:
+    print("SSH detected.")
+
+# BUILD #######################################################################
+
+if not args.no_build:
+    print_and_run(
+        [
+            "cargo",
+            env_vars["CARGO_CMD"],
+            *map(lambda feature: f"-F {feature}", args.features),
+            *args.forward,
+        ]
+    )
+    bin_path = os.path.join(env_vars["HOSTPATH"], pkg_name, pkg_name + ".exe")
+    bin_path = (
+        subprocess.check_output(f"wslpath -aw {bin_path}", shell=True)
+        .decode()
+        .replace("\n", "")
+    )
+    start = """\
+    Start-Process -Wait -Environment @{{
+    RUST_LOG="{RUST_LOG}"
+    DEBUG_LEVEL="{DEBUG_LEVEL}"
+    }} -FilePath "{bin_path}"\
+    """.format(
+        RUST_LOG=os.environ.get("RUST_LOG"),
+        DEBUG_LEVEL=os.environ.get("DEBUG_LEVEL"),
+        bin_path=bin_path,
+    )
+    start_path = os.path.join(target_dir, "start.ps1")
+    with open(start_path, "w") as f:
+        f.write(start)
+else:
+    print("Not building.")
+
+
+# HASH #########################################################################
+def do_hash():
+    # generate checksum
+    mismatched = ()
+    hashfile = ""
+    for file in build_files:
+        with open(file, "rb") as f:
+            hash = xxhash.xxh64_hexdigest(f.read())
+            hashfile += f"{file} {hash}\n"
+
+    for root, subdirs, files in os.walk("assets"):
+        for file in files:
+            path = os.path.join(root, file)
+            with open(path, "rb") as f:
+                hash = xxhash.xxh64_hexdigest(f.read())
+                hashfile += f"{path} {hash}\n"
+
+    # check the checksum
+    hashfile_path = os.path.join(target_dir, ".hash")
+    if os.path.exists(hashfile_path):
+        with open(hashfile_path) as f:
+            zipped = zip(hashfile.splitlines(), f.readlines())
+            if args.verbose > 1:
+                print(
+                    "Comparing hashes:\n",
+                    "\n".join(
+                        list(
+                            map(
+                                lambda t: f"{t[0].split()[0]} {t[0].split()[1]} {t[1].split()[1]}",
+                                zipped,
+                            )
+                        )
+                    ),
+                )
+            filtered = filter(lambda tuple: tuple[0] != tuple[1], zipped)
+            mismatched = list(map(lambda tuple: tuple[0].split()[0], filtered))
+    else:
+        mismatched = list(map(lambda l: l.split()[0], hashfile.splitlines()))
+
+    # overwrite it
+    with open(hashfile_path, "w") as f:
+        f.write(hashfile)
+
+    return mismatched
+
+
+# SYNC #########################################################################
+if not args.no_sync:
+    exec_path = os.path.join(target_dir, pkg_name + ".exe")
+    build_files = [start_path, exec_path]
+    if "dev" in args.features:
+        build_files.append(os.path.join(target_dir, "bevy_dylib.dll"))
+
+    if args.no_hash:
+        print("Not hashing.")
+        mismatched = build_files
+        for root, subdirs, files in os.walk("assets"):
+            for file in files:
+                path = os.path.join(root, file)
+                mismatched.append(path)
+    else:
+        mismatched = do_hash()
+    if args.verbose > 1:
+        print("Mismatched files:", mismatched)
+
+    # sync
+
+    for local_file in mismatched:
+        remote_file = local_file.replace(target_dir + "/", "")
+        destination = os.path.join(env_vars["HOSTPATH"], pkg_name, remote_file)
+        if ssh_connection:
+            user = os.environ.get("USER")
+            ssh_connection = ssh_connection.split()
+            ip = ssh_connection[0]
+            port = ssh_connection[1]
+            destination = f"scp://{user}@{ip}:{port}/{destination}"
+            print_and_run(
+                ["scp", env_vars["SCP_FLAGS"] or "", local_file, destination]
+            )
+        else:
+            print_and_run(["mkdir", "-p", os.path.dirname(destination)])
+            print_and_run(["cp", local_file, destination])
+else:
+    print("Not syncing.")
+
+# RUN #########################################################################
+if not args.no_run and not ssh_connection:
+    start_path = os.path.join(env_vars["HOSTPATH"], pkg_name, "start.ps1")
+    start_path = (
+        subprocess.check_output(f"wslpath -aw {start_path}", shell=True)
+        .decode()
+        .replace("\n", "")
+    )
+    tty = subprocess.check_output("wslpath -aw $(tty)", shell=True).decode()
+    subprocess.call(["pwsh.exe", start_path])
+else:
+    print("Not running.")
