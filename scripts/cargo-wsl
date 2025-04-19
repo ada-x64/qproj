@@ -6,16 +6,22 @@ import subprocess
 import sys
 import xxhash
 import tomllib
+import common
 
 # SETUP #######################################################################
 
-temp = (
-    subprocess.check_output(
-        "wslpath -au $(pwsh.exe -c 'echo $env:TEMP')", shell=True
+temp = None
+try:
+    temp = (
+        subprocess.check_output(
+            "wslpath -au $(pwsh.exe -c 'echo $env:TEMP')", shell=True
+        )
+        .decode("ascii")
+        .replace("\r\n", "")
     )
-    .decode("ascii")
-    .replace("\r\n", "")
-)
+except:
+    if not os.environ.get("HOSTPATH"):
+        print("WARN: wsl not detected and HOSTPATH not set.")
 
 env_vars = {
     # "WINDBG_EXE": {
@@ -69,7 +75,7 @@ parser.add_argument(
 parser.add_argument(
     "-r", "--no-run", action="store_true", help="Do not run the project."
 )
-parser.add_argument("wsl")
+parser.add_argument("wsl", help="(dummy argument)")
 # parser.add_argument(
 #     "-W",
 #     "--windbg",
@@ -92,18 +98,13 @@ parser.add_argument(
 parser.add_argument(
     "-v", "--verbose", action="count", help="Run verbosely.", default=0
 )
-parser.add_argument(
-    "--",
-    help="Arguments passed after the '--' will be forwarded directly to cargo.",
-    dest="forward",
-)
 
-argv = sys.argv[1:]
-idx = argv.index("--") if "--" in argv else -1
-unparsed = argv[idx + 1 :] if idx >= 0 else None
-argv = argv[:idx] if idx >= 0 else argv
-args = parser.parse_args(argv)
-args.forward = unparsed or []
+args = common.parse_with_forward(parser, "cargo")
+
+
+def print_and_run(cmd):
+    common.print_and_run(cmd, args.verbose)
+
 
 for key in env_vars:
     env_vars[key] = os.environ.get(key) or env_vars[key].get("default")
@@ -124,13 +125,6 @@ target_dir = os.path.join("target", env_vars["CARGO_BUILD_TARGET"], profile)
 if args.verbose > 2:
     print(f"ARGS:\n{args}")
     print(f"ENV_VARS:\n{env_vars}")
-
-
-def print_and_run(cmd: list[str]):
-    if args.verbose > 0:
-        print("> " + " ".join(cmd))
-    subprocess.run(cmd)
-
 
 ssh_connection = os.environ.get("SSH_CONNECTION")
 if ssh_connection:
