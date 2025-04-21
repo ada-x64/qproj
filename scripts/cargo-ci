@@ -8,7 +8,7 @@ import argparse
 
 parser = argparse.ArgumentParser(
     prog="cargo ci",
-    description="Runs nektos/act to test CI. Logs will be output to `act-[n].log`",
+    description="Runs nektos/act to test CI.`",
 )
 
 # dummy
@@ -24,7 +24,7 @@ args = common.parse_with_forward(parser, "act")
 
 act = args.act
 try:
-    if subprocess.check_call(["gh", "act", "--version"]) == 0:
+    if subprocess.check_call(["gh", "act", "--version"], stderr=subprocess.DEVNULL) == 0:
         act = "gh act"
 except:
     act = shutil.which("act") or shutil.which(".bin/act")
@@ -38,13 +38,8 @@ if not act and not args.no_install:
     with open("./.bin/install-act.sh", mode="x") as f:
         f.write(res.text)
     subprocess.call(["bash", ".bin/install-act.sh", "-b", ".bin"])
+    act = ".bin/act"
 
 # TODO: This could be made more flexible with yaml parsing.
 image = "ubuntu-24.04=ghcr.io/catthehacker/ubuntu:act-24.04"
-num_targets = 2
-tee = ""
-for i in range(num_targets):
-    tee += f" >( grep 'build-and-test-{i}' > act-{i}.log )"
-
-cmd = f"{act} -P '{image}' {" ".join(args.forward)} 2>&1 | tee {tee}"
-common.print_and_run(["bash", "-c", cmd], 2)
+subprocess.run([act, "-P", image, *args.forward])

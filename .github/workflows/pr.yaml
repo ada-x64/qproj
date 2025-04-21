@@ -17,13 +17,9 @@ jobs:
         with:
           submodules: recursive
 
-      # - name: Install bevy build deps
-      #   run: sudo apt update &&
-      #     sudo apt install -y pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0 llvm clang lld
-
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12.3'
+          python-version: '3.12.3' 
           cache: 'pip'
       - run: 'pip install -r requirements.txt'
 
@@ -37,17 +33,16 @@ jobs:
         uses: actions/cache@v4
         if: ${{matrix.target}} == x86_64-pc-windows-msvc
         with:
-          path: .xwin-cache
+          path: ${{github.workspace}}/.xwin-cache
           key: ${{ runner.OS }}-xwin-cache # doesn't need to hash
 
       - run: "./scripts/cargo-setup"
-        if: ${{matrix.target}} == x86_64-pc-windows-msvc 
 
       - run: curl -sfL https://direnv.net/install.sh | bash
       - run: direnv allow
       - run: direnv export gha >> "$GITHUB_ENV"
-      - run: env
-      
+      - run: echo "!!! DEBUG INFORMATION !!!"; env; ls -lah ${{github.workspace}}/.bin
+
       - name: cargo chk
         run: ./scripts/cargo-chk
       - name: cargo build (${{matrix.target}})
