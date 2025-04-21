@@ -5,3 +5,5 @@ build
 .xwin-cache
 .bin
 .env.*
+.venv
+__pycache__

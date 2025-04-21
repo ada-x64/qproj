@@ -1,0 +1,45 @@
+#!./.venv/bin/python3
+
+import shutil
+import subprocess
+import requests
+import common
+import argparse
+
+parser = argparse.ArgumentParser(
+    prog="cargo ci",
+    description="Runs nektos/act to test CI.`",
+)
+
+# dummy
+parser.add_argument("ci", help="(dummy argument)")
+parser.add_argument("--act", action="store", help="Act command to execute.")
+parser.add_argument(
+    "--no-install",
+    action="store_true",
+    help="Do not install act if it is not present.",
+)
+
+args = common.parse_with_forward(parser, "act")
+
+act = args.act
+try:
+    if subprocess.check_call(["gh", "act", "--version"], stderr=subprocess.DEVNULL) == 0:
+        act = "gh act"
+except:
+    act = shutil.which("act") or shutil.which(".bin/act")
+
+
+if not act and not args.no_install:
+    print("Installing nektos/act to .bin...")
+    res = requests.get(
+        "https://raw.githubusercontent.com/nektos/act/master/install.sh"
+    )
+    with open("./.bin/install-act.sh", mode="x") as f:
+        f.write(res.text)
+    subprocess.call(["bash", ".bin/install-act.sh", "-b", ".bin"])
+    act = ".bin/act"
+
+# TODO: This could be made more flexible with yaml parsing.
+image = "ubuntu-24.04=ghcr.io/catthehacker/ubuntu:act-24.04"
+subprocess.run([act, "-P", image, *args.forward])

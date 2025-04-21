@@ -1,52 +1,17 @@
 #!/bin/bash
-# This script installs xwin.
-# See the bevy cheatbook for more info.
-# https://bevy-cheatbook.github.io/setup/cross/linux-windows.html
 
-if [[ $* == *-f* || $* == *--force* ]]; then
-  FORCE=true
-fi
-if [[ $* == *-x* || $* == *--xwin* ]]; then
-  XWIN=true
-fi
-if [[ $* == *-b* || $* == *--bin* ]]; then
-  BIN=true
+OS_RELEASE=$(cat /etc/os-release)
+if [[ "$OS_RELEASE" != *"debian"* ]]; then
+  echo "Debian based distro not detected! You may have issues with this script."
 fi
 
-if [[ $XWIN || $FORCE || ! -d ".xwin-cache" ]]; then
-  cargo install xwin --locked
-  xwin --accept-license splat
+
+if [ ! -d .venv ]; then
+  echo "Setting up virtual environment..."
+  python3 -m venv .venv
+  . .venv/bin/activate 
 fi
+python3 -m pip install -r requirements.txt
 
-# from https://jake-shadle.github.io/xwin/#4-override-cc-defaults
-if [[ $BIN || $FORCE || ! -d ".bin" ]]; then
-    rm -rf .bin
-    mkdir .bin > /dev/null
-    CLANG="$(which clang-cl | which clang)"
-    LLVM_AR="$(which llvm-lib | which llvm-ar)"
-    LLD_LINK="$(which lld-link)"
-    if [[ -z $CLANG ]]; then echo "WARN: Cannot find clang!"; fi
-    if [[ -z $LLVM_AR ]]; then echo "WARN: Cannot find llvm-ar!"; fi
-    if [[ -z $LLD_LINK ]]; then echo "WARN: Cannot find lld-link!"; fi
-    ln -s "$CLANG" .bin/clang-cl
-    ln -s "$LLVM_AR" .bin/llvm-lib
-    ln -s "$LLD_LINK" .bin/lld-link
-    set -e
-    ./.bin/clang-cl -v;
-    ./.bin/llvm-lib -v;
-    ./.bin/lld-link --version;
-    set +e
-fi
-
-cat <<EOF
-Successfully set up.
-If you want to debug with windbg or renderdoc, make sure that they are in your path,\
-then run \`cargo wsl\` with \`WINDBG=true\` or \`RENDERDOC=true\`.
-
-!IMPORTANT! If you are running a Debian-based distro, you will need to set Clang as your C(++) compiler.\
-Run the following:\
-\
-    update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100;\
-    update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100;\
-
-EOF
+shift
+.venv/bin/python3 scripts/cargo-setup.py "$@"
