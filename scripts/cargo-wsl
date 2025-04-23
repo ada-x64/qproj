@@ -95,9 +95,11 @@ parser.add_argument("wsl", help="(dummy argument)")
 #     help="Run renderdoc after building.",
 # )
 parser.add_argument(
-    "-f",
-    "--features",
-    nargs="*",
+    "-F",
+    "--feature",
+    nargs=1,
+    action="append",
+    dest="features",
     help="Feature flags passed to cargo.",
     default=["debug", "inspector"],
 )
@@ -107,7 +109,7 @@ parser.add_argument(
 
 args = common.parse_with_forward(parser, "cargo")
 if args.trace:
-    args.features.append("bevy/trace_tracy")
+    args.forward.concat(["-F", "bevy/trace_tracy"])
 
 
 def print_and_run(cmd: str | list[str], **shargs):
@@ -127,7 +129,9 @@ profile = (
     if "-r" in args.forward or "--release" in args.forward
     else "debug"
 )
-target_dir = os.path.join("target", env_vars["CARGO_BUILD_TARGET"], profile)
+target_dir = os.path.abspath(
+    os.path.join("target", env_vars["CARGO_BUILD_TARGET"], profile)
+)
 
 
 if args.verbose > 2:
@@ -145,7 +149,6 @@ if not args.no_build:
         [
             "cargo",
             env_vars["CARGO_CMD"],
-            *map(lambda feature: f"-F {feature}", args.features),
             *args.forward,
         ]
     ).check_returncode()
@@ -156,29 +159,52 @@ if not args.no_build:
         .decode()
         .replace("\n", "")
     )
-    logpath = os.path.join(os.environ.get("PWD"), "run.log")
-    try:
-        logpath = (
-            print_and_run(["wslpath", "-aw", logpath], stdout=subprocess.PIPE)
-            .stdout.decode()
-            .strip()
-        )
-    except:
-        pass
+
+    winpath = "$env:PATH"
+    if "dev" in args.forward:
+        try:
+            rustlibs = (
+                subprocess.check_output(
+                    [
+                        "rustc",
+                        f"--target={env_vars['CARGO_BUILD_TARGET']}",
+                        "--print",
+                        "target-libdir",
+                    ]
+                )
+                .decode()
+                .strip()
+            )
+            rustlibs = (
+                subprocess.check_output(["wslpath", "-aw", rustlibs])
+                .decode()
+                .strip()
+            )
+            deps = os.path.abspath(os.path.join(target_dir, "deps"))
+            deps = (
+                subprocess.check_output(["wslpath", "-aw", deps])
+                .decode()
+                .strip()
+            )
+            winpath = f"$env:PATH;{rustlibs};{deps};"
+
+        except:
+            print("WARN: Could not generate path to dynamic libraries!")
 
     runas = "-Verb RunAs" if args.trace else ""
     start = """\
     Start-Process  -Wait -Environment @{{
     RUST_LOG="{RUST_LOG}"
     DEBUG_LEVEL="{DEBUG_LEVEL}"
+    PATH="{winpath}"
     }} -FilePath "{bin_path}" {runas}\
-    2>&1 | tee {logpath}\
+    2>&1 | Tee-Object -FilePath run.log\
     """.format(
         RUST_LOG=os.environ.get("RUST_LOG"),
         DEBUG_LEVEL=os.environ.get("DEBUG_LEVEL"),
         bin_path=bin_path,
         runas=runas,
-        logpath=logpath,
+        winpath=winpath,
     )
     if args.verbose > 1:
         print(f"start.ps1:\n{start}")

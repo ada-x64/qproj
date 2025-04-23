@@ -39,6 +39,7 @@ dev = ["bevy/dynamic_linking"]
 debug = ["q_debug", "q_worldgen/debug", "bevy/bevy_dev_tools"]
 inspector = ["q_inspector", "q_worldgen/inspector"]
 
+
 # All of Bevy's default features exept for the audio related ones (bevy_audio, vorbis), since they clash with bevy_kira_audio
 #   and android_shared_stdcxx/android-game-activity, since those are covered in `mobile`
 [workspace.dependencies]
