@@ -3,7 +3,7 @@
 #  ┗┫┣┛┛ ┗┛┃
 # --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 [package]
-name = "worldgen"
+name = "q_worldgen"
 version = "0.1.0"
 publish = false
 authors = ["<phoenix.mandala@pm.me>"]
@@ -11,7 +11,7 @@ edition = "2024"
 
 [features]
 # just to silence the warning
-debug = ["debug_gizmos"]
+debug = ["q_debug"]
 dev = ["bevy/dynamic_linking"]
 inspector = ["bevy-inspector-egui"]
 
@@ -22,7 +22,6 @@ rand = { workspace = true }
 itertools = { workspace = true }
 log = { workspace = true }
 serde_json = "1.0.138"
-debug_gizmos = { workspace = true, optional = true }
 rayon = { workspace = true }
 noise_gui = { workspace = true }
 noise = "0.8.2"                                             #keep in sync with noise_gui
@@ -33,3 +32,5 @@ thiserror = { workspace = true }
 meshopt = { workspace = true }
 bevy-inspector-egui = { workspace = true, optional = true }
 avian3d = { workspace = true }
+
+q_debug = { workspace = true, optional = true }

@@ -75,6 +75,12 @@ parser.add_argument(
 parser.add_argument(
     "-r", "--no-run", action="store_true", help="Do not run the project."
 )
+parser.add_argument(
+    "-t",
+    "--trace",
+    action="store_true",
+    help="Runs with -F bevy/trace_tracy. On Windows this requires running the built application as an administrator.",
+)
 parser.add_argument("wsl", help="(dummy argument)")
 # parser.add_argument(
 #     "-W",
@@ -100,10 +106,12 @@ parser.add_argument(
 )
 
 args = common.parse_with_forward(parser, "cargo")
+if args.trace:
+    args.features.append("bevy/trace_tracy")
 
 
-def print_and_run(cmd):
-    common.print_and_run(cmd, args.verbose)
+def print_and_run(cmd: str | list[str], **shargs):
+    return common.print_and_run(cmd, args.verbose, **shargs)
 
 
 for key in env_vars:
@@ -140,23 +148,40 @@ if not args.no_build:
             *map(lambda feature: f"-F {feature}", args.features),
             *args.forward,
         ]
-    )
+    ).check_returncode()
+
     bin_path = os.path.join(env_vars["HOSTPATH"], pkg_name, pkg_name + ".exe")
     bin_path = (
         subprocess.check_output(f"wslpath -aw {bin_path}", shell=True)
         .decode()
         .replace("\n", "")
     )
+    logpath = os.path.join(os.environ.get("PWD"), "run.log")
+    try:
+        logpath = (
+            print_and_run(["wslpath", "-aw", logpath], stdout=subprocess.PIPE)
+            .stdout.decode()
+            .strip()
+        )
+    except:
+        pass
+
+    runas = "-Verb RunAs" if args.trace else ""
     start = """\
-    Start-Process -Wait -Environment @{{
+    Start-Process  -Wait -Environment @{{
     RUST_LOG="{RUST_LOG}"
     DEBUG_LEVEL="{DEBUG_LEVEL}"
-    }} -FilePath "{bin_path}"\
+    }} -FilePath "{bin_path}" {runas}\
+    2>&1 | tee {logpath}\
     """.format(
         RUST_LOG=os.environ.get("RUST_LOG"),
         DEBUG_LEVEL=os.environ.get("DEBUG_LEVEL"),
         bin_path=bin_path,
+        runas=runas,
+        logpath=logpath,
     )
+    if args.verbose > 1:
+        print(f"start.ps1:\n{start}")
     start_path = os.path.join(target_dir, "start.ps1")
     with open(start_path, "w") as f:
         f.write(start)

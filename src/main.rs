@@ -7,7 +7,7 @@ use bevy::{
     log::{LogPlugin, tracing_subscriber::EnvFilter},
     prelude::*,
 };
-use worldgen::WorldgenPluginSettings;
+use q_worldgen::WorldgenPluginSettings;
 
 #[bevy_main]
 fn main() {
@@ -19,8 +19,8 @@ fn main() {
             filter: EnvFilter::from_default_env().to_string(),
             ..Default::default()
         }),
-        worldgen::WorldgenPlugin,
-        player::PlayerPlugin,
+        q_worldgen::WorldgenPlugin,
+        q_player::PlayerPlugin,
         PhysicsPlugins::default(),
     ))
     .insert_resource(WorldgenPluginSettings {
@@ -30,7 +30,7 @@ fn main() {
 
     #[cfg(feature = "debug")]
     {
-        use debug_gizmos::{DebugLevel, DebugPlugin};
+        use q_debug::{DebugLevel, DebugPlugin};
         let level = std::env::var("DEBUG_LEVEL").unwrap_or_default();
         let debug_level = DebugLevel(level.parse().unwrap_or_default());
         debug!("DEBUG_LEVEL = {debug_level:?}");
@@ -42,7 +42,7 @@ fn main() {
 
     #[cfg(feature = "inspector")]
     {
-        app.add_plugins((inspector::InspectorPlugin,));
+        app.add_plugins((q_inspector::InspectorPlugin,));
     }
 
     app.run();
