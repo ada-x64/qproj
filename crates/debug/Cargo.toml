@@ -3,7 +3,7 @@
 #  ┗┫┣┛┛ ┗┛┃
 # --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 [package]
-name = "debug_gizmos"
+name = "q_debug"
 version = "0.1.0"
 publish = false
 authors = ["<phoenix.mandala@pm.me>"]

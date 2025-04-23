@@ -6,7 +6,7 @@ use avian3d::prelude::*;
 use bevy::prelude::*;
 use bevy_tnua::prelude::*;
 use bevy_tnua_avian3d::{TnuaAvian3dPlugin, TnuaAvian3dSensorShape};
-use worldgen::util::SpawnAroundTracker;
+use q_worldgen::util::SpawnAroundTracker;
 
 #[derive(Component, Default, Debug)]
 pub struct Player;

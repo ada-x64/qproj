@@ -2,10 +2,13 @@ import subprocess
 import sys
 
 
-def print_and_run(cmd: list[str], verbose: int):
+def print_and_run(cmd: str | list[str], verbose: int = 1, **args):
     if verbose > 0:
-        print("> " + " ".join(cmd))
-    subprocess.run(cmd)
+        if type(cmd) is list:
+            print("> " + " ".join(cmd))
+        else:
+            print(f"> {cmd}")
+    return subprocess.run(cmd, **args)
 
 
 def parse_with_forward(parser, subprocess: str):

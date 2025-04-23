@@ -35,15 +35,9 @@ codegen-units = 1
 strip = true
 
 [features]
-dev = [
-    "bevy/dynamic_linking",
-    "worldgen/dev",
-    "player/dev",
-    "debug_gizmos/dev",
-    "inspector/dev",
-]
-debug = ["debug_gizmos", "worldgen/debug", "bevy/bevy_dev_tools"]
-inspector = ["dep:inspector", "worldgen/inspector"]
+dev = ["bevy/dynamic_linking"]
+debug = ["q_debug", "q_worldgen/debug", "bevy/bevy_dev_tools"]
+inspector = ["q_inspector", "q_worldgen/inspector"]
 
 # All of Bevy's default features exept for the audio related ones (bevy_audio, vorbis), since they clash with bevy_kira_audio
 #   and android_shared_stdcxx/android-game-activity, since those are covered in `mobile`
@@ -95,13 +89,14 @@ anyhow = "1.0.97"
 thiserror = "2.0.12"
 bevy-inspector-egui = "0.29"
 avian3d = "0.2"
+bevy_dolly = "0.0.5"
+meshopt = "0.4.1"
 
-## workspace crates
-worldgen = { path = "crates/worldgen" }
-debug_gizmos = { path = "crates/debug" }
-player = { path = "crates/player" }
-inspector = { path = "crates/inspector" }
-meshopt = { path = "crates/meshopt" }
+## crates in the workspace
+q_worldgen = { path = "crates/worldgen" }
+q_debug = { path = "crates/debug" }
+q_player = { path = "crates/player" }
+q_inspector = { path = "crates/inspector" }
 
 
 [dependencies]
@@ -118,10 +113,10 @@ image = { version = "0.25", default-features = false }
 blake3 = { workspace = true }
 
 # local deps
-debug_gizmos = { workspace = true, optional = true }
-inspector = { workspace = true, optional = true }
-worldgen = { workspace = true }
-player = { workspace = true }
+q_debug = { workspace = true, optional = true }
+q_inspector = { workspace = true, optional = true }
+q_worldgen = { workspace = true }
+q_player = { workspace = true }
 
 [dev-dependencies]
 cargo-husky = { version = "1", default-features = false, features = [
