@@ -24,14 +24,6 @@ except:
         print("WARN: wsl not detected and HOSTPATH not set.")
 
 env_vars = {
-    # "WINDBG_EXE": {
-    #     "description": "The windbg executable.",
-    #     "default": "windbg.exe",
-    # },
-    # "RENDERDOC_EXE": {
-    #     "description": "The qrenderdoc executable.",
-    #     "default": "qrenderdoc.exe",
-    # },
     "CARGO_CMD": {
         "description": "The cargo command to execute.",
         "default": "build",
@@ -50,18 +42,24 @@ env_vars = {
     },
 }
 
+
 # PARSE #######################################################################
+class CustomFormatter(
+    argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter
+):
+    pass
+
 
 epilog = "Accepts the following environment variables:\n"
 for name, values in env_vars.items():
-    epilog += f"{name}:\t{values.get('description')}\n\t\tDefaults to {values.get('default')}\n"
+    epilog += f"  {name}:\t\t{values.get('description')}\n\t\t\t(default: {values.get('default')})\n"
 
 env = os.environ
 parser = argparse.ArgumentParser(
     prog="cargo wsl",
-    description="Builds the project assuming you're on WSL.",
+    description="Builds the project assuming you're on WSL. By default will compile with `-Fdebug -Fdev -Finspector`. Packaged files are checksummed and only changed files are synced. If SSH is detected, there will be some extra steps involved, and dynamic linking will be disabled.",
     epilog=epilog,
-    formatter_class=argparse.RawTextHelpFormatter,
+    formatter_class=CustomFormatter,
 )
 parser.add_argument(
     "-b", "--no-build", action="store_true", help="Do not build the project."
@@ -79,37 +77,35 @@ parser.add_argument(
     "-t",
     "--trace",
     action="store_true",
-    help="Runs with -F bevy/trace_tracy. On Windows this requires running the built application as an administrator.",
+    help="Runs with `-Fbevy/trace_tracy --release` and removes `-Fdev`. On Windows this requires running the built application as an administrator.",
 )
 parser.add_argument("wsl", help="(dummy argument)")
-# parser.add_argument(
-#     "-W",
-#     "--windbg",
-#     action="store_true",
-#     help="Run windbg after building.",
-# )
-# parser.add_argument(
-#     "-R",
-#     "--renderdoc",
-#     action="store_true",
-#     help="Run renderdoc after building.",
-# )
 parser.add_argument(
-    "-F",
-    "--feature",
-    nargs=1,
-    action="append",
-    dest="features",
-    help="Feature flags passed to cargo.",
-    default=["debug", "inspector"],
+    "-f",
+    "--no-default-features",
+    action="store_true",
+    help="By default, cargo wsl will run with `-Fdebug -Fdev -Finspector`. Pass this flag if you want to disable that behavior.",
 )
 parser.add_argument(
     "-v", "--verbose", action="count", help="Run verbosely.", default=0
 )
 
+ssh_connection = os.environ.get("SSH_CONNECTION")
+if ssh_connection:
+    print("SSH detected.")
+
 args = common.parse_with_forward(parser, "cargo")
+if not args.no_default_features:
+    args.forward = args.forward + [
+        "-Fdebug",
+        "-Fdev",
+        "-Finspector",
+    ]
 if args.trace:
-    args.forward.concat(["-F", "bevy/trace_tracy"])
+    args.forward = args.forward + ["-Fbevy/trace_tracy", "--release"]
+
+if ssh_connection or args.trace and "-Fdev" in args.forward:
+    args.forward.remove("-Fdev")
 
 
 def print_and_run(cmd: str | list[str], **shargs):
@@ -138,9 +134,6 @@ if args.verbose > 2:
     print(f"ARGS:\n{args}")
     print(f"ENV_VARS:\n{env_vars}")
 
-ssh_connection = os.environ.get("SSH_CONNECTION")
-if ssh_connection:
-    print("SSH detected.")
 
 # BUILD #######################################################################
 
@@ -193,11 +186,11 @@ if not args.no_build:
 
     runas = "-Verb RunAs" if args.trace else ""
     start = """\
-    Start-Process  -Wait -Environment @{{
+    Start-Process {runas} -Wait -Environment @{{
     RUST_LOG="{RUST_LOG}"
     DEBUG_LEVEL="{DEBUG_LEVEL}"
     PATH="{winpath}"
-    }} -FilePath "{bin_path}" {runas}\
+    }} -FilePath "{bin_path}" \
     2>&1 | Tee-Object -FilePath run.log\
     """.format(
         RUST_LOG=os.environ.get("RUST_LOG"),
@@ -216,7 +209,7 @@ else:
 
 
 # HASH #########################################################################
-def do_hash():
+def do_hash(build_files):
     # generate checksum
     mismatched = ()
     hashfile = ""
@@ -265,8 +258,6 @@ def do_hash():
 if not args.no_sync:
     exec_path = os.path.join(target_dir, pkg_name + ".exe")
     build_files = [start_path, exec_path]
-    if "dev" in args.features:
-        build_files.append(os.path.join(target_dir, "bevy_dylib.dll"))
 
     if args.no_hash:
         print("Not hashing.")
@@ -276,12 +267,11 @@ if not args.no_sync:
                 path = os.path.join(root, file)
                 mismatched.append(path)
     else:
-        mismatched = do_hash()
+        mismatched = do_hash(build_files)
     if args.verbose > 1:
         print("Mismatched files:", mismatched)
 
     # sync
-
     for local_file in mismatched:
         remote_file = local_file.replace(target_dir + "/", "")
         destination = os.path.join(env_vars["HOSTPATH"], pkg_name, remote_file)
