@@ -31,10 +31,9 @@ pub fn update_camera(
     time: Res<Time>,
     keys: Res<ButtonInput<KeyCode>>,
     mouse_btn: Res<ButtonInput<MouseButton>>,
-    cam: Query<&Camera, With<InspectorCam>>,
+    mut cam_rig: Single<(&Camera, &mut Rig), With<InspectorCam>>,
     window: Query<&Window>,
     mut mouse_motion_events: EventReader<MouseMotion>,
-    mut rig_q: Query<&mut Rig>,
 ) {
     let time_delta_seconds: f32 = time.delta_secs();
     let boost_mult = 5.0f32;
@@ -71,10 +70,11 @@ pub fn update_camera(
     let mut delta = Vec2::ZERO;
     // should only activate if the cursor is within the gameview window
     let cursor_pos = window.get_single().ok().and_then(|w| w.cursor_position());
+    let (cam, rig) = (cam_rig.0, &mut cam_rig.1);
     let can_scroll = cam
-        .get_single()
-        .ok()
-        .and_then(|c| c.viewport.as_ref().zip(cursor_pos))
+        .viewport
+        .as_ref()
+        .zip(cursor_pos)
         .map(|(vp, cpos)| {
             let topleft = vp.physical_position.as_vec2();
             let bottomright =
@@ -93,12 +93,10 @@ pub fn update_camera(
         delta.y *= sensitivity.y;
     }
 
-    let mut rig = rig_q.single_mut();
-
     rig.driver_mut::<Fpv>().update_pos_rot(
         move_vec,
         delta,
-        false,
+        true,
         boost,
         time_delta_seconds,
     );

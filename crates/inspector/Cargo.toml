@@ -15,7 +15,6 @@ debug = []
 
 [dependencies]
 bevy = { workspace = true, features = ["bevy_dev_tools"] }
-bevy_asset_loader = { workspace = true }
 log = { workspace = true }
 bevy-inspector-egui = { workspace = true }
 avian3d = { workspace = true }

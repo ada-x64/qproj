@@ -165,7 +165,7 @@ if not args.no_build:
     )
 
     winpath = "$env:PATH"
-    if "dev" in args.forward:
+    if "-Fdev" in args.forward:
         try:
             rustlibs = (
                 subprocess.check_output(
@@ -195,17 +195,19 @@ if not args.no_build:
         except:
             print("WARN: Could not generate path to dynamic libraries!")
 
-    runas = "-Verb RunAs" if args.trace else ""
+    runas = "-Verb RunAs" if args.trace else "-NoNewWindow"
     start = """\
     Start-Process {runas} -Wait -Environment @{{
     RUST_LOG="{RUST_LOG}"
     DEBUG_LEVEL="{DEBUG_LEVEL}"
+    RUST_BACKTRACE="{RUST_BACKTRACE}"
     PATH="{winpath}"
     }} -FilePath "{bin_path}" \
     2>&1 | Tee-Object -FilePath run.log\
     """.format(
         RUST_LOG=os.environ.get("RUST_LOG"),
         DEBUG_LEVEL=os.environ.get("DEBUG_LEVEL"),
+        RUST_BACKTRACE=os.environ.get("RUST_BACKTRACE"),
         bin_path=bin_path,
         runas=runas,
         winpath=winpath,
@@ -309,7 +311,7 @@ if not args.no_sync:
             host = f"{user}@{ip}:{port}"
 
         sync_script = f"sftp sftp://{host}/{env_vars["HOSTPATH"]} <<EOF\n{sync_script}\nEOF"
-        print_and_run(sync_script, True)
+        print_and_run(["bash", "-c", sync_script])
     else:
         print_and_run(["bash", "-c", sync_script])
 

@@ -19,6 +19,6 @@ bevy = { workspace = true }
 itertools = { workspace = true }
 log = { workspace = true }
 anyhow = { workspace = true }
-derivative = { workspace = true }
+derive_more = { workspace = true }
 thiserror = { workspace = true }
 avian3d = { workspace = true }

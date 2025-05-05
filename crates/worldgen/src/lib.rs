@@ -43,7 +43,7 @@ impl WorldgenPlugin {
         mut commands: Commands,
         // settings: Res<WorldgenPluginSettings>,
     ) {
-        let expr = assets.load("terrain/test.ron");
+        let expr = assets.load("terrain/complex-planet.terrain.ron");
         generator.expr = Some(expr);
         let material = materials.add(StandardMaterial::default());
         generator.default_material = Some(material);
@@ -189,7 +189,7 @@ impl WorldgenPlugin {
                 // })
                 // TODO
             } else {
-                commands.entity(entt).despawn_recursive();
+                commands.entity(entt).despawn();
             }
         });
 
@@ -230,6 +230,7 @@ impl WorldgenPlugin {
         }
     }
 
+    /// TODO: Make this an event.
     fn terrain_initialized(
         terrain: Query<&Terrain, With<Initialized>>,
     ) -> bool {

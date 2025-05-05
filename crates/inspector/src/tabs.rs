@@ -66,10 +66,11 @@ impl egui_dock::TabViewer for TabViewer<'_> {
                 // if selected {
                 //     self.selection = InspectorSelection::Entities;
                 // }
-                let filter = Filter::<With<Transform>>::from_ui_fuzzy(
-                    ui,
-                    Id::new("fuzzy-filter"),
-                );
+                let filter =
+                    Filter::<(Without<Parent>, Without<Observer>)>::from_ui_fuzzy(
+                        ui,
+                        Id::new("fuzzy-filter"),
+                    );
                 ui_for_entities_filtered(self.world, ui, true, &filter);
                 // if selected {
                 //     self.selection = InspectorSelection::Entities;

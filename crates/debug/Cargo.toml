@@ -15,7 +15,6 @@ dev = ["bevy/dynamic_linking"]
 [dependencies]
 bevy = { workspace = true, features = ["bevy_dev_tools"] }
 bevy_kira_audio = { workspace = true }
-bevy_asset_loader = { workspace = true }
 rand = { workspace = true }
 itertools = { workspace = true }
 log = { workspace = true }

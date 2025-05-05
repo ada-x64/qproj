@@ -36,7 +36,7 @@ strip = true
 
 [features]
 dev = ["bevy/dynamic_linking"]
-debug = ["q_debug", "q_worldgen/debug", "bevy/bevy_dev_tools"]
+debug = ["q_debug", "q_worldgen/debug", "q_player/debug", "bevy/bevy_dev_tools"]
 inspector = ["q_inspector", "q_worldgen/inspector"]
 
 
@@ -78,7 +78,6 @@ bevy = { version = "0.15", default-features = false, features = [
     "x11",
 ] }
 bevy_kira_audio = { version = "0.22.0" }
-bevy_asset_loader = { version = "0.22" }
 blake3 = { version = "1.5", features = ["pure"] }
 rand = { version = "0.8.3" }
 itertools = "0.14.0"
@@ -88,12 +87,14 @@ log = { version = "0.4", features = [
 ] }
 rayon = { version = "1.10" }
 noise_gui = { git = "https://github.com/ada-x64/noise_gui.git", branch = "quell", package = "noise_expr" }
-derivative = "2.2.0"
+derive_more = { version = "2.0", features = ["from"] }
 anyhow = "1.0.97"
 thiserror = "2.0.12"
 bevy-inspector-egui = "0.29"
 avian3d = "0.2"
 bevy_dolly = "0.0.5"
+derive_builder = "0.20.2"
+
 ## crates in the workspace
 q_worldgen = { path = "crates/worldgen" }
 q_debug = { path = "crates/debug" }
@@ -105,7 +106,6 @@ q_inspector = { path = "crates/inspector" }
 # general deps
 bevy = { workspace = true }
 bevy_kira_audio = { workspace = true }
-bevy_asset_loader = { workspace = true }
 rand = { workspace = true }
 itertools = { workspace = true }
 log = { workspace = true }

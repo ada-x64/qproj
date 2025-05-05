@@ -7,7 +7,10 @@ use bevy::{
     log::{LogPlugin, tracing_subscriber::EnvFilter},
     prelude::*,
 };
-use q_player::PlayerSet;
+use q_player::PlayerState;
+
+#[cfg(feature = "inspector")]
+mod inspector;
 
 #[derive(States, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum GameState {
@@ -44,30 +47,29 @@ fn main() {
         debug!("DEBUG_LEVEL = {debug_level:?}");
         app.add_plugins(DebugPlugin {
             debug_level,
-            wireframes: true,
+            wireframes: false,
         });
     }
 
     #[cfg(feature = "inspector")]
     {
-        fn enable_ui(mut state: ResMut<NextState<InspectorState>>) {
-            info!("ENABLING INSPECTOR UI");
-            state.set(InspectorState::Enabled);
-        }
-        use q_inspector::state::InspectorState;
-        app.add_plugins((q_inspector::InspectorPlugin,))
-            .add_systems(Startup, enable_ui)
-            .add_systems(OnEnter(InspectorState::Disabled), q_player::spawn)
-            .configure_sets(
-                Update,
-                PlayerSet::Active.run_if(in_state(InspectorState::Disabled)),
-            );
+        app.add_plugins(inspector::InspectorIntegrationPlugin);
+        app.add_systems(
+            Startup,
+            |mut player_state: ResMut<NextState<PlayerState>>| {
+                player_state.set(PlayerState::Inactive)
+            },
+        );
     }
-
-    app.configure_sets(
-        Update,
-        PlayerSet::Active.run_if(in_state(GameState::MainGame)),
-    );
+    #[cfg(not(feature = "inspector"))]
+    {
+        app.add_systems(
+            Startup,
+            |mut player_state: ResMut<NextState<PlayerState>>| {
+                player_state.set(PlayerState::Active)
+            },
+        );
+    }
 
     app.run();
 }

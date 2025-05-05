@@ -27,7 +27,7 @@ noise_gui = { workspace = true }
 noise = "0.8.2"                                             #keep in sync with noise_gui
 ron = "0.8.1"
 anyhow = { workspace = true }
-derivative = { workspace = true }
+derive_more = { workspace = true }
 thiserror = { workspace = true }
 meshopt = { workspace = true }
 bevy-inspector-egui = { workspace = true, optional = true }

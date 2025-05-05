@@ -19,12 +19,13 @@ bevy = { workspace = true }
 itertools = { workspace = true }
 log = { workspace = true }
 anyhow = { workspace = true }
-derivative = { workspace = true }
+derive_more = { workspace = true }
 thiserror = { workspace = true }
 avian3d = { workspace = true }
 bevy-tnua-avian3d = "0.3.1"
 bevy-tnua = "0.22"
 bevy_dolly = { workspace = true }
+derive_builder = { workspace = true }
 
 q_debug = { workspace = true, optional = true }
 q_worldgen = { workspace = true }

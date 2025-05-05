@@ -14,10 +14,11 @@ use egui_dock::{DockArea, NodeIndex, Style};
 
 use crate::tabs::{Tab, TabViewer};
 
-#[derive(States, Debug, Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(States, Debug, Copy, Clone, PartialEq, Eq, Hash, Default)]
 
 pub enum InspectorState {
     /// Awaiting setup
+    #[default]
     Init,
     /// Describes the UI state where: Inspector editing is active and the game is paused.
     Enabled,

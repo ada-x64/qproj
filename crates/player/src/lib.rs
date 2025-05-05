@@ -7,15 +7,29 @@ use bevy::prelude::*;
 use bevy_dolly::prelude::*;
 use bevy_tnua::prelude::*;
 use bevy_tnua_avian3d::{TnuaAvian3dPlugin, TnuaAvian3dSensorShape};
+use cam::{PlayerCamDriver, PlayerCamRigOptionsBuilder};
+use q_debug::uv_debug_texture;
 use q_worldgen::util::SpawnAroundTracker;
+use std::f32::consts::PI;
 
+mod cam;
 #[derive(Component, Default, Debug)]
 pub struct Player;
 
-#[derive(SystemSet, Debug, Hash, Eq, PartialEq, Copy, Clone)]
-pub enum PlayerSet {
+#[derive(States, Debug, Hash, Eq, PartialEq, Copy, Clone, Default)]
+pub enum PlayerState {
+    #[default]
+    Init,
     Active,
     Inactive,
+}
+impl From<PlayerState> for bool {
+    fn from(value: PlayerState) -> bool {
+        match value {
+            PlayerState::Active => true,
+            PlayerState::Init | PlayerState::Inactive => false,
+        }
+    }
 }
 
 #[derive(Component, Default, Debug)]
@@ -28,37 +42,79 @@ impl Plugin for PlayerPlugin {
             TnuaControllerPlugin::new(FixedUpdate),
             TnuaAvian3dPlugin::new(FixedUpdate),
         ))
+        .init_state::<PlayerState>()
         .add_systems(
             FixedUpdate,
             apply_controls.in_set(TnuaUserControlsSystemSet),
         )
-        .add_systems(Update, (update_camera).in_set(PlayerSet::Active));
+        .add_systems(OnExit(PlayerState::Init), init)
+        .add_systems(
+            Update,
+            (Dolly::<PlayerCam>::update_active, update_camera)
+                .run_if(in_state(PlayerState::Active)),
+        );
     }
 }
 
-pub fn spawn(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>) {
-    let pos = Vec3::new(0., 0., 0.);
-    let mesh = meshes.add(Capsule3d::new(0.5, 1.));
-    commands.spawn((
-        Player,
-        Mesh3d(mesh),
-        Name::new("Player"),
-        RigidBody::Dynamic,
-        Collider::capsule(0.5, 1.),
-        TnuaController::default(),
-        TnuaAvian3dSensorShape(Collider::cylinder(0.49, 0.)),
-        LockedAxes::ROTATION_LOCKED,
-        SpawnAroundTracker,
-        Transform::from_translation(pos),
-    ));
-    commands.spawn((PlayerCam, MovableLookAt::from_position_target(pos)));
+// TODO: This position needs to vary depending on the terrain. Probably want to wait until it's loaded.
+// But, game state should wait until terrain is loaded to transition to PlayerState::Active
+pub fn init(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut images: ResMut<Assets<Image>>,
+) {
+    debug!("EXITING PLAYERSTATE::INIT");
+    let pos = Vec3::ZERO;
+    let capsule = meshes.add(Capsule3d::new(0.5, 1.));
+    let sphere = meshes.add(Sphere::new(1.));
+    let img = images.add(uv_debug_texture());
+    let material = materials.add(StandardMaterial {
+        base_color_texture: Some(img),
+        ..Default::default()
+    });
+    commands
+        .spawn((
+            Player,
+            Mesh3d(capsule),
+            MeshMaterial3d(material.clone()),
+            Name::new("Player"),
+            RigidBody::Dynamic,
+            Collider::capsule(0.5, 1.),
+            TnuaController::default(),
+            TnuaAvian3dSensorShape(Collider::cylinder(0.49, 0.)),
+            LockedAxes::ROTATION_LOCKED,
+            SpawnAroundTracker,
+            Transform::from_translation(pos),
+        ))
+        .with_child((
+            Camera3d::default(),
+            PlayerCam,
+            Rig::builder()
+                .with(PlayerCamDriver::new(
+                    PlayerCamRigOptionsBuilder::default()
+                        .rot_smoothing(0.)
+                        .build()
+                        .unwrap(),
+                ))
+                .build(),
+            Transform::default(),
+            Collider::sphere(1.),
+            Mesh3d(sphere),
+            MeshMaterial3d(material),
+            PointLight::default(),
+        ));
 }
 
+#[allow(clippy::type_complexity)]
 pub fn update_camera(
     player_tf: Single<&Transform, With<Player>>,
-    mut cam: Single<&mut MovableLookAt, With<PlayerCam>>,
+    mut rig_tf: Single<&mut Rig, With<PlayerCam>>,
 ) {
-    cam.set_position_target(player_tf.translation, player_tf.rotation);
+    rig_tf.driver_mut::<PlayerCamDriver>().set_position(
+        player_tf.translation,
+        Quat::from_axis_angle(player_tf.forward().as_vec3(), PI / 3.),
+    );
 }
 
 fn apply_controls(

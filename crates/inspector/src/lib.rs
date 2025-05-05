@@ -25,14 +25,8 @@ impl Plugin for InspectorPlugin {
         app.add_plugins((DefaultInspectorConfigPlugin, bevy_egui::EguiPlugin))
             .init_resource::<DockState>()
             .insert_resource(UiState::new(assets))
-            .insert_state(InspectorState::Init)
-            .add_systems(
-                OnTransition {
-                    exited: InspectorState::Init,
-                    entered: InspectorState::Enabled,
-                },
-                (|| debug!("ENABLING INSPECTOR UI!"), spawn_camera),
-            )
+            .init_state::<InspectorState>()
+            .add_systems(OnExit(InspectorState::Init), spawn_camera)
             .add_systems(
                 Update,
                 (Dolly::<InspectorCam>::update_active, update_camera)
