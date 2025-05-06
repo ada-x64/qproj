@@ -55,7 +55,7 @@ impl Default for DockState {
         let [_game, _bottom] = tree.split_below(
             NodeIndex::root(),
             0.8,
-            vec![Tab::Resources, Tab::Assets],
+            vec![Tab::Resources, Tab::Assets, Tab::States],
         );
         dock_state
     }

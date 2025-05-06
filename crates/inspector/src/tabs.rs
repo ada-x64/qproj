@@ -21,6 +21,7 @@ pub enum Tab {
     Resources,
     Assets,
     NoiseEditor,
+    States,
 }
 
 pub struct TabViewer<'a> {
@@ -56,18 +57,20 @@ impl egui_dock::TabViewer for TabViewer<'_> {
                     shortcircuit_entity: None,
                     extra_state: &mut (),
                 }
-                .show_with_default_filter::<()>(ui);
-                // let filter =
-                //     Filter::<(Without<Parent>, Without<Observer>)>::from_ui_fuzzy(
-                //         ui,
-                //         Id::new("fuzzy-filter"),
-                //     );
-                // ui_for_entities_filtered(self.world, ui, true, &filter);
+                .show_with_default_filter::<(Without<Parent>, Without<Observer>)>(ui);
+
                 if selected {
                     state.selection = InspectorSelection::Entities;
                 }
             }
-            Tab::Resources => resources::render_tab(self, ui, &type_registry),
+            Tab::Resources => resources::render_tab::<ReflectResource>(
+                self,
+                ui,
+                &type_registry,
+            ),
+            Tab::States => {
+                resources::render_tab::<ReflectState>(self, ui, &type_registry)
+            }
             Tab::Assets => assets::render_tab(self, ui, &type_registry),
             Tab::NoiseEditor => todo!(),
         }
