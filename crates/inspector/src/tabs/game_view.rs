@@ -7,13 +7,13 @@ use bevy_egui::{EguiContextSettings, egui};
 
 use crate::{
     cam::InspectorCam,
-    state::{PhysicsEnabled, UiState},
+    state::{GameViewActive, UiState},
 };
 
 use super::TabViewer;
 
 pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
-    viewer.world.resource_scope::<State<PhysicsEnabled>, _>(
+    viewer.world.resource_scope::<State<GameViewActive>, _>(
         |world, physics| {
             let btn_text = if physics.as_bool() {
                 "\u{23f9}"
@@ -23,7 +23,7 @@ pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
             ui.horizontal(|ui| {
                 if ui.add(egui::Button::new(btn_text)).clicked() {
                     world
-                        .get_resource_mut::<NextState<PhysicsEnabled>>()
+                        .get_resource_mut::<NextState<GameViewActive>>()
                         .unwrap()
                         .set(physics.toggle());
                 }

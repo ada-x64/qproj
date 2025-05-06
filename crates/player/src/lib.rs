@@ -9,6 +9,7 @@ use bevy_tnua::prelude::*;
 use bevy_tnua_avian3d::{TnuaAvian3dPlugin, TnuaAvian3dSensorShape};
 use cam::{PlayerCamDriver, PlayerCamRigOptionsBuilder};
 use q_debug::uv_debug_texture;
+use q_utils::boolish_states;
 use q_worldgen::util::SpawnAroundTracker;
 use std::f32::consts::PI;
 
@@ -16,21 +17,7 @@ mod cam;
 #[derive(Component, Default, Debug)]
 pub struct Player;
 
-#[derive(States, Debug, Hash, Eq, PartialEq, Copy, Clone, Default)]
-pub enum PlayerState {
-    #[default]
-    Init,
-    Active,
-    Inactive,
-}
-impl From<PlayerState> for bool {
-    fn from(value: PlayerState) -> bool {
-        match value {
-            PlayerState::Active => true,
-            PlayerState::Init | PlayerState::Inactive => false,
-        }
-    }
-}
+boolish_states!(PlayerState, CamState);
 
 #[derive(Component, Default, Debug)]
 pub struct PlayerCam;
@@ -42,29 +29,36 @@ impl Plugin for PlayerPlugin {
             TnuaControllerPlugin::new(FixedUpdate),
             TnuaAvian3dPlugin::new(FixedUpdate),
         ))
-        .init_state::<PlayerState>()
+        .setup_boolish_states()
         .add_systems(
             FixedUpdate,
             apply_controls.in_set(TnuaUserControlsSystemSet),
         )
         .add_systems(OnExit(PlayerState::Init), init)
+        .add_systems(OnEnter(CamState::Enabled), set_cam_active::<true>)
+        .add_systems(OnEnter(CamState::Disabled), set_cam_active::<false>)
         .add_systems(
             Update,
             (Dolly::<PlayerCam>::update_active, update_camera)
-                .run_if(in_state(PlayerState::Active)),
+                .run_if(in_state(PlayerState::Enabled)),
         );
     }
 }
 
+fn set_cam_active<const VAL: bool>(
+    mut cam: Single<&mut Camera, With<PlayerCam>>,
+) {
+    cam.is_active = VAL;
+}
+
 // TODO: This position needs to vary depending on the terrain. Probably want to wait until it's loaded.
-// But, game state should wait until terrain is loaded to transition to PlayerState::Active
+// But, game state should wait until terrain is loaded to transition to PlayerState::Enabled
 pub fn init(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
 ) {
-    debug!("EXITING PLAYERSTATE::INIT");
     let pos = Vec3::ZERO;
     let capsule = meshes.add(Capsule3d::new(0.5, 1.));
     let sphere = meshes.add(Sphere::new(1.));

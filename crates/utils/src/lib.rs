@@ -37,7 +37,7 @@ impl BoolishState {
 }
 
 /// Sets up simple boolean states with third-value for initialization.
-/// Don't forget to call setup_macro_states when setting up your states!
+/// Don't forget to call setup_boolish_states when setting up your states!
 #[macro_export]
 macro_rules! boolish_states {
     ($($name: ident),*) => {
@@ -47,12 +47,12 @@ macro_rules! boolish_states {
             )]
             #[reflect(State)]
             pub enum $name {
-                /// Awaiting setup
+                /// awaiting setup
                 #[default]
                 Init,
-                /// Describes the UI state where: Inspector editing is active and the game is paused.
+                /// gloss to bool: true
                 Enabled,
-                /// Describes the UI state where: Inspector editing is inactive and the game is being played.
+                /// gloss to bool: false
                 Disabled,
             }
             impl From<bool> for $name {
@@ -83,8 +83,20 @@ macro_rules! boolish_states {
         }
         impl SetupBoolishStates for App {
             fn setup_boolish_states(&mut self) -> &mut Self {
-                self$(.init_state::<$name>().register_type::<$name>())*
+                use bevy::log::debug;
+                self$(.init_state::<$name>().register_type::<$name>()
+                    .add_systems(OnEnter($name::Enabled), || debug!(state_name = stringify!($name), status="ENABLED"))
+                    .add_systems(OnEnter($name::Disabled), || debug!(state_name = stringify!($name), status="DISABLED"))
+            )*
             }
         }
+        // pub trait SetupBoolishDebugLog {
+        //     fn setup_boolish_debug_log(&mut self) -> &mut Self;
+        // }
+        // impl SetupBoolishDebugLog for App {
+        //     fn setup_boolish_debug_log(&mut self) -> &mut Self {
+        //         self.add_systems(OnEnter())
+        //     }
+        // }
     }
 }

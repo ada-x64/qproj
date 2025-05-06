@@ -52,24 +52,24 @@ fn main() {
     }
 
     #[cfg(feature = "inspector")]
-    {
-        app.add_plugins(inspector::InspectorIntegrationPlugin);
-        app.add_systems(
-            Startup,
-            |mut player_state: ResMut<NextState<PlayerState>>| {
-                player_state.set(PlayerState::Inactive)
-            },
-        );
-    }
+    let _ = {
+        app.add_plugins(inspector::InspectorIntegrationPlugin)
+            .add_systems(
+                OnEnter(GameState::Inspector),
+                |mut player_state: ResMut<NextState<PlayerState>>| {
+                    player_state.set(PlayerState::Disabled)
+                },
+            )
+    };
     #[cfg(not(feature = "inspector"))]
-    {
+    let _ = {
         app.add_systems(
             Startup,
             |mut player_state: ResMut<NextState<PlayerState>>| {
-                player_state.set(PlayerState::Active)
+                player_state.set(PlayerState::Enabled)
             },
         );
-    }
+    };
 
     app.run();
 }

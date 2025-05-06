@@ -2,7 +2,7 @@
 // ┏┓┏┓┏┓┏┓┓
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
-use bevy::{input::mouse::MouseMotion, prelude::*, window::CursorGrabMode};
+use bevy::{input::mouse::MouseMotion, prelude::*};
 use bevy_dolly::prelude::*;
 
 #[derive(Component, Debug, Default)]
@@ -97,18 +97,18 @@ pub fn update_camera(
         time_delta_seconds,
     );
 }
-/// Grabs/ungrabs mouse cursor
-fn toggle_grab_cursor(window: &mut Window) -> bool {
-    match window.cursor_options.grab_mode {
-        CursorGrabMode::None => {
-            window.cursor_options.grab_mode = CursorGrabMode::Confined;
-            window.cursor_options.visible = false;
-            false
-        }
-        _ => {
-            window.cursor_options.grab_mode = CursorGrabMode::None;
-            window.cursor_options.visible = true;
-            true
-        }
-    }
-}
+// /// Grabs/ungrabs mouse cursor
+// fn toggle_grab_cursor(window: &mut Window) -> bool {
+//     match window.cursor_options.grab_mode {
+//         CursorGrabMode::None => {
+//             window.cursor_options.grab_mode = CursorGrabMode::Confined;
+//             window.cursor_options.visible = false;
+//             false
+//         }
+//         _ => {
+//             window.cursor_options.grab_mode = CursorGrabMode::None;
+//             window.cursor_options.visible = true;
+//             true
+//         }
+//     }
+// }

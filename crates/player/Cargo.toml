@@ -30,3 +30,4 @@ derive_builder = { workspace = true }
 q_debug = { workspace = true, optional = true }
 q_worldgen = { workspace = true }
 q_inspector = { workspace = true, optional = true }
+q_utils = { workspace = true }

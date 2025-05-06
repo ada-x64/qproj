@@ -4427,6 +4427,7 @@ dependencies = [
  "log",
  "q_debug",
  "q_inspector",
+ "q_utils",
  "q_worldgen",
  "thiserror 2.0.12",
 ]

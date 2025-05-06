@@ -25,7 +25,7 @@ impl Default for InspectorSettings {
     }
 }
 
-boolish_states!(InspectorEnabled, PhysicsEnabled, CamEnabled);
+boolish_states!(InspectorEnabled, GameViewActive, CamEnabled);
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum InspectorSelection {

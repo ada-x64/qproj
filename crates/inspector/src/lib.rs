@@ -13,7 +13,7 @@ use bevy_egui::{EguiContext, EguiPostUpdateSet};
 use bevy_inspector_egui::DefaultInspectorConfigPlugin;
 use cam::{InspectorCam, spawn_camera, update_camera};
 use state::{
-    CamEnabled, InspectorEnabled, InspectorSettings, PhysicsEnabled,
+    CamEnabled, GameViewActive, InspectorEnabled, InspectorSettings,
     SetupStates, UiState,
 };
 use tabs::game_view::set_camera_viewport;
@@ -38,8 +38,8 @@ impl Plugin for InspectorPlugin {
             )
             .add_systems(OnEnter(CamEnabled::Disabled), set_cam_active::<false>)
             .add_systems(OnEnter(CamEnabled::Enabled), set_cam_active::<true>)
-            .add_systems(OnEnter(PhysicsEnabled::Disabled), pause_time)
-            .add_systems(OnEnter(PhysicsEnabled::Enabled), unpause_time)
+            .add_systems(OnEnter(GameViewActive::Disabled), pause_time)
+            .add_systems(OnEnter(GameViewActive::Enabled), unpause_time)
             .add_systems(
                 PostUpdate,
                 (show_ui_system
@@ -66,10 +66,10 @@ impl Plugin for InspectorPlugin {
 }
 
 fn init(
-    mut physics: ResMut<NextState<PhysicsEnabled>>,
+    mut game_view: ResMut<NextState<GameViewActive>>,
     mut cam: ResMut<NextState<CamEnabled>>,
 ) {
-    physics.set(PhysicsEnabled::Disabled);
+    game_view.set(GameViewActive::Disabled);
     cam.set(CamEnabled::Enabled);
 }
 
@@ -87,23 +87,25 @@ fn show_ui_system(world: &mut World) {
     });
 }
 
+/// TODO: Physics should be handled _outside_ the inspector
 fn pause_time(
+    mut time: ResMut<Time<Physics>>,
+    mut cam: ResMut<NextState<CamEnabled>>,
+) {
+    time.pause();
+    cam.set(true.into())
+}
+
+/// TODO: Physics should be handled _outside_ the inspector
+fn unpause_time(
     mut time: ResMut<Time<Physics>>,
     mut cam: ResMut<NextState<CamEnabled>>,
     settings: Res<InspectorSettings>,
 ) {
-    time.pause();
+    time.unpause();
     if settings.switch_cams {
         cam.set(false.into())
     }
-}
-
-fn unpause_time(
-    mut time: ResMut<Time<Physics>>,
-    mut cam: ResMut<NextState<CamEnabled>>,
-) {
-    time.unpause();
-    cam.set(true.into())
 }
 
 fn set_cam_active<const VAL: bool>(
