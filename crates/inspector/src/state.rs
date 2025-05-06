@@ -4,39 +4,30 @@
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use std::any::TypeId;
 
-use bevy::{
-    asset::{LoadedFolder, UntypedAssetId},
-    prelude::*,
-};
-use bevy_egui::egui::{self};
+use bevy::{asset::UntypedAssetId, prelude::*};
+use bevy_egui::egui::{self, mutex::Mutex};
 use bevy_inspector_egui::bevy_inspector::hierarchy::SelectedEntities;
 use egui_dock::{DockArea, NodeIndex, Style};
+use q_utils::boolish_states;
 
 use crate::tabs::{Tab, TabViewer};
 
-#[derive(States, Debug, Copy, Clone, PartialEq, Eq, Hash, Default)]
+// a bunch of state enums and such ////////////////////////////////////////////
 
-pub enum InspectorState {
-    /// Awaiting setup
-    #[default]
-    Init,
-    /// Describes the UI state where: Inspector editing is active and the game is paused.
-    Enabled,
-    /// Describes the UI state where: Inspector editing is inactive and the game is being played.
-    Disabled,
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Resource, Reflect)]
+#[reflect(Resource)]
+pub struct InspectorSettings {
+    pub switch_cams: bool,
 }
-impl From<bool> for InspectorState {
-    fn from(value: bool) -> Self {
-        if value { Self::Enabled } else { Self::Disabled }
-    }
-}
-impl From<InspectorState> for bool {
-    fn from(value: InspectorState) -> Self {
-        matches!(value, InspectorState::Enabled)
+impl Default for InspectorSettings {
+    fn default() -> Self {
+        Self { switch_cams: true }
     }
 }
 
-#[derive(Eq, PartialEq)]
+boolish_states!(InspectorEnabled, PhysicsEnabled, CamEnabled);
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum InspectorSelection {
     Entities,
     Resource(TypeId, String),
@@ -70,38 +61,51 @@ impl Default for DockState {
     }
 }
 
-#[derive(Resource)]
+#[derive(Resource, Debug)]
 pub struct UiState {
-    // Idea:
-    // As long as the inspector is open, the game is in InspectorMode.
-    // Game time is paused and main systems are suspended.
-    // Once the user hits "play" the ui will either become disabled or
-    // the gameview tab will go fullscreen until the simulation is stopped with ESC.
-    // This is basically how it is with Unity.
-    // InspectorCamera is a flycam.
-    // Will need to switch between game states in the main application.
     pub viewport_rect: egui::Rect,
     pub selection: InspectorSelection,
     pub selected_entities: SelectedEntities,
-    pub assets: Handle<LoadedFolder>,
 }
-impl UiState {
-    pub fn new(assets: Handle<LoadedFolder>) -> Self {
+impl Default for UiState {
+    fn default() -> Self {
         Self {
             viewport_rect: egui::Rect::NOTHING,
             selection: InspectorSelection::Entities,
             selected_entities: SelectedEntities::default(),
-            assets,
         }
     }
+}
+impl UiState {
     pub fn ui(&mut self, world: &mut World, ctx: &mut egui::Context) {
         world.resource_scope::<DockState, _>(|world, mut dock_state| {
             DockArea::new(&mut dock_state.0)
                 .style(Style::from_egui(ctx.style().as_ref()))
-                .show(ctx, &mut TabViewer { state: self, world });
+                .show(
+                    ctx,
+                    &mut TabViewer {
+                        world,
+                        state: Mutex::new(self),
+                    },
+                );
         });
     }
     pub fn enabled(world: &mut World) -> bool {
-        (*world.resource::<State<InspectorState>>().get()).into()
+        (*world.resource::<State<InspectorEnabled>>().get()).into()
+    }
+}
+
+// set up the app /////////////////////////////////////////////////////////////
+
+pub trait SetupStates {
+    fn setup_states(&mut self) -> &mut Self;
+}
+impl SetupStates for App {
+    fn setup_states(&mut self) -> &mut Self {
+        self.setup_boolish_states()
+            .init_resource::<DockState>()
+            .init_resource::<UiState>()
+            .init_resource::<InspectorSettings>()
+            .register_type::<InspectorSettings>()
     }
 }

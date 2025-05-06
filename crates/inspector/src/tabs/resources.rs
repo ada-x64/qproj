@@ -26,14 +26,15 @@ pub fn render_tab(
         .collect();
     resources.sort_by(|(name_a, _), (name_b, _)| name_a.cmp(name_b));
 
+    let mut state = tab_viewer.state.lock();
     for (resource_name, type_id) in resources {
-        let selected = match tab_viewer.selection {
+        let selected = match state.selection {
             InspectorSelection::Resource(selected, _) => selected == type_id,
             _ => false,
         };
 
         if ui.selectable_label(selected, resource_name).clicked() {
-            tab_viewer.selection = InspectorSelection::Resource(
+            state.selection = InspectorSelection::Resource(
                 type_id,
                 resource_name.to_string(),
             );

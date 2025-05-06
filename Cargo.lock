@@ -4408,6 +4408,7 @@ dependencies = [
  "bevy_egui",
  "egui_dock",
  "log",
+ "q_utils",
 ]
 
 [[package]]
@@ -4428,6 +4429,13 @@ dependencies = [
  "q_inspector",
  "q_worldgen",
  "thiserror 2.0.12",
+]
+
+[[package]]
+name = "q_utils"
+version = "0.1.0"
+dependencies = [
+ "bevy",
 ]
 
 [[package]]

@@ -100,6 +100,7 @@ q_worldgen = { path = "crates/worldgen" }
 q_debug = { path = "crates/debug" }
 q_player = { path = "crates/player" }
 q_inspector = { path = "crates/inspector" }
+q_utils = { path = "crates/utils" }
 
 
 [dependencies]

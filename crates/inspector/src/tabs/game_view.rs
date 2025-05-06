@@ -5,21 +5,32 @@
 use bevy::{prelude::*, render::camera::Viewport, window::PrimaryWindow};
 use bevy_egui::{EguiContextSettings, egui};
 
-use crate::{cam::InspectorCam, state::UiState};
+use crate::{
+    cam::InspectorCam,
+    state::{PhysicsEnabled, UiState},
+};
 
 use super::TabViewer;
 
 pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
-    let enabled = viewer.enabled();
-    let btn_text = if enabled { "\u{25B6}" } else { "\u{23f9}" };
-    ui.horizontal(|ui| {
-        if ui.add(egui::Button::new(btn_text)).clicked() {
-            viewer.set_enabled(!enabled);
-        }
-    });
-    viewer.viewport_rect = ui.clip_rect();
-    // TODO: If game view clicked, grab cursor. (See cam::toggle_grab_cursor)
-    // If cursor is grabbed, ESC un-grabs it.
+    viewer.world.resource_scope::<State<PhysicsEnabled>, _>(
+        |world, physics| {
+            let btn_text = if physics.as_bool() {
+                "\u{23f9}"
+            } else {
+                "\u{25B6}"
+            };
+            ui.horizontal(|ui| {
+                if ui.add(egui::Button::new(btn_text)).clicked() {
+                    world
+                        .get_resource_mut::<NextState<PhysicsEnabled>>()
+                        .unwrap()
+                        .set(physics.toggle());
+                }
+            });
+        },
+    );
+    viewer.state.lock().viewport_rect = ui.clip_rect();
 }
 
 // make camera only render to view not obstructed by UI

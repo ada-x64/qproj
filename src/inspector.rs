@@ -1,15 +1,23 @@
+//         •
+// ┏┓┏┓┏┓┏┓┓
+// ┗┫┣┛┛ ┗┛┃
+//--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use bevy::prelude::*;
-use q_inspector::{cam::InspectorCam, state::InspectorState};
+use q_inspector::{
+    cam::InspectorCam,
+    state::{InspectorEnabled, InspectorSettings, PhysicsEnabled},
+};
 use q_player::{PlayerCam, PlayerState};
 
 pub struct InspectorIntegrationPlugin;
 
-fn enable_ui(mut state: ResMut<NextState<InspectorState>>) {
+fn enable_ui(mut state: ResMut<NextState<InspectorEnabled>>) {
     info!("ENABLING INSPECTOR UI");
-    state.set(InspectorState::Enabled);
+    state.set(InspectorEnabled::Enabled);
 }
 fn transition_state(
-    inspector_state: Res<State<InspectorState>>,
+    physics: Res<State<PhysicsEnabled>>,
+    inspector_settings: Res<InspectorSettings>,
     mut player_state: ResMut<NextState<PlayerState>>,
     mut player_cam: Query<
         &mut Camera,
@@ -25,20 +33,29 @@ fn transition_state(
     else {
         return;
     };
-    let enabled = matches!(inspector_state.get(), InspectorState::Enabled);
-    player_cam.is_active = !enabled;
-    inspector_cam.is_active = enabled;
-    player_state.set(if enabled {
-        PlayerState::Inactive
+    if inspector_settings.switch_cams {
+        let enabled = matches!(physics.get(), PhysicsEnabled::Enabled);
+        player_cam.is_active = !enabled;
+        inspector_cam.is_active = enabled;
+        player_state.set(if enabled {
+            PlayerState::Inactive
+        } else {
+            PlayerState::Active
+        });
     } else {
-        PlayerState::Active
-    });
+        player_cam.is_active = false;
+    }
 }
+
 impl Plugin for InspectorIntegrationPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((q_inspector::InspectorPlugin,))
             .add_systems(Startup, enable_ui)
-            .add_systems(OnEnter(InspectorState::Disabled), transition_state)
-            .add_systems(OnEnter(InspectorState::Enabled), transition_state);
+            .add_systems(OnEnter(InspectorEnabled::Disabled), transition_state)
+            .add_systems(OnEnter(InspectorEnabled::Enabled), transition_state)
+            .add_systems(
+                Update,
+                transition_state.run_if(resource_changed::<InspectorSettings>),
+            );
     }
 }

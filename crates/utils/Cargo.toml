@@ -1,0 +1,24 @@
+#          •
+#  ┏┓┏┓┏┓┏┓┓
+#  ┗┫┣┛┛ ┗┛┃
+# --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
+[package]
+name = "q_utils"
+version = "0.1.0"
+publish = false
+authors = ["<phoenix.mandala@pm.me>"]
+edition = "2024"
+
+[features]
+debug = []                     # q_debug
+dev = ["bevy/dynamic_linking"]
+inspector = []                 # q_inspector
+
+[dependencies]
+bevy = { workspace = true }
+# itertools = { workspace = true }
+# log = { workspace = true }
+# anyhow = { workspace = true }
+# derive_more = { workspace = true }
+# thiserror = { workspace = true }
+# avian3d = { workspace = true }

@@ -1,3 +1,7 @@
+//         •
+// ┏┓┏┓┏┓┏┓┓
+// ┗┫┣┛┛ ┗┛┃
+//--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use bevy::prelude::*;
 use bevy_dolly::prelude::*;
 use derive_builder::Builder;
@@ -44,7 +48,7 @@ impl PlayerCamDriver {
         self.driver_mut::<Position>().position =
             target_position - self.driver_mut::<Arm>().offset;
         self.driver_mut::<Rotation>().rotation = target_rotation;
-        self.driver_mut::<LookAt>().target = target_position + Vec3::Y;
+        self.driver_mut::<LookAt>().target = target_position - Vec3::Y;
     }
 }
 impl RigDriver for PlayerCamDriver {

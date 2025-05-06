@@ -2,11 +2,7 @@
 // ┏┓┏┓┏┓┏┓┓
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
-use bevy::{
-    input::mouse::MouseMotion,
-    prelude::*,
-    window::{CursorGrabMode, PrimaryWindow},
-};
+use bevy::{input::mouse::MouseMotion, prelude::*, window::CursorGrabMode};
 use bevy_dolly::prelude::*;
 
 #[derive(Component, Debug, Default)]
