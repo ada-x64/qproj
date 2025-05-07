@@ -5,9 +5,7 @@
 use bevy::reflect::{TypeData, TypeRegistry};
 use bevy_egui::egui;
 
-use crate::state::InspectorSelection;
-
-use super::TabViewer;
+use super::{InspectorSelection, TabViewer};
 
 pub fn render_tab<T: TypeData>(
     viewer: &mut TabViewer,

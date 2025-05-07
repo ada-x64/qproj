@@ -5,11 +5,9 @@
 use bevy::{
     asset::RenderAssetUsages,
     diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin},
-    ecs::system::{BoxedSystem, SystemParam},
     pbr::wireframe::{WireframeConfig, WireframePlugin},
     prelude::*,
     render::render_resource::{Extent3d, TextureDimension, TextureFormat},
-    utils::tracing::Subscriber,
 };
 
 #[derive(Default)]

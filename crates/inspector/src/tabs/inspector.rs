@@ -8,9 +8,7 @@ use bevy_inspector_egui::bevy_inspector::{
     self, ui_for_entities_shared_components, ui_for_entity_with_children,
 };
 
-use crate::state::InspectorSelection;
-
-use super::TabViewer;
+use super::{InspectorSelection, TabViewer};
 
 pub fn render_tab(
     viewer: &mut TabViewer,

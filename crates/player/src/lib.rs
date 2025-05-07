@@ -17,7 +17,7 @@ mod cam;
 #[derive(Component, Default, Debug)]
 pub struct Player;
 
-boolish_states!(PlayerState, CamState);
+boolish_states!(CamState, PlayerState);
 
 #[derive(Component, Default, Debug)]
 pub struct PlayerCam;
@@ -25,23 +25,25 @@ pub struct PlayerCam;
 pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((
-            TnuaControllerPlugin::new(FixedUpdate),
-            TnuaAvian3dPlugin::new(FixedUpdate),
-        ))
-        .setup_boolish_states()
-        .add_systems(
-            FixedUpdate,
-            apply_controls.in_set(TnuaUserControlsSystemSet),
-        )
-        .add_systems(OnExit(PlayerState::Init), init)
-        .add_systems(OnEnter(CamState::Enabled), set_cam_active::<true>)
-        .add_systems(OnEnter(CamState::Disabled), set_cam_active::<false>)
-        .add_systems(
-            Update,
-            (Dolly::<PlayerCam>::update_active, update_camera)
-                .run_if(in_state(PlayerState::Enabled)),
-        );
+        let _ = {
+            app.add_plugins((
+                TnuaControllerPlugin::new(FixedUpdate),
+                TnuaAvian3dPlugin::new(FixedUpdate),
+            ))
+            .setup_boolish_states()
+            .add_systems(
+                FixedUpdate,
+                apply_controls.in_set(TnuaUserControlsSystemSet),
+            )
+            .add_systems(OnExit(PlayerState::Init), init)
+            .add_systems(OnEnter(CamState::Enabled), set_cam_active::<true>)
+            .add_systems(OnEnter(CamState::Disabled), set_cam_active::<false>)
+            .add_systems(
+                Update,
+                (Dolly::<PlayerCam>::update_active, update_camera)
+                    .run_if(in_state(PlayerState::Enabled)),
+            )
+        };
     }
 }
 
@@ -61,7 +63,6 @@ pub fn init(
 ) {
     let pos = Vec3::ZERO;
     let capsule = meshes.add(Capsule3d::new(0.5, 1.));
-    let sphere = meshes.add(Sphere::new(1.));
     let img = images.add(uv_debug_texture());
     let material = materials.add(StandardMaterial {
         base_color_texture: Some(img),
@@ -69,10 +70,10 @@ pub fn init(
     });
     commands
         .spawn((
+            Name::new("Player"),
             Player,
             Mesh3d(capsule),
             MeshMaterial3d(material.clone()),
-            Name::new("Player"),
             RigidBody::Dynamic,
             Collider::capsule(0.5, 1.),
             TnuaController::default(),
@@ -82,6 +83,7 @@ pub fn init(
             Transform::from_translation(pos),
         ))
         .with_child((
+            Name::new("Player Cam"),
             Camera3d::default(),
             PlayerCam,
             Rig::builder()
@@ -93,9 +95,6 @@ pub fn init(
                 ))
                 .build(),
             Transform::default(),
-            Collider::sphere(1.),
-            Mesh3d(sphere),
-            MeshMaterial3d(material),
             PointLight::default(),
         ));
 }
@@ -106,7 +105,7 @@ pub fn update_camera(
     mut rig_tf: Single<&mut Rig, With<PlayerCam>>,
 ) {
     rig_tf.driver_mut::<PlayerCamDriver>().set_position(
-        player_tf.translation,
+        player_tf.translation - Vec3::new(0., -1., -1.),
         Quat::from_axis_angle(player_tf.forward().as_vec3(), PI / 3.),
     );
 }

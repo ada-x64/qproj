@@ -5,9 +5,7 @@
 use bevy::{asset::ReflectAsset, reflect::TypeRegistry};
 use bevy_egui::egui;
 
-use crate::state::InspectorSelection;
-
-use super::TabViewer;
+use super::{InspectorSelection, TabViewer};
 
 pub fn render_tab(
     tab_viewer: &mut TabViewer,

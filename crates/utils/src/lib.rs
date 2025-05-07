@@ -25,19 +25,25 @@ impl From<BoolishState> for bool {
         matches!(value, BoolishState::Enabled)
     }
 }
-impl BoolishState {
-    /// Returns the value as a boolean.
-    pub fn as_bool(&self) -> bool {
+impl BoolishStateTrait for BoolishState {
+    fn as_bool(&self) -> bool {
         (*self).into()
     }
-    /// Returns the opposite value, consuming self.
-    pub fn toggle(self) -> Self {
+    fn toggle(self) -> Self {
         (!self.as_bool()).into()
     }
 }
 
+pub trait BoolishStateTrait: From<bool> {
+    /// Returns the value as a boolean.
+    fn as_bool(&self) -> bool;
+    /// Returns the opposite value, consuming self.
+    fn toggle(self) -> Self;
+}
+
 /// Sets up simple boolean states with third-value for initialization.
 /// Don't forget to call setup_boolish_states when setting up your states!
+/// TODO: Make this a Derive proc_macro and seperate the setup_boolish macro.
 #[macro_export]
 macro_rules! boolish_states {
     ($($name: ident),*) => {
@@ -65,17 +71,34 @@ macro_rules! boolish_states {
                     matches!(value, $name::Enabled)
                 }
             }
-            impl $name {
-                /// Returns the value as a boolean.
-                pub fn as_bool(&self) -> bool {
-                    (*self).into()
-                }
-                /// Returns the opposite value, consuming self.
-                pub fn toggle(self) -> Self {
-                    (!self.as_bool()).into()
-                }
-            }
         )*
+        q_utils::impl_boolish!($($name)*);
+        q_utils::setup_boolish!($($name)*);
+    }
+}
+
+/// Use this when you have an enum you manually want to derive boolish for.
+/// (Would be better as proc_macro but w/e)
+#[macro_export]
+macro_rules! impl_boolish {
+    ($($name: ident)*) => {
+        $(
+        impl q_utils::BoolishStateTrait for $name {
+            fn as_bool(&self) -> bool {
+                (*self).into()
+            }
+            fn toggle(self) -> Self {
+                (!self.as_bool()).into()
+            }
+        })*
+    };
+}
+
+/// Creates the `setup_boolish_states` function and trait impl for App.
+/// Will log to Debug whenever the state switches between $name::Enabled and $name::Disabled
+#[macro_export]
+macro_rules! setup_boolish {
+    ($($name: ident)*) => {
         // Hygeine: This _should_ effectively declare a new trait whenever it's introduced.
         // That's the intended behavior.
         pub trait SetupBoolishStates {
@@ -90,13 +113,5 @@ macro_rules! boolish_states {
             )*
             }
         }
-        // pub trait SetupBoolishDebugLog {
-        //     fn setup_boolish_debug_log(&mut self) -> &mut Self;
-        // }
-        // impl SetupBoolishDebugLog for App {
-        //     fn setup_boolish_debug_log(&mut self) -> &mut Self {
-        //         self.add_systems(OnEnter())
-        //     }
-        // }
     }
 }

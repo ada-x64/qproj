@@ -4,17 +4,19 @@
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use bevy::{prelude::*, render::camera::Viewport, window::PrimaryWindow};
 use bevy_egui::{EguiContextSettings, egui};
+use q_utils::BoolishStateTrait;
 
 use crate::{
-    cam::InspectorCam,
-    state::{GameViewActive, UiState},
+    components::cam::InspectorCam,
+    state::{GameViewState, UiState},
 };
 
 use super::TabViewer;
 
 pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
-    viewer.world.resource_scope::<State<GameViewActive>, _>(
-        |world, physics| {
+    viewer
+        .world
+        .resource_scope::<State<GameViewState>, _>(|world, physics| {
             let btn_text = if physics.as_bool() {
                 "\u{23f9}"
             } else {
@@ -23,13 +25,12 @@ pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
             ui.horizontal(|ui| {
                 if ui.add(egui::Button::new(btn_text)).clicked() {
                     world
-                        .get_resource_mut::<NextState<GameViewActive>>()
+                        .get_resource_mut::<NextState<GameViewState>>()
                         .unwrap()
                         .set(physics.toggle());
                 }
             });
-        },
-    );
+        });
     viewer.state.lock().viewport_rect = ui.clip_rect();
 }
 

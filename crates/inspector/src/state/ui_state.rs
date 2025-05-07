@@ -2,37 +2,17 @@
 // ┏┓┏┓┏┓┏┓┓
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
-use std::any::TypeId;
-
-use bevy::{asset::UntypedAssetId, prelude::*};
-use bevy_egui::egui::{self, mutex::Mutex};
+use crate::tabs::*;
+use bevy::{prelude::*, window::PrimaryWindow};
+use bevy_egui::{
+    EguiContext, EguiPostUpdateSet,
+    egui::{self, mutex::Mutex},
+};
 use bevy_inspector_egui::bevy_inspector::hierarchy::SelectedEntities;
+use easy_ext::ext;
 use egui_dock::{DockArea, NodeIndex, Style};
-use q_utils::boolish_states;
 
-use crate::tabs::{Tab, TabViewer};
-
-// a bunch of state enums and such ////////////////////////////////////////////
-
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Resource, Reflect)]
-#[reflect(Resource)]
-pub struct InspectorSettings {
-    pub switch_cams: bool,
-}
-impl Default for InspectorSettings {
-    fn default() -> Self {
-        Self { switch_cams: true }
-    }
-}
-
-boolish_states!(InspectorEnabled, GameViewActive, CamEnabled);
-
-#[derive(Debug, Eq, PartialEq)]
-pub enum InspectorSelection {
-    Entities,
-    Resource(TypeId, String),
-    Asset(TypeId, String, UntypedAssetId),
-}
+use super::UISet;
 
 #[derive(Resource, Deref, DerefMut)]
 pub struct DockState(egui_dock::DockState<Tab>);
@@ -90,22 +70,40 @@ impl UiState {
                 );
         });
     }
-    pub fn enabled(world: &mut World) -> bool {
-        (*world.resource::<State<InspectorEnabled>>().get()).into()
-    }
+    // pub fn enabled(world: &mut World) -> bool {
+    //     (*world.resource::<State<InspectorEnabled>>().get()).into()
+    // }
 }
 
-// set up the app /////////////////////////////////////////////////////////////
+pub fn show_ui_system(world: &mut World) {
+    let Ok(egui_context) = world
+        .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
+        .get_single(world)
+    else {
+        return;
+    };
+    let mut egui_context = egui_context.clone();
 
-pub trait SetupStates {
-    fn setup_states(&mut self) -> &mut Self;
+    world.resource_scope::<UiState, _>(|world, mut ui_state| {
+        ui_state.ui(world, egui_context.get_mut())
+    });
 }
-impl SetupStates for App {
-    fn setup_states(&mut self) -> &mut Self {
-        self.setup_boolish_states()
-            .init_resource::<DockState>()
+
+// Setup //////////////////////////////////////////////////////////////////////
+#[ext(SetupUi)]
+pub impl App {
+    fn setup_ui(&mut self) -> &mut Self {
+        self.init_resource::<DockState>()
             .init_resource::<UiState>()
-            .init_resource::<InspectorSettings>()
-            .register_type::<InspectorSettings>()
+            .add_systems(
+                PostUpdate,
+                (show_ui_system
+                    .before(EguiPostUpdateSet::ProcessOutput)
+                    .before(bevy_egui::end_pass_system)
+                    .before(
+                        bevy::transform::TransformSystem::TransformPropagate,
+                    ))
+                .in_set(UISet),
+            )
     }
 }

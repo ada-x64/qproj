@@ -2,16 +2,26 @@
 // ┏┓┏┓┏┓┏┓┓
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
-use bevy::prelude::*;
+use bevy::{asset::UntypedAssetId, prelude::*};
 use bevy_egui::egui::{self, mutex::Mutex};
 use bevy_inspector_egui::bevy_inspector::hierarchy::Hierarchy;
+use easy_ext::ext;
+use game_view::set_camera_viewport;
+use std::any::TypeId;
 
-use crate::state::{InspectorSelection, UiState};
+use crate::state::{UISet, UiState, show_ui_system};
 
 pub mod assets;
 pub mod game_view;
 pub mod inspector;
 pub mod resources;
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum InspectorSelection {
+    Entities,
+    Resource(TypeId, String),
+    Asset(TypeId, String, UntypedAssetId),
+}
 
 #[derive(Debug)]
 pub enum Tab {
@@ -74,5 +84,17 @@ impl egui_dock::TabViewer for TabViewer<'_> {
             Tab::Assets => assets::render_tab(self, ui, &type_registry),
             Tab::NoiseEditor => todo!(),
         }
+    }
+}
+
+// Setup //////////////////////////////////////////////////////////////////////
+
+#[ext(SetupTabs)]
+pub impl App {
+    fn setup_tabs(&mut self) -> &mut Self {
+        self.add_systems(
+            PostUpdate,
+            (set_camera_viewport.after(show_ui_system),).in_set(UISet),
+        )
     }
 }

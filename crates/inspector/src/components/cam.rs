@@ -4,6 +4,9 @@
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use bevy::{input::mouse::MouseMotion, prelude::*};
 use bevy_dolly::prelude::*;
+use easy_ext::ext;
+
+use crate::state::CamState;
 
 #[derive(Component, Debug, Default)]
 pub struct InspectorCam;
@@ -112,3 +115,15 @@ pub fn update_camera(
 //         }
 //     }
 // }
+
+#[ext(SetupCamComponent)]
+pub impl App {
+    fn setup_cam_component(&mut self) -> &mut Self {
+        self.add_systems(OnExit(CamState::Init), spawn_camera)
+            .add_systems(
+                Update,
+                (Dolly::<InspectorCam>::update_active, update_camera)
+                    .run_if(in_state(CamState::Enabled)),
+            )
+    }
+}

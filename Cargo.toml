@@ -37,7 +37,7 @@ strip = true
 [features]
 dev = ["bevy/dynamic_linking"]
 debug = ["q_debug", "q_worldgen/debug", "q_player/debug", "bevy/bevy_dev_tools"]
-inspector = ["q_inspector", "q_worldgen/inspector"]
+inspector = ["q_inspector", "q_worldgen/inspector", "q_player/inspector"]
 
 
 # All of Bevy's default features exept for the audio related ones (bevy_audio, vorbis), since they clash with bevy_kira_audio
@@ -46,7 +46,7 @@ inspector = ["q_inspector", "q_worldgen/inspector"]
 
 meshopt = "0.4.1"
 
-bevy = { version = "0.15", default-features = false, features = [
+bevy = { version = "0.15.3", default-features = false, features = [
     "animation",
     "bevy_asset",
     "bevy_color",
@@ -94,6 +94,7 @@ bevy-inspector-egui = "0.29"
 avian3d = "0.2"
 bevy_dolly = "0.0.5"
 derive_builder = "0.20.2"
+easy-ext = "1.0.2"
 
 ## crates in the workspace
 q_worldgen = { path = "crates/worldgen" }
