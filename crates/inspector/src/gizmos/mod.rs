@@ -1,12 +1,10 @@
-//         •
-// ┏┓┏┓┏┓┏┓┓
-// ┗┫┣┛┛ ┗┛┃
-//--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
+mod player_cam;
+
 use bevy::prelude::*;
 
-// pub trait SetupGizmos {
-//     fn setup_gizmos(&mut self) -> &mut Self;
-// }
-// impl SetupGizmos for App {
-//     fn setup_gizmos(&mut self) -> &mut Self {}
-// }
+pub struct GizmosPlugin;
+impl Plugin for GizmosPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Update, Self::draw_cam_gizmo);
+    }
+}

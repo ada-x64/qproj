@@ -5,11 +5,10 @@
 use bevy::{asset::UntypedAssetId, prelude::*};
 use bevy_egui::egui::{self, mutex::Mutex};
 use bevy_inspector_egui::bevy_inspector::hierarchy::Hierarchy;
-use easy_ext::ext;
 use game_view::set_camera_viewport;
 use std::any::TypeId;
 
-use crate::state::{UISet, UiState, show_ui_system};
+use crate::prelude::*;
 
 pub mod assets;
 pub mod game_view;
@@ -87,14 +86,15 @@ impl egui_dock::TabViewer for TabViewer<'_> {
     }
 }
 
-// Setup //////////////////////////////////////////////////////////////////////
+// Plugin //////////////////////////////////////////////////////////////////////
 
-#[ext(SetupTabs)]
-pub impl App {
-    fn setup_tabs(&mut self) -> &mut Self {
-        self.add_systems(
+pub struct TabsPlugin;
+impl Plugin for TabsPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
             PostUpdate,
-            (set_camera_viewport.after(show_ui_system),).in_set(UISet),
-        )
+            (set_camera_viewport.after(UiStatePlugin::show_ui_system),)
+                .in_set(UISet),
+        );
     }
 }

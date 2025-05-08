@@ -101,7 +101,7 @@ macro_rules! setup_boolish {
     ($($name: ident)*) => {
         // Hygeine: This _should_ effectively declare a new trait whenever it's introduced.
         // That's the intended behavior.
-        pub trait SetupBoolishStates {
+        trait SetupBoolishStates {
             fn setup_boolish_states(&mut self) -> &mut Self;
         }
         impl SetupBoolishStates for App {

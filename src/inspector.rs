@@ -4,7 +4,7 @@
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use bevy::prelude::*;
 use q_inspector::prelude::*;
-use q_player::PlayerState;
+use q_player::prelude::*;
 
 pub struct InspectorIntegrationPlugin;
 
@@ -15,7 +15,7 @@ fn enable_ui(mut state: ResMut<NextState<InspectorState>>) {
 fn transition_state(
     active: Res<State<GameViewState>>,
     mut player_state: ResMut<NextState<PlayerState>>,
-    mut player_cam_state: ResMut<NextState<q_player::CamState>>,
+    mut player_cam_state: ResMut<NextState<PlayerCamState>>,
     settings: Res<InspectorSettings>,
 ) {
     let enabled = matches!(active.get(), GameViewState::Enabled);

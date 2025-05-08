@@ -7,7 +7,7 @@ use bevy::{
     log::{LogPlugin, tracing_subscriber::EnvFilter},
     prelude::*,
 };
-use q_player::PlayerState;
+use q_player::prelude::*;
 
 #[cfg(feature = "inspector")]
 mod inspector;

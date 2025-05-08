@@ -4415,6 +4415,7 @@ dependencies = [
  "easy-ext",
  "egui_dock",
  "log",
+ "q_player",
  "q_utils",
 ]
 
@@ -4430,10 +4431,10 @@ dependencies = [
  "bevy_dolly",
  "derive_builder",
  "derive_more 2.0.1",
+ "easy-ext",
  "itertools 0.14.0",
  "log",
  "q_debug",
- "q_inspector",
  "q_utils",
  "q_worldgen",
  "thiserror 2.0.12",

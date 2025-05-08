@@ -126,10 +126,12 @@ for key in env_vars:
 
 pkg_name = "bevy_game"
 bin_name = "bevy_game.exe"
+pdb_name = "bevy_game.pdb"
 with open("Cargo.toml", "rb") as f:
     toml = tomllib.load(f)
     pkg_name = toml.get("package").get("name")
     bin_name = pkg_name + ".exe"
+    pdb_name = pkg_name + ".pdb"
 
 profile = (
     "release"
@@ -272,7 +274,8 @@ def do_hash(build_files):
 # SYNC #########################################################################
 if not args.no_sync:
     exec_path = os.path.join(target_dir, bin_name)
-    build_files = [start_path, exec_path]
+    pdb_path = os.path.join(target_dir, pdb_name)
+    build_files = [start_path, exec_path, pdb_path]
 
     if args.no_hash:
         print("Not hashing.")

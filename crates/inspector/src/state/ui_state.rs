@@ -9,10 +9,11 @@ use bevy_egui::{
     egui::{self, mutex::Mutex},
 };
 use bevy_inspector_egui::bevy_inspector::hierarchy::SelectedEntities;
-use easy_ext::ext;
 use egui_dock::{DockArea, NodeIndex, Style};
 
 use super::UISet;
+
+// Resources //////////////////////////////////////////////////////////////////
 
 #[derive(Resource, Deref, DerefMut)]
 pub struct DockState(egui_dock::DockState<Tab>);
@@ -75,35 +76,36 @@ impl UiState {
     // }
 }
 
-pub fn show_ui_system(world: &mut World) {
-    let Ok(egui_context) = world
-        .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
-        .get_single(world)
-    else {
-        return;
-    };
-    let mut egui_context = egui_context.clone();
+// Plugin /////////////////////////////////////////////////////////////////////
+pub struct UiStatePlugin;
+impl UiStatePlugin {
+    pub fn show_ui_system(world: &mut World) {
+        let Ok(egui_context) = world
+            .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
+            .get_single(world)
+        else {
+            return;
+        };
+        let mut egui_context = egui_context.clone();
 
-    world.resource_scope::<UiState, _>(|world, mut ui_state| {
-        ui_state.ui(world, egui_context.get_mut())
-    });
+        world.resource_scope::<UiState, _>(|world, mut ui_state| {
+            ui_state.ui(world, egui_context.get_mut())
+        });
+    }
 }
-
-// Setup //////////////////////////////////////////////////////////////////////
-#[ext(SetupUi)]
-pub impl App {
-    fn setup_ui(&mut self) -> &mut Self {
-        self.init_resource::<DockState>()
+impl Plugin for UiStatePlugin {
+    fn build(&self, app: &mut App) {
+        app.init_resource::<DockState>()
             .init_resource::<UiState>()
             .add_systems(
                 PostUpdate,
-                (show_ui_system
+                (Self::show_ui_system
                     .before(EguiPostUpdateSet::ProcessOutput)
                     .before(bevy_egui::end_pass_system)
                     .before(
                         bevy::transform::TransformSystem::TransformPropagate,
                     ))
                 .in_set(UISet),
-            )
+            );
     }
 }

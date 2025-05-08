@@ -25,3 +25,4 @@ bevy_egui = "0.32.0"
 egui_dock = "0.15.0"
 
 q_utils = { workspace = true }
+q_player = { workspace = true }

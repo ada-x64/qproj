@@ -12,7 +12,6 @@ edition = "2024"
 [features]
 debug = ["q_debug"]
 dev = ["bevy/dynamic_linking"]
-inspector = ["q_inspector"]
 
 [dependencies]
 bevy = { workspace = true }
@@ -26,8 +25,8 @@ bevy-tnua-avian3d = "0.3.1"
 bevy-tnua = "0.22"
 bevy_dolly = { workspace = true }
 derive_builder = { workspace = true }
+easy-ext = { workspace = true }
 
 q_debug = { workspace = true, optional = true }
 q_worldgen = { workspace = true }
-q_inspector = { workspace = true, optional = true }
 q_utils = { workspace = true }

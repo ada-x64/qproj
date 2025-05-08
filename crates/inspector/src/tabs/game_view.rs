@@ -3,17 +3,49 @@
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use bevy::{prelude::*, render::camera::Viewport, window::PrimaryWindow};
-use bevy_egui::{EguiContextSettings, egui};
+use bevy_egui::{
+    EguiContextSettings,
+    egui::{self},
+};
 use q_utils::BoolishStateTrait;
 
-use crate::{
-    components::cam::InspectorCam,
-    state::{GameViewState, UiState},
-};
+use crate::prelude::*;
 
 use super::TabViewer;
 
 pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
+    let can_scroll = viewer
+        .world
+        .get_resource::<State<InspectorCamCanScroll>>()
+        .unwrap()
+        .as_bool();
+    let click_and_drag = ui.interact(
+        ui.clip_rect(),
+        "gameview_interact".into(),
+        egui::Sense::click_and_drag(),
+    );
+
+    // Move on click and drag
+    if click_and_drag.hovered() && !can_scroll {
+        viewer
+            .world
+            .get_resource_mut::<NextState<InspectorCamCanScroll>>()
+            .unwrap()
+            .set(true.into());
+    } else if !click_and_drag.hovered() && can_scroll {
+        viewer
+            .world
+            .get_resource_mut::<NextState<InspectorCamCanScroll>>()
+            .unwrap()
+            .set(false.into());
+    }
+
+    // TODO: Should we do this in Egui by manually calling a system here?
+    // if click_and_drag.dragged() {
+    //     let delta = click_and_drag.drag_delta();
+    // }
+
+    viewer.state.lock().viewport_rect = ui.clip_rect();
     viewer
         .world
         .resource_scope::<State<GameViewState>, _>(|world, physics| {
@@ -31,7 +63,6 @@ pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
                 }
             });
         });
-    viewer.state.lock().viewport_rect = ui.clip_rect();
 }
 
 // make camera only render to view not obstructed by UI
