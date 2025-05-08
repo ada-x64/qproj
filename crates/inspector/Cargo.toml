@@ -15,11 +15,14 @@ debug = []
 
 [dependencies]
 bevy = { workspace = true, features = ["bevy_dev_tools"] }
-bevy_asset_loader = { workspace = true }
 log = { workspace = true }
 bevy-inspector-egui = { workspace = true }
 avian3d = { workspace = true }
+bevy_dolly = { workspace = true }
+easy-ext = { workspace = true }
 # bevy-inspector-egui uses egui v0.30
 bevy_egui = "0.32.0"
 egui_dock = "0.15.0"
-bevy_flycam = "0.15"
+
+q_utils = { workspace = true }
+q_player = { workspace = true }

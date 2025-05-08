@@ -7,7 +7,21 @@ use bevy::{
     log::{LogPlugin, tracing_subscriber::EnvFilter},
     prelude::*,
 };
-use q_worldgen::WorldgenPluginSettings;
+use q_player::prelude::*;
+
+#[cfg(feature = "inspector")]
+mod inspector;
+
+#[derive(States, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum GameState {
+    #[cfg(feature = "inspector")]
+    #[cfg_attr(feature = "inspector", default)]
+    Inspector,
+    MainMenu,
+    #[cfg_attr(not(feature = "inspector"), default)]
+    LoadingWorld,
+    MainGame,
+}
 
 #[bevy_main]
 fn main() {
@@ -23,10 +37,7 @@ fn main() {
         q_player::PlayerPlugin,
         PhysicsPlugins::default(),
     ))
-    .insert_resource(WorldgenPluginSettings {
-        spawn_immediately: true,
-        use_debug_colors: cfg!(feature = "debug"),
-    });
+    .insert_state(GameState::default());
 
     #[cfg(feature = "debug")]
     {
@@ -36,15 +47,29 @@ fn main() {
         debug!("DEBUG_LEVEL = {debug_level:?}");
         app.add_plugins(DebugPlugin {
             debug_level,
-            wireframes: true,
+            wireframes: false,
         });
     }
 
     #[cfg(feature = "inspector")]
-    {
-        app.add_plugins((q_inspector::InspectorPlugin,));
-    }
+    let _ = {
+        app.add_plugins(inspector::InspectorIntegrationPlugin)
+            .add_systems(
+                OnEnter(GameState::Inspector),
+                |mut player_state: ResMut<NextState<PlayerState>>| {
+                    player_state.set(PlayerState::Disabled)
+                },
+            )
+    };
+    #[cfg(not(feature = "inspector"))]
+    let _ = {
+        app.add_systems(
+            Startup,
+            |mut player_state: ResMut<NextState<PlayerState>>| {
+                player_state.set(PlayerState::Enabled)
+            },
+        );
+    };
 
     app.run();
-    // foo
 }

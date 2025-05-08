@@ -3,15 +3,16 @@
 #  ┗┫┣┛┛ ┗┛┃
 # --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 [package]
-name = "q_player"
+name = "CHANGEME"
 version = "0.1.0"
 publish = false
 authors = ["<phoenix.mandala@pm.me>"]
 edition = "2024"
 
 [features]
-debug = ["q_debug"]
+debug = []                     # q_debug
 dev = ["bevy/dynamic_linking"]
+inspector = []                 # q_inspector
 
 [dependencies]
 bevy = { workspace = true }
@@ -21,12 +22,3 @@ anyhow = { workspace = true }
 derive_more = { workspace = true }
 thiserror = { workspace = true }
 avian3d = { workspace = true }
-bevy-tnua-avian3d = "0.3.1"
-bevy-tnua = "0.22"
-bevy_dolly = { workspace = true }
-derive_builder = { workspace = true }
-easy-ext = { workspace = true }
-
-q_debug = { workspace = true, optional = true }
-q_worldgen = { workspace = true }
-q_utils = { workspace = true }

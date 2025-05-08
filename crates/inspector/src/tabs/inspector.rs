@@ -8,26 +8,27 @@ use bevy_inspector_egui::bevy_inspector::{
     self, ui_for_entities_shared_components, ui_for_entity_with_children,
 };
 
-use crate::state::InspectorSelection;
-
-use super::TabViewer;
+use super::{InspectorSelection, TabViewer};
 
 pub fn render_tab(
     viewer: &mut TabViewer,
     ui: &mut egui::Ui,
     type_registry: &TypeRegistry,
 ) {
-    match viewer.state.selection {
-        InspectorSelection::Entities => match viewer
-            .state
-            .selected_entities
-            .as_slice()
-        {
-            &[entity] => ui_for_entity_with_children(viewer.world, entity, ui),
-            entities => {
-                ui_for_entities_shared_components(viewer.world, entities, ui)
+    let state = viewer.state.lock();
+    match state.selection {
+        InspectorSelection::Entities => {
+            match state.selected_entities.as_slice() {
+                &[entity] => {
+                    ui_for_entity_with_children(viewer.world, entity, ui)
+                }
+                entities => ui_for_entities_shared_components(
+                    viewer.world,
+                    entities,
+                    ui,
+                ),
             }
-        },
+        }
         InspectorSelection::Resource(type_id, ref name) => {
             ui.label(name);
             bevy_inspector::by_type_id::ui_for_resource(
