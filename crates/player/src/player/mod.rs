@@ -6,7 +6,6 @@ mod bundle;
 pub use bundle::*;
 
 use bevy::prelude::*;
-use q_debug::uv_debug_texture;
 use q_utils::boolish_states;
 
 use crate::prelude::*;
@@ -21,15 +20,10 @@ impl IntegrationPlugin {
         mut commands: Commands,
         mut meshes: ResMut<Assets<Mesh>>,
         mut materials: ResMut<Assets<StandardMaterial>>,
-        mut images: ResMut<Assets<Image>>,
     ) {
         let pos = Vec3::ZERO;
         let capsule = meshes.add(Capsule3d::new(0.5, 1.));
-        let img = images.add(uv_debug_texture());
-        let material = materials.add(StandardMaterial {
-            base_color_texture: Some(img),
-            ..Default::default()
-        });
+        let material = materials.add(StandardMaterial::default());
         commands.spawn(PlayerBundle::new(
             Transform::from_translation(pos),
             capsule,
