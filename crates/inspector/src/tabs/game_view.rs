@@ -65,6 +65,7 @@ pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
         });
 }
 
+// TODO: This isn't working.
 // make camera only render to view not obstructed by UI
 pub fn set_camera_viewport(
     ui_state: Res<UiState>,

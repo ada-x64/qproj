@@ -1,3 +1,7 @@
+//         •
+// ┏┓┏┓┏┓┏┓┓
+// ┗┫┣┛┛ ┗┛┃
+//--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 mod bundle;
 mod driver;
 pub use bundle::*;
@@ -21,13 +25,22 @@ impl PlayerCamPlugin {
 
     #[allow(clippy::type_complexity)]
     pub fn update_camera(
-        player_tf: Single<&Transform, With<Player>>,
-        mut rig_tf: Single<&mut Rig, With<PlayerCam>>,
+        mut set: ParamSet<(
+            Single<&Transform, With<Player>>,
+            Single<&mut Rig, With<PlayerCam>>,
+            Single<&mut Transform, With<PlayerCam>>,
+        )>,
     ) {
-        rig_tf.driver_mut::<PlayerCamDriver>().set_position(
-            player_tf.translation - Vec3::new(0., -1., -1.),
-            Quat::from_axis_angle(player_tf.forward().as_vec3(), PI / 3.),
-        );
+        let cam_dist = 10.;
+        let translation =
+            set.p0().translation - Vec3::new(0., cam_dist, cam_dist);
+        let rotation =
+            Quat::from_axis_angle(set.p0().forward().as_vec3(), PI / 3.);
+        set.p1()
+            .driver_mut::<PlayerCamDriver>()
+            .set_target_position(translation, rotation);
+        set.p2().translation = translation;
+        set.p2().rotation = rotation;
     }
 }
 impl Plugin for PlayerCamPlugin {

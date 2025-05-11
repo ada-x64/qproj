@@ -40,7 +40,7 @@ impl PlayerCamDriver {
                 .build(),
         )
     }
-    pub fn set_position(
+    pub fn set_target_position(
         &mut self,
         target_position: Vec3,
         target_rotation: Quat,

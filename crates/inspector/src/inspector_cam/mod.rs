@@ -60,25 +60,6 @@ impl InspectorCamPlugin {
         };
 
         let mut delta = Vec2::ZERO;
-        // should only activate if the cursor is within the gameview window
-        // let cursor_pos =
-        //     window.get_single().ok().and_then(|w| w.cursor_position());
-        // let (cam, rig) = (cam_rig.0, &mut cam_rig.1);
-        // let can_scroll = cam
-        //     .viewport
-        //     .as_ref()
-        //     .zip(cursor_pos)
-        //     .map(|(vp, cpos)| {
-        //         let topleft = vp.physical_position.as_vec2();
-        //         let bottomright =
-        //             vp.physical_position.as_vec2() + vp.physical_size.as_vec2();
-        //         topleft.x < cpos.x
-        //             && topleft.y < cpos.y
-        //             && bottomright.x > cpos.x
-        //             && bottomright.y > cpos.y
-        //     })
-        //     .unwrap_or_default();
-
         if can_scroll.get().as_bool() && mouse_btn.pressed(MouseButton::Right) {
             for event in mouse_motion_events.read() {
                 delta += event.delta;

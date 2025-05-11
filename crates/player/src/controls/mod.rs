@@ -1,3 +1,7 @@
+//         •
+// ┏┓┏┓┏┓┏┓┓
+// ┗┫┣┛┛ ┗┛┃
+//--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use bevy::prelude::*;
 use bevy_tnua::prelude::*;
 use bevy_tnua_avian3d::TnuaAvian3dPlugin;

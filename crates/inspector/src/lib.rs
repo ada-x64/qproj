@@ -15,7 +15,7 @@ pub mod prelude {
     pub use crate::tabs::*;
 }
 
-use bevy::prelude::*;
+use bevy::{pbr::wireframe::WireframePlugin, prelude::*};
 use bevy_inspector_egui::DefaultInspectorConfigPlugin;
 use prelude::*;
 pub struct InspectorPlugin;
@@ -23,11 +23,13 @@ impl Plugin for InspectorPlugin {
     fn build(&self, app: &mut App) {
         let _ = {
             app.add_plugins((
+                WireframePlugin,
                 DefaultInspectorConfigPlugin,
                 bevy_egui::EguiPlugin,
                 InspectorCamPlugin,
                 InspectorStatePlugin,
                 UiStatePlugin,
+                GizmosPlugin,
             ))
         };
     }

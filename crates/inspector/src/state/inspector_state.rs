@@ -13,10 +13,14 @@ use crate::prelude::*;
 #[reflect(Resource)]
 pub struct InspectorSettings {
     pub switch_cams: bool,
+    pub enable_gizmo_overlay: bool,
 }
 impl Default for InspectorSettings {
     fn default() -> Self {
-        Self { switch_cams: true }
+        Self {
+            switch_cams: true,
+            enable_gizmo_overlay: true,
+        }
     }
 }
 
@@ -29,11 +33,14 @@ pub struct UISet;
 pub struct InspectorStatePlugin;
 impl InspectorStatePlugin {
     fn init(
+        settings: Res<InspectorSettings>,
         mut game_view: ResMut<NextState<GameViewState>>,
         mut cam: ResMut<NextState<InspectorCamState>>,
+        mut gizmos: ResMut<NextState<GizmosState>>,
     ) {
         game_view.set(GameViewState::Disabled);
         cam.set(InspectorCamState::Enabled);
+        gizmos.set(settings.enable_gizmo_overlay.into())
     }
 
     /// TODO: Physics should be handled _outside_ the inspector

@@ -1,3 +1,7 @@
+//         •
+// ┏┓┏┓┏┓┏┓┓
+// ┗┫┣┛┛ ┗┛┃
+//--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 mod bundle;
 pub use bundle::*;
 
@@ -26,13 +30,12 @@ impl IntegrationPlugin {
             base_color_texture: Some(img),
             ..Default::default()
         });
-        commands
-            .spawn(PlayerBundle::new(
-                Transform::from_translation(pos),
-                capsule,
-                material,
-            ))
-            .with_child(PlayerCamBundle::new());
+        commands.spawn(PlayerBundle::new(
+            Transform::from_translation(pos),
+            capsule,
+            material.clone(),
+        ));
+        commands.spawn(PlayerCamBundle::new());
     }
 }
 impl Plugin for IntegrationPlugin {
