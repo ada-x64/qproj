@@ -11,7 +11,6 @@ use q_utils::boolish_states;
 use crate::prelude::*;
 use bevy::prelude::*;
 use bevy_dolly::prelude::*;
-use std::f32::consts::PI;
 
 boolish_states!(PlayerCamState);
 
@@ -31,16 +30,19 @@ impl PlayerCamPlugin {
             Single<&mut Transform, With<PlayerCam>>,
         )>,
     ) {
-        let cam_dist = 10.;
-        let translation =
-            set.p0().translation - Vec3::new(0., cam_dist, cam_dist);
-        let rotation =
-            Quat::from_axis_angle(set.p0().forward().as_vec3(), PI / 3.);
+        let mut new_tf = **set.p0();
+        let lookat_pos = set.p0().translation;
+        new_tf.translation -= Vec3::new(0., -2., -10.);
+        new_tf.rotate_around(set.p0().translation, set.p0().rotation);
+        new_tf.look_at(set.p0().translation, Vec3::Y);
         set.p1()
             .driver_mut::<PlayerCamDriver>()
-            .set_target_position(translation, rotation);
-        set.p2().translation = translation;
-        set.p2().rotation = rotation;
+            .set_target_position(
+                new_tf.translation,
+                new_tf.rotation,
+                lookat_pos,
+            );
+        **set.p2() = new_tf;
     }
 }
 impl Plugin for PlayerCamPlugin {

@@ -44,11 +44,11 @@ impl PlayerCamDriver {
         &mut self,
         target_position: Vec3,
         target_rotation: Quat,
+        lookat_target: Vec3,
     ) {
-        self.driver_mut::<Position>().position =
-            target_position - self.driver_mut::<Arm>().offset;
+        self.driver_mut::<Position>().position = target_position; // - self.driver_mut::<Arm>().offset;
         self.driver_mut::<Rotation>().rotation = target_rotation;
-        self.driver_mut::<LookAt>().target = target_position - Vec3::Y;
+        self.driver_mut::<LookAt>().target = lookat_target;
     }
 }
 impl RigDriver for PlayerCamDriver {

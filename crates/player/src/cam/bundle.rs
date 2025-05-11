@@ -21,10 +21,7 @@ impl PlayerCamBundle {
             PlayerCam,
             Rig::builder()
                 .with(PlayerCamDriver::new(
-                    PlayerCamRigOptionsBuilder::default()
-                        .rot_smoothing(0.)
-                        .build()
-                        .unwrap(),
+                    PlayerCamRigOptionsBuilder::default().build().unwrap(),
                 ))
                 .build(),
             Transform::default(),
