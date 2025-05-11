@@ -9,8 +9,9 @@ use bevy::{
     asset::RenderAssetUsages,
     prelude::*,
     render::{render_resource::*, view::RenderLayers},
+    window::PrimaryWindow,
 };
-use q_utils::boolish_states;
+use q_utils::{InspectorIgnore, boolish_states};
 
 #[derive(
     SystemSet, Default, Reflect, Hash, PartialEq, Eq, Debug, Clone, Copy,
@@ -33,7 +34,11 @@ impl Plugin for GizmosPlugin {
             )
             .add_systems(
                 Update,
-                (Self::draw_cam_gizmo, Self::render_axes).in_set(GizmosSet),
+                (
+                    Self::draw_cam_gizmo,
+                    Self::render_axes.after(game_view::set_camera_viewport),
+                )
+                    .in_set(GizmosSet),
             )
             .configure_sets(
                 Update,
@@ -93,6 +98,8 @@ impl GizmosPlugin {
         // the camera is probably too close up?
         commands.spawn((
             AxesCam,
+            Name::new("Axes Cam"),
+            InspectorIgnore,
             Camera3d::default(),
             Camera {
                 target: image_handle.clone().into(),
@@ -117,26 +124,24 @@ impl GizmosPlugin {
 
     #[allow(clippy::complexity)]
     pub fn render_axes(
-        cam_tf: Single<
-            (&Transform, &Camera),
-            (With<InspectorCam>, Without<AxesCam>),
-        >,
+        cam_tf: Single<&Transform, (With<InspectorCam>, Without<AxesCam>)>,
         mut cam2_tf: Single<
             &mut Transform,
             (With<AxesCam>, Without<InspectorCam>),
         >,
         mut gizmos: Gizmos<RenderToTextureGroup>,
         mut node: Single<&mut Node, With<AxesNode>>,
+        ui_state: Res<UiState>,
+        window: Single<&mut Window, With<PrimaryWindow>>,
     ) {
         gizmos.axes(Isometry3d::IDENTITY, 5.);
-        **cam2_tf = cam_tf.0.with_translation(
-            Vec3::new(0., 0., 0.) - cam_tf.0.forward().as_vec3() * 15.,
+        **cam2_tf = cam_tf.with_translation(
+            Vec3::new(0., 0., 0.) - cam_tf.forward().as_vec3() * 15.,
         );
-        let viewport = cam_tf.1.viewport.clone().unwrap_or_default();
-        let top = viewport.physical_position.y;
-        let right = viewport.physical_position.x + viewport.physical_size.x;
-        node.top = Val::Px(top as f32);
-        node.right = Val::Px(right as f32);
+        node.top = Val::Px(ui_state.viewport_rect.top());
+        node.right = Val::Px(
+            window.physical_width() as f32 - ui_state.viewport_rect.right(),
+        );
     }
 
     // TODO: Implement outline shader. Apply it to selected entities.

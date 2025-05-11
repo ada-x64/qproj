@@ -2,8 +2,7 @@
 // ┏┓┏┓┏┓┏┓┓
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
-pub mod boolish;
-pub use boolish::*;
+use bevy::prelude::*;
 
-pub mod components;
-pub use components::*;
+#[derive(Component)]
+pub struct InspectorIgnore;

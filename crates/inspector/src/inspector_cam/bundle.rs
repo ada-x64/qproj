@@ -4,6 +4,7 @@
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use bevy::prelude::*;
 use bevy_dolly::prelude::*;
+use q_utils::InspectorIgnore;
 
 #[derive(Component, Debug, Default)]
 pub struct InspectorCam;
@@ -15,7 +16,9 @@ impl InspectorCamBundle {
         (
             Camera3d::default(),
             transform,
+            Name::new("Inspector Cam"),
             InspectorCam,
+            InspectorIgnore,
             Rig::builder()
                 .with(Fpv::from_position_target(transform))
                 .build(),

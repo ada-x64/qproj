@@ -69,18 +69,10 @@ pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
 // make camera only render to view not obstructed by UI
 pub fn set_camera_viewport(
     ui_state: Res<UiState>,
-    primary_window: Query<&mut Window, With<PrimaryWindow>>,
     egui_settings: Query<&EguiContextSettings>,
-    mut cameras: Query<&mut Camera, With<InspectorCam>>,
+    mut cam: Single<&mut Camera, With<InspectorCam>>,
+    window: Single<&mut Window, With<PrimaryWindow>>,
 ) {
-    let Ok(mut cam) = cameras.get_single_mut() else {
-        return;
-    };
-
-    let Ok(window) = primary_window.get_single() else {
-        return;
-    };
-
     let scale_factor =
         window.scale_factor() * egui_settings.single().scale_factor;
 

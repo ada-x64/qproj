@@ -6,6 +6,7 @@ use bevy::{asset::UntypedAssetId, prelude::*};
 use bevy_egui::egui::{self, mutex::Mutex};
 use bevy_inspector_egui::bevy_inspector::hierarchy::Hierarchy;
 use game_view::set_camera_viewport;
+use q_utils::InspectorIgnore;
 use std::any::TypeId;
 
 use crate::prelude::*;
@@ -66,7 +67,11 @@ impl egui_dock::TabViewer for TabViewer<'_> {
                     shortcircuit_entity: None,
                     extra_state: &mut (),
                 }
-                .show_with_default_filter::<(Without<Parent>, Without<Observer>)>(ui);
+                .show_with_default_filter::<(
+                    Without<Parent>,
+                    Without<Observer>,
+                    Without<InspectorIgnore>,
+                )>(ui);
 
                 if selected {
                     state.selection = InspectorSelection::Entities;
