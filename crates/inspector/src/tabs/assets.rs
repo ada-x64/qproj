@@ -5,9 +5,7 @@
 use bevy::{asset::ReflectAsset, reflect::TypeRegistry};
 use bevy_egui::egui;
 
-use crate::state::InspectorSelection;
-
-use super::TabViewer;
+use super::{InspectorSelection, TabViewer};
 
 pub fn render_tab(
     tab_viewer: &mut TabViewer,
@@ -31,8 +29,9 @@ pub fn render_tab(
         let handles: Vec<_> = reflect_asset.ids(tab_viewer.world).collect();
 
         ui.collapsing(format!("{asset_name} ({})", handles.len()), |ui| {
+            let mut state = tab_viewer.state.lock();
             for handle in handles {
-                let selected = match tab_viewer.selection {
+                let selected = match state.selection {
                     InspectorSelection::Asset(_, _, selected_id) => {
                         selected_id == handle
                     }
@@ -43,7 +42,7 @@ pub fn render_tab(
                     .selectable_label(selected, format!("{:?}", handle))
                     .clicked()
                 {
-                    tab_viewer.selection = InspectorSelection::Asset(
+                    state.selection = InspectorSelection::Asset(
                         asset_type_id,
                         asset_name.to_string(),
                         handle,
