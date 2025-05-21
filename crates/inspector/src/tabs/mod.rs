@@ -68,9 +68,9 @@ impl egui_dock::TabViewer for TabViewer<'_> {
                     extra_state: &mut (),
                 }
                 .show_with_default_filter::<(
-                    Without<Parent>,
                     Without<Observer>,
                     Without<InspectorIgnore>,
+                    Without<ChildOf>,
                 )>(ui);
 
                 if selected {
@@ -99,7 +99,7 @@ impl Plugin for TabsPlugin {
         app.add_systems(
             PostUpdate,
             (set_camera_viewport.after(UiStatePlugin::show_ui_system),)
-                .in_set(UISet),
+                .in_set(UiSystems),
         );
     }
 }

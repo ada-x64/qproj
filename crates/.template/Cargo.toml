@@ -3,7 +3,7 @@
 #  ┗┫┣┛┛ ┗┛┃
 # --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 [package]
-name = "CHANGEME"
+name = "q_template"
 version = "0.1.0"
 publish = false
 authors = ["<phoenix.mandala@pm.me>"]

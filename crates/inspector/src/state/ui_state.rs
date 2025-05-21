@@ -11,7 +11,7 @@ use bevy_egui::{
 use bevy_inspector_egui::bevy_inspector::hierarchy::SelectedEntities;
 use egui_dock::{DockArea, NodeIndex, Style};
 
-use super::UISet;
+use super::UiSystems;
 
 // Resources //////////////////////////////////////////////////////////////////
 
@@ -79,18 +79,16 @@ impl UiState {
 // Plugin /////////////////////////////////////////////////////////////////////
 pub struct UiStatePlugin;
 impl UiStatePlugin {
-    pub fn show_ui_system(world: &mut World) {
-        let Ok(egui_context) = world
+    pub fn show_ui_system(world: &mut World) -> Result<(), BevyError> {
+        let egui_context = world
             .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
-            .get_single(world)
-        else {
-            return;
-        };
+            .single(world)?;
         let mut egui_context = egui_context.clone();
 
         world.resource_scope::<UiState, _>(|world, mut ui_state| {
             ui_state.ui(world, egui_context.get_mut())
         });
+        Ok(())
     }
 }
 impl Plugin for UiStatePlugin {
@@ -105,7 +103,7 @@ impl Plugin for UiStatePlugin {
                     .before(
                         bevy::transform::TransformSystem::TransformPropagate,
                     ))
-                .in_set(UISet),
+                .in_set(UiSystems),
             );
     }
 }

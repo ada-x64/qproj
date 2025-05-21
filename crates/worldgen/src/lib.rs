@@ -210,19 +210,21 @@ impl WorldgenPlugin {
         mut commands: Commands,
         mut generator: ResMut<ChunkGenerator>,
         tf: Query<(&SpawnAroundTracker, &Transform)>,
-    ) {
-        let Ok(tf) = tf.get_single() else { return };
+    ) -> Result<(), BevyError> {
+        let tf = tf.single()?;
         let pos = generator.world_pos_to_chunk_pos(tf.1.translation.xz());
         let trigger = generator.current_chunk.map(|c| pos != c).unwrap_or(true);
         if trigger {
             generator.current_chunk = Some(pos);
             commands.trigger(SpawnAround { pos })
         }
+        Ok(())
     }
 
     fn handle_tasks(mut commands: Commands, mut q: Query<&mut ComputeChunk>) {
         // https://github.com/bevyengine/bevy/blob/adbb53b87f146b8750cb932ca4deb4f875d3e6b6/examples/async_tasks/async_compute.rs#L111
-        // Iter through all ComputeChunk instances, poll their tasks, and if they're complete then run their command queue
+        // Iter through all ComputeChunk instances, poll their tasks, and if
+        // they're complete then run their command queue
         for mut task in &mut q {
             if let Some(mut queue) = block_on(future::poll_once(&mut task.0)) {
                 commands.append(&mut queue);
@@ -234,7 +236,7 @@ impl WorldgenPlugin {
     fn terrain_initialized(
         terrain: Query<&Terrain, With<Initialized>>,
     ) -> bool {
-        terrain.get_single().is_ok()
+        terrain.single().is_ok()
     }
 }
 

@@ -16,7 +16,7 @@ use q_utils::{InspectorIgnore, boolish_states};
 #[derive(
     SystemSet, Default, Reflect, Hash, PartialEq, Eq, Debug, Clone, Copy,
 )]
-pub struct GizmosSet;
+pub struct GizmoSystems;
 
 boolish_states!(GizmosState);
 
@@ -38,11 +38,11 @@ impl Plugin for GizmosPlugin {
                     Self::draw_cam_gizmo,
                     Self::render_axes.after(game_view::set_camera_viewport),
                 )
-                    .in_set(GizmosSet),
+                    .in_set(GizmoSystems),
             )
             .configure_sets(
                 Update,
-                GizmosSet.run_if(in_state(GizmosState::Enabled)),
+                GizmoSystems.run_if(in_state(GizmosState::Enabled)),
             );
     }
 }
@@ -84,7 +84,8 @@ impl GizmosPlugin {
             TextureFormat::Bgra8UnormSrgb,
             RenderAssetUsages::default(),
         );
-        // You need to set these texture usage flags in order to use the image as a render target
+        // You need to set these texture usage flags in order to use the image
+        // as a render target
         image.texture_descriptor.usage = TextureUsages::TEXTURE_BINDING
             | TextureUsages::COPY_DST
             | TextureUsages::RENDER_ATTACHMENT;
@@ -122,7 +123,6 @@ impl GizmosPlugin {
         commands.spawn((AxesNode, node)).with_child(image_node);
     }
 
-    #[allow(clippy::complexity)]
     pub fn render_axes(
         cam_tf: Single<&Transform, (With<InspectorCam>, Without<AxesCam>)>,
         mut cam2_tf: Single<

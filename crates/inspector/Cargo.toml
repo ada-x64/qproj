@@ -20,9 +20,9 @@ bevy-inspector-egui = { workspace = true }
 avian3d = { workspace = true }
 bevy_dolly = { workspace = true }
 easy-ext = { workspace = true }
-# bevy-inspector-egui uses egui v0.30
-bevy_egui = "0.32.0"
-egui_dock = "0.15.0"
+egui = "0.31"
+bevy_egui = "0.34.0"
+egui_dock = "0.16.0"
 
 q_utils = { workspace = true }
 q_player = { workspace = true }
