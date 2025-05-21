@@ -11,7 +11,6 @@ edition = "2024"
 
 [features]
 # just to silence the warning
-debug = ["q_debug"]
 dev = ["bevy/dynamic_linking"]
 inspector = ["bevy-inspector-egui"]
 
@@ -32,5 +31,3 @@ thiserror = { workspace = true }
 meshopt = { workspace = true }
 bevy-inspector-egui = { workspace = true, optional = true }
 avian3d = { workspace = true }
-
-q_debug = { workspace = true, optional = true }

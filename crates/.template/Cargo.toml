@@ -10,7 +10,6 @@ authors = ["<phoenix.mandala@pm.me>"]
 edition = "2024"
 
 [features]
-debug = []                     # q_debug
 dev = ["bevy/dynamic_linking"]
 inspector = []                 # q_inspector
 
