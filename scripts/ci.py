@@ -47,6 +47,6 @@ image = "ubuntu-24.04=ghcr.io/catthehacker/ubuntu:act-24.04"
 with open("ci.log", mode="w") as f:
     print("Running...\nSee ci.log")
     subprocess.run(
-        f"sudo {act} -P {image} {' '.join(args.forward)} 2>&1 | tee ci.log",
+        f"sudo {act} -P {image} --env-file='' {' '.join(args.forward)} 2>&1 | tee ci.log",
         shell=True,
     )
