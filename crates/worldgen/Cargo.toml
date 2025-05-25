@@ -9,9 +9,16 @@ publish = false
 authors = ["<phoenix.mandala@pm.me>"]
 edition = "2024"
 
+[lints]
+workspace = true
+
+# see https://thebevyflock.github.io/bevy_cli/bevy_lint/lints/
+[package.metadata.bevy_lint]
+panicking_methods = "deny"
+pedantic = "warn"
+
 [features]
 # just to silence the warning
-debug = ["q_debug"]
 dev = ["bevy/dynamic_linking"]
 inspector = ["bevy-inspector-egui"]
 
@@ -32,5 +39,3 @@ thiserror = { workspace = true }
 meshopt = { workspace = true }
 bevy-inspector-egui = { workspace = true, optional = true }
 avian3d = { workspace = true }
-
-q_debug = { workspace = true, optional = true }

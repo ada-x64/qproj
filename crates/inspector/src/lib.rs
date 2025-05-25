@@ -23,9 +23,11 @@ impl Plugin for InspectorPlugin {
     fn build(&self, app: &mut App) {
         let _ = {
             app.add_plugins((
-                WireframePlugin,
+                WireframePlugin::default(),
                 DefaultInspectorConfigPlugin,
-                bevy_egui::EguiPlugin,
+                bevy_egui::EguiPlugin {
+                    enable_multipass_for_primary_context: false,
+                },
                 InspectorCamPlugin,
                 InspectorStatePlugin,
                 UiStatePlugin,

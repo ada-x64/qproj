@@ -12,15 +12,12 @@ impl GizmosPlugin {
     pub fn draw_cam_gizmo(
         mut gizmos: Gizmos,
         q: Query<&Transform, With<PlayerCam>>,
-    ) {
-        let opt = q.get_single();
-        if opt.is_err() {
-            return;
-        }
-        let cam = opt.unwrap();
+    ) -> Result<(), BevyError> {
+        let cam = q.single()?;
         let start_point = cam.translation - cam.forward().as_vec3();
         let end_point = cam.translation;
         gizmos.arrow(start_point, end_point, RED);
         gizmos.sphere(Isometry3d::from_translation(start_point), 0.5, RED);
+        Ok(())
     }
 }

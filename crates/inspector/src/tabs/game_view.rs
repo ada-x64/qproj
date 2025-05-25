@@ -72,9 +72,9 @@ pub fn set_camera_viewport(
     egui_settings: Query<&EguiContextSettings>,
     mut cam: Single<&mut Camera, With<InspectorCam>>,
     window: Single<&mut Window, With<PrimaryWindow>>,
-) {
+) -> Result<(), BevyError> {
     let scale_factor =
-        window.scale_factor() * egui_settings.single().scale_factor;
+        window.scale_factor() * egui_settings.single()?.scale_factor;
 
     let viewport_pos =
         ui_state.viewport_rect.left_top().to_vec2() * scale_factor;
@@ -89,10 +89,11 @@ pub fn set_camera_viewport(
     let rect = physical_position + physical_size;
 
     let window_size = window.physical_size();
-    // wgpu will panic if trying to set a viewport rect which has coordinates extending
-    // past the size of the render target, i.e. the physical window in our case.
-    // Typically this shouldn't happen- but during init and resizing etc. edge cases might occur.
-    // Simply do nothing in those cases.
+    // wgpu will panic if trying to set a viewport rect which has coordinates
+    // extending past the size of the render target, i.e. the physical
+    // window in our case. Typically this shouldn't happen- but during init
+    // and resizing etc. edge cases might occur. Simply do nothing in those
+    // cases.
     if rect.x <= window_size.x && rect.y <= window_size.y {
         cam.viewport = Some(Viewport {
             physical_position,
@@ -102,4 +103,6 @@ pub fn set_camera_viewport(
     } else {
         warn!("Attempted to set camera viewport beyond render target size.")
     }
+
+    Ok(())
 }

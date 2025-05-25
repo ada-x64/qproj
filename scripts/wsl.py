@@ -1,4 +1,7 @@
-#!.venv/bin/python3
+#          •
+#  ┏┓┏┓┏┓┏┓┓
+#  ┗┫┣┛┛ ┗┛┃
+# --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 
 import argparse
 import os
@@ -24,7 +27,7 @@ except:
     if not os.environ.get("HOSTPATH"):
         print("WARN: wsl not detected and HOSTPATH not set.")
 
-env_vars = {
+env_vars_desc = {
     "CARGO_CMD": {
         "description": "The cargo command to execute.",
         "default": "build",
@@ -60,12 +63,12 @@ class CustomFormatter(
 
 
 epilog = "Accepts the following environment variables:\n"
-for name, values in env_vars.items():
+for name, values in env_vars_desc.items():
     epilog += f"  {name}:\t\t{values.get('description')}\n\t\t\t(default: {values.get('default')})\n"
 
 env = os.environ
 parser = argparse.ArgumentParser(
-    prog="cargo wsl",
+    prog="wsl",
     description="Builds the project assuming you're on WSL. By default will compile with `-Fdebug -Fdev -Finspector`. Packaged files are checksummed and only changed files are synced. If SSH is detected, there will be some extra steps involved, and dynamic linking will be disabled.",
     epilog=epilog,
     formatter_class=CustomFormatter,
@@ -117,19 +120,22 @@ if ssh_connection or args.trace and "-Fdev" in args.forward:
     args.forward.remove("-Fdev")
 
 
-def print_and_run(cmd: str | list[str], **shargs):
-    return common.print_and_run(cmd, args.verbose, **shargs)
+def print_and_run(cmd: str | list[str], **shargs: object):  # type: ignore
+    return common.print_and_run(cmd, args.verbose, **shargs)  # type: ignore
 
 
-for key in env_vars:
-    env_vars[key] = os.environ.get(key) or env_vars[key].get("default")
+env_vars: dict[str, str] = {}
+for key in env_vars_desc:
+    env_vars[key] = (
+        os.environ.get(key) or env_vars_desc[key].get("default") or ""
+    )
 
 pkg_name = "bevy_game"
 bin_name = "bevy_game.exe"
 pdb_name = "bevy_game.pdb"
 with open("Cargo.toml", "rb") as f:
     toml = tomllib.load(f)
-    pkg_name = toml.get("package").get("name")
+    pkg_name = toml.get("package").get("name")  # type:ignore
     bin_name = pkg_name + ".exe"
     pdb_name = pkg_name + ".pdb"
 
@@ -138,8 +144,8 @@ profile = (
     if "-r" in args.forward or "--release" in args.forward
     else "debug"
 )
-target_dir = os.path.abspath(
-    os.path.join("target", env_vars["CARGO_BUILD_TARGET"], profile)
+target_dir = os.path.abspath(  # type: ignore
+    os.path.join("target", env_vars["CARGO_BUILD_TARGET"], profile)  # type: ignore
 )
 
 
@@ -150,6 +156,7 @@ if args.verbose > 2:
 
 # BUILD #######################################################################
 
+start_path = None
 if not args.no_build:
     print_and_run(
         [
@@ -157,7 +164,7 @@ if not args.no_build:
             env_vars["CARGO_CMD"],
             *args.forward,
         ]
-    ).check_returncode()
+    ).check_returncode()  # type:ignore
 
     bin_path = os.path.join(env_vars["HOSTPATH"], pkg_name, pkg_name + ".exe")
     bin_path = (
@@ -227,7 +234,7 @@ else:
 hashfile_path = os.path.join(target_dir, ".hash")
 
 
-def do_hash(build_files):
+def do_hash(build_files: list[str]):
     # generate checksum
     mismatched = ()
     hashfile = ""
@@ -236,7 +243,7 @@ def do_hash(build_files):
             hash = xxhash.xxh64_hexdigest(f.read())
             hashfile += f"{file} {hash}\n"
 
-    for root, subdirs, files in os.walk("assets"):
+    for root, _subdirs, files in os.walk("assets"):
         for file in files:
             path = os.path.join(root, file)
             with open(path, "rb") as f:
@@ -275,7 +282,7 @@ def do_hash(build_files):
 if not args.no_sync:
     exec_path = os.path.join(target_dir, bin_name)
     pdb_path = os.path.join(target_dir, pdb_name)
-    build_files = [start_path, exec_path, pdb_path]
+    build_files = [start_path or "", exec_path, pdb_path]
 
     if args.no_hash:
         print("Not hashing.")

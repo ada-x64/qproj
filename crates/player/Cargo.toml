@@ -9,8 +9,15 @@ publish = false
 authors = ["<phoenix.mandala@pm.me>"]
 edition = "2024"
 
+[lints]
+workspace = true
+
+# see https://thebevyflock.github.io/bevy_cli/bevy_lint/lints/
+[package.metadata.bevy_lint]
+panicking_methods = "deny"
+pedantic = "warn"
+
 [features]
-debug = ["q_debug"]
 dev = ["bevy/dynamic_linking"]
 
 [dependencies]
@@ -21,12 +28,11 @@ anyhow = { workspace = true }
 derive_more = { workspace = true }
 thiserror = { workspace = true }
 avian3d = { workspace = true }
-bevy-tnua-avian3d = "0.3.1"
-bevy-tnua = "0.22"
+bevy-tnua-avian3d = "0.5"
+bevy-tnua = "0.24"
 bevy_dolly = { workspace = true }
 derive_builder = { workspace = true }
 easy-ext = { workspace = true }
 
-q_debug = { workspace = true, optional = true }
 q_worldgen = { workspace = true }
 q_utils = { workspace = true }

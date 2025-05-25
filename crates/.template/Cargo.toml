@@ -3,14 +3,21 @@
 #  ┗┫┣┛┛ ┗┛┃
 # --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 [package]
-name = "CHANGEME"
+name = "q_template"
 version = "0.1.0"
 publish = false
 authors = ["<phoenix.mandala@pm.me>"]
 edition = "2024"
 
+[lints]
+workspace = true
+
+# see https://thebevyflock.github.io/bevy_cli/bevy_lint/lints/
+[package.metadata.bevy_lint]
+panicking_methods = "deny"
+pedantic = "warn"
+
 [features]
-debug = []                     # q_debug
 dev = ["bevy/dynamic_linking"]
 inspector = []                 # q_inspector
 
@@ -21,4 +28,3 @@ log = { workspace = true }
 anyhow = { workspace = true }
 derive_more = { workspace = true }
 thiserror = { workspace = true }
-avian3d = { workspace = true }

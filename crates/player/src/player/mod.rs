@@ -14,8 +14,9 @@ boolish_states!(PlayerState);
 
 pub struct IntegrationPlugin;
 impl IntegrationPlugin {
-    // TODO: This position needs to vary depending on the terrain. Probably want to wait until it's loaded.
-    // But, game state should wait until terrain is loaded to transition to PlayerState::Enabled
+    // TODO: This position needs to vary depending on the terrain. Probably want
+    // to wait until it's loaded. But, game state should wait until terrain
+    // is loaded to transition to PlayerState::Enabled
     fn spawn(
         mut commands: Commands,
         mut meshes: ResMut<Assets<Mesh>>,

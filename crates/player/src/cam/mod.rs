@@ -22,7 +22,6 @@ impl PlayerCamPlugin {
         cam.is_active = VAL;
     }
 
-    #[allow(clippy::type_complexity)]
     pub fn update_camera(
         mut set: ParamSet<(
             Single<&Transform, With<Player>>,

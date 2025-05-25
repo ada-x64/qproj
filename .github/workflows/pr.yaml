@@ -3,7 +3,7 @@ name: Cargo Build & Test
 on:
   pull_request:
 
-env: 
+env:
   CARGO_TERM_COLOR: always
 
 jobs:
@@ -11,24 +11,20 @@ jobs:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        target: [x86_64-pc-windows-msvc, x86_64-unknown-linux-gnu] 
+        target: [x86_64-pc-windows-msvc, x86_64-unknown-linux-gnu]
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12.3' 
-          cache: 'pip'
-      - run: 'pip install -r requirements.txt'
+      - uses: extractions/setup-just@v3
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           target: ${{matrix.target}}
           components: rustfmt,clippy
           rustflags: ""
-        
+
       - name: cache xwin
         uses: actions/cache@v4
         if: ${{matrix.target}} == x86_64-pc-windows-msvc
@@ -36,16 +32,8 @@ jobs:
           path: ${{github.workspace}}/.xwin-cache
           key: ${{ runner.OS }}-xwin-cache # doesn't need to hash
 
-      - run: "./scripts/cargo-setup"
-
-      - run: curl -sfL https://direnv.net/install.sh | bash
-      - run: direnv allow
-      - run: direnv export gha >> "$GITHUB_ENV"
-      - run: echo "!!! DEBUG INFORMATION !!!"; env; ls -lah ${{github.workspace}}/.bin
-
-      - name: cargo chk
-        run: ./scripts/cargo-chk
-      - name: cargo build (${{matrix.target}})
-        run: cargo build --release --target=${{matrix.target}}
+      - run: just setup --non-interactive
+      - run: just check
+      - run: just build --release --no-default-features --target=${{matrix.target}}
       # TODO add tests
       # TODO zip up bin and assets, upload artefact

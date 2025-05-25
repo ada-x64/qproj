@@ -15,16 +15,15 @@ mod inspector;
 #[derive(States, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum GameState {
     #[cfg(feature = "inspector")]
-    #[cfg_attr(feature = "inspector", default)]
     Inspector,
     MainMenu,
-    #[cfg_attr(not(feature = "inspector"), default)]
+    #[default]
     LoadingWorld,
     MainGame,
 }
 
 #[bevy_main]
-fn main() {
+fn main() -> AppExit {
     let mut app = App::new();
 
     // use RUST_LOG
@@ -38,18 +37,6 @@ fn main() {
         PhysicsPlugins::default(),
     ))
     .insert_state(GameState::default());
-
-    #[cfg(feature = "debug")]
-    {
-        use q_debug::{DebugLevel, DebugPlugin};
-        let level = std::env::var("DEBUG_LEVEL").unwrap_or_default();
-        let debug_level = DebugLevel(level.parse().unwrap_or_default());
-        debug!("DEBUG_LEVEL = {debug_level:?}");
-        app.add_plugins(DebugPlugin {
-            debug_level,
-            wireframes: false,
-        });
-    }
 
     #[cfg(feature = "inspector")]
     let _ = {
@@ -71,5 +58,5 @@ fn main() {
         );
     };
 
-    app.run();
+    app.run()
 }
