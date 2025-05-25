@@ -12,7 +12,7 @@ _check check='' fix='': (_headers fix)
     pyright ./scripts
     cargo fmt -- {{ check }}
     cargo clippy --locked --workspace {{ fix }} -- --no-deps
-    bevy_lint
+    bevy lint
 
 _headers fix='': _venv
     .venv/bin/python3 ./scripts/headers.py {{ fix }}
