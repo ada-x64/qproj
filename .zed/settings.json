@@ -1,12 +1,7 @@
 {
   "languages": {
     "Python": {
-      "language_servers": ["pyright"],
-      "format_on_save": {
-        "external": {
-          "command": ".venv/bin/python3 -m black"
-        }
-      }
+      "language_servers": ["pyright"]
     }
   },
   "lsp": {

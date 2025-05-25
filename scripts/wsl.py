@@ -68,7 +68,7 @@ for name, values in env_vars_desc.items():
 
 env = os.environ
 parser = argparse.ArgumentParser(
-    prog="cargo wsl",
+    prog="wsl",
     description="Builds the project assuming you're on WSL. By default will compile with `-Fdebug -Fdev -Finspector`. Packaged files are checksummed and only changed files are synced. If SSH is detected, there will be some extra steps involved, and dynamic linking will be disabled.",
     epilog=epilog,
     formatter_class=CustomFormatter,

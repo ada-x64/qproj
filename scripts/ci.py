@@ -10,7 +10,7 @@ import common
 import argparse
 
 parser = argparse.ArgumentParser(
-    prog="cargo ci",
+    prog="ci",
     description="Runs nektos/act to test CI.`",
 )
 
@@ -31,6 +31,8 @@ if not act and not args.no_install:
     res = requests.get(
         "https://raw.githubusercontent.com/nektos/act/master/install.sh"
     )
+
+    subprocess.call(["mkdir", "-p", ".bin"])
     with open("./.bin/install-act.sh", mode="x") as f:
         f.write(res.text)
     subprocess.call(["bash", ".bin/install-act.sh", "-b", ".bin"])

@@ -35,6 +35,8 @@ parser.add_argument(
 args = parser.parse_args()
 print(args)
 
+## SYSTEM DEPS ################################################################
+
 if not args.no_deps:
     os_like: tuple[str]
     if os.environ.get("CI") == "true":
@@ -73,12 +75,73 @@ if not args.no_deps:
             "Could not determine packages to install.\nSee https://github.com/bevyengine/bevy/blob/latest/docs/linux_dependencies.md "
         )
 
+## CARGO DEPS #################################################################
+
 bevy_lint = shutil.which("bevy_lint")
 if not bevy_lint or args.force:
+    # https://github.com/TheBevyFlock/bevy_cli/releases/tag/lint-v0.3.0
     subprocess.run(
-        "cargo install --git https://github.com/TheBevyFlock/bevy_cli --tag cli-v0.1.0-alpha.1 --locked bevy_cli",
+        """
+        rustup toolchain install nightly-2025-04-03 \
+            --component rustc-dev \
+            --component llvm-tools-preview
+
+        rustup run nightly-2025-04-03 cargo install \
+            --git https://github.com/TheBevyFlock/bevy_cli.git \
+            --tag lint-v0.3.0 \
+            --locked \
+            bevy_lint
+        """,
         shell=True,
     )
+
+deny = shutil.which("cargo-deny")
+if not deny or args.force:
+    subprocess.run("cargo install --locked cargo-deny", shell=True)
+
+## BUILD DEPS #################################################################
+
+dirname = os.path.dirname(__file__)
+binpath = os.path.abspath(os.path.join(dirname, "../.bin"))
+
+
+def mk_symlink(cmd: str, alias: str):
+    bin = shutil.which(cmd)
+    if not bin:
+        raise Exception(f"Could not find {cmd}!")
+    subprocess.run(["mkdir", "-p", ".bin"])
+    alias_path = os.path.abspath(os.path.join(binpath, alias))
+    try:
+        os.symlink(bin, alias_path)
+    except:
+        pass
+    return alias_path
+
+
+clang_cl = (
+    shutil.which("clang-cl")
+    or shutil.which("clang-cl-19")
+    or shutil.which("clang-cl-18")
+    or mk_symlink("clang", "clang-cl")
+)
+
+llvm_ar = (
+    shutil.which("llvm-ar")
+    or shutil.which("llvm-ar-19")
+    or shutil.which("llvm-ar-18")
+    or mk_symlink("llvm-lib", "llvm-ar")
+)
+
+lld_link = (
+    shutil.which("lld-link")
+    or shutil.which("lld-link-19")
+    or shutil.which("lld-link-18")
+    or mk_symlink("lld-link", "lld-link")
+)  # unsure what to put here
+
+subprocess.check_call([clang_cl, "--version"])
+subprocess.check_call([llvm_ar, "--version"])
+subprocess.check_call([lld_link, "--version"])
 
 xwin_path = os.path.abspath(os.path.join(thispath, "..", ".xwin-cache"))
 if args.force or not os.path.exists(xwin_path):
@@ -86,28 +149,39 @@ if args.force or not os.path.exists(xwin_path):
     subprocess.run(["cargo", "install", "xwin", "--locked"])
     subprocess.run(["xwin", "--accept-license", "splat"])
 
-bin_path = os.path.abspath(os.path.join(thispath, "..", ".bin"))
-if args.force or not os.path.exists(bin_path):
-    shutil.rmtree(bin_path, ignore_errors=True)
-    clang = shutil.which("clang-cl") or shutil.which("clang")
-    llvm_ar = shutil.which("llvm-lib") or shutil.which("llvm-ar")
-    lld_link = shutil.which("lld-link")
-    if not clang:
-        print("WARN: Cannot find clang!")
-    if not llvm_ar:
-        print("WARN: Cannot find llvm-ar!")
-    if not lld_link:
-        print("WARN: Cannot find lld-link!")
+env = os.path.join(os.path.join(thispath, "..", ".env"))
+if args.force or not os.path.exists(env):
+    with open(env, "w") as f:
+        xwin_path = xwin_path + "/splat"
+        dirs = os.listdir(f"{xwin_path}/sdk/include")
+        cflags = ""
+        for dir in dirs:
+            cflags = f"{cflags} /imsvc {xwin_path}/sdk/include/{dir}"
+        cflags = f"{cflags} /imsvc {xwin_path}/crt/include"
+        rustflags = " ".join(
+            [
+                f"-Clink-arg=/libpath:{xwin_path}/crt/lib/x86_64",
+                f"-Clink-arg=/libpath:{xwin_path}/sdk/lib/um/x86_64",
+                f"-Clink-arg=/libpath:{xwin_path}/sdk/lib/ucrt/x86_64",
+            ]
+        )
 
-    os.mkdir(bin_path)
-    os.symlink(f"{clang}", f"{bin_path}/clang-cl")
-    os.symlink(f"{llvm_ar}", f"{bin_path}/llvm-lib")
-    os.symlink(f"{lld_link}", f"{bin_path}/lld-link")
-    subprocess.check_call([f"{bin_path}/clang-cl", "-v"])
-    subprocess.check_call([f"{bin_path}/llvm-lib", "-v"])
-    subprocess.check_call([f"{bin_path}/lld-link", "--version"])
+        vars = [
+            f"XWIN_DIR='{xwin_path}'",
+            f"CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS='{rustflags}'",
+            f"CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER='{lld_link}'",
+            f"CC_x86_64_pc_windows_msvc='{clang_cl}'",
+            f"CXX_x86_64_pc_windows_msvc='{clang_cl}'",
+            f"AR_x86_64_pc_windows_msvc='{llvm_ar}'",
+            f"CFLAGS_x86_64_pc_windows_msvc='{cflags}'",
+            f"TRACY_CLIENT_SYS_CXXFLAGS_x86_64_pc_windows_msvc='{cflags}'",
+            "CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER='x86_64-w64-mingw32-gcc'",
+            f"PATH=$PATH:{binpath}",
+        ]
+        f.write("\n".join(vars))
 
-# hooks
+
+## HOOKS ######################################################################
 with open(".git/hooks/pre-push", "w+") as f:
     f.write("#!/bin/bash\njust check\n")
 
@@ -116,7 +190,6 @@ print(
     """
 -------------------------------------------------------------------------------
 \x1b[1mSuccessfully set up.\x1b[22m
-To build, run `cargo wsl.`
 
 {IMPORTANT} You will need to set Clang as your C(++) compiler. If you are on a
 Debian-based distro, run the following:
