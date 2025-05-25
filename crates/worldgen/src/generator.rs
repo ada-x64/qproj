@@ -40,7 +40,8 @@ pub struct ChunkGenerator {
     /// The length and width of the chunk
     #[cfg_attr(feature = "inspector", inspector(min = 1, max = 128))]
     pub size: usize,
-    /// This number is squared to determine the number of chunks spawned around the player.
+    /// This number is squared to determine the number of chunks spawned around
+    /// the player.
     #[cfg_attr(feature = "inspector", inspector(min = 1, max = 16))]
     pub active_radius: i32,
     /// Maximum elevation

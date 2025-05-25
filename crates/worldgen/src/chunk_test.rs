@@ -67,8 +67,8 @@
 
 //                 if let Some((other, this)) = maybe_perim {
 //                     other.iter().zip(&this).for_each(|(other, this)| {
-//                         // TODO: Assert that the worldspace coords are the same.
-//                         // then, assert that the heights are the same.
+//                         // TODO: Assert that the worldspace coords are the
+// same.                         // then, assert that the heights are the same.
 //                     });
 //                     // let mut did_test = false;
 //                     // other.iter().for_each(|other| {
@@ -81,9 +81,9 @@
 //                     //         // }
 //                     //     })
 //                     // });
-//                     // assert!(did_test, "pos={pos},\nhoriz={horiz}\nthis={this:?}\nother={other:?}");
-//                 }
-//             };
+//                     // assert!(did_test,
+// "pos={pos},\nhoriz={horiz}\nthis={this:?}\nother={other:?}");
+// }             };
 //             doit(true);
 //             doit(false);
 //         });
@@ -100,8 +100,8 @@
 //     //             .filter_map(|(idx, vec)| {
 //     //                 let x = idx % size;
 //     //                 let y = idx / size;
-//     //                 (x == 0 || x == size || y == 0 || y == size).then_some(vec)
-//     //             })
+//     //                 (x == 0 || x == size || y == 0 || y ==
+// size).then_some(vec)     //             })
 //     //             .collect_vec()
 //     //     })
 //     //     .collect_vec();

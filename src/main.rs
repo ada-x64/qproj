@@ -23,7 +23,7 @@ pub enum GameState {
 }
 
 #[bevy_main]
-fn main() {
+fn main() -> AppExit {
     let mut app = App::new();
 
     // use RUST_LOG
@@ -58,5 +58,5 @@ fn main() {
         );
     };
 
-    app.run();
+    app.run()
 }

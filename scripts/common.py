@@ -1,11 +1,8 @@
-import subprocess
-import sys
-
-
-def print_and_run(cmd: str | list[str], verbose: int = 1, **args):
-    if verbose > 0:
-        if type(cmd) is list:
-            print("> " + " ".join(cmd))
+#          •
+#  ┏┓┏┓┏┓┏┓┓
+#  ┗┫┣┛┛ ┗┛┃
+# --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
+int("> " + " ".join(cmd))
         else:
             print(f"> {cmd}")
     return subprocess.run(cmd, **args)

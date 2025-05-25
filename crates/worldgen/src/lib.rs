@@ -108,14 +108,20 @@ impl WorldgenPlugin {
         command_queue.push(move |world: &mut World| {
             // debug!("SPAWNING CHUNK AT ({pos})");
             let default_material = world
-                .resource_mut::<ChunkGenerator>()
-                .default_material
-                .clone()
-                .expect("default_material was none!");
+                .get_resource_mut::<ChunkGenerator>()
+                .and_then(|g| g.default_material.clone());
+            if default_material.is_none() {
+                error!("Could not get chunk generator's default material!");
+                return;
+            }
+            let default_material = default_material.unwrap();
 
             let collider = Collider::trimesh_from_mesh(&mesh)
                 .expect("Could not create chunk collider");
-            let mesh_handle = world.resource_mut::<Assets<Mesh>>().add(mesh);
+            let mesh_handle = world
+                .get_resource_mut::<Assets<Mesh>>()
+                .expect("Could not get mesh assets!")
+                .add(mesh);
             let chunk_entt = world
                 .spawn((
                     transform,
@@ -130,11 +136,18 @@ impl WorldgenPlugin {
                 .id();
 
             let terrain_id = world
-                .resource_mut::<ChunkGenerator>()
+                .get_resource_mut::<ChunkGenerator>()
+                .expect("No chunk generator!")
                 .terrain_entt
                 .expect("Undefined terrain entt!");
-            world.entity_mut(terrain_id).add_child(chunk_entt);
-            world.entity_mut(task_child_id).despawn();
+            world
+                .get_entity_mut(terrain_id)
+                .expect("Could not get terrain entity!")
+                .add_child(chunk_entt);
+            world
+                .get_entity_mut(task_child_id)
+                .expect("Could not get task child entity!")
+                .despawn();
         });
         command_queue
     }

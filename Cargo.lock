@@ -4672,7 +4672,6 @@ name = "q_template"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "avian3d",
  "bevy",
  "derive_more 2.0.1",
  "itertools 0.14.0",

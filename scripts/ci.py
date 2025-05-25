@@ -1,5 +1,3 @@
-#!./.venv/bin/python3
-
 import shutil
 import subprocess
 import requests
@@ -22,12 +20,7 @@ parser.add_argument(
 
 args = common.parse_with_forward(parser, "act")
 
-act = args.act
-try:
-    if subprocess.check_call(["gh", "act", "--version"], stderr=subprocess.DEVNULL) == 0:
-        act = "gh act"
-except:
-    act = shutil.which("act") or shutil.which(".bin/act")
+act: str | None = args.act or shutil.which("act") or shutil.which(".bin/act")
 
 
 if not act and not args.no_install:
@@ -40,6 +33,15 @@ if not act and not args.no_install:
     subprocess.call(["bash", ".bin/install-act.sh", "-b", ".bin"])
     act = ".bin/act"
 
+if not act:
+    print("Could not find act! Exiting.")
+    exit(1)
+
 # TODO: This could be made more flexible with yaml parsing.
 image = "ubuntu-24.04=ghcr.io/catthehacker/ubuntu:act-24.04"
-subprocess.run([act, "-P", image, *args.forward])
+with open("ci.log", mode="w") as f:
+    print("Running...\nSee ci.log");
+    subprocess.run(
+        f"sudo {act} -P {image} {' '.join(args.forward)} 2>&1 | tee ci.log",
+        shell=True
+    )

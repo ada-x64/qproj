@@ -128,8 +128,9 @@ pub fn gen_normals(positions: &[Vec3], indices: &[u32]) -> Vec<Vec3> {
         let edge2 = v3 - v1;
         let face_normal = edge1.cross(edge2);
 
-        // Weight face normal by triangle area (proportional to cross product length)
-        // This is optional but gives better results for varied triangle sizes
+        // Weight face normal by triangle area (proportional to cross product
+        // length) This is optional but gives better results for varied
+        // triangle sizes
 
         // Accumulate face normal to each vertex
         normals[i1] += face_normal;

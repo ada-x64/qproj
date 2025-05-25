@@ -1,3 +1,7 @@
+#          •
+#  ┏┓┏┓┏┓┏┓┓
+#  ┗┫┣┛┛ ┗┛┃
+# --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 [graph]
 targets = ["x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
 all-features = false

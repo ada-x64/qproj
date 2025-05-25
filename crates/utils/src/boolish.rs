@@ -10,9 +10,11 @@ pub enum BoolishState {
     /// Awaiting setup
     #[default]
     Init,
-    /// Describes the UI state where: Inspector editing is active and the game is paused.
+    /// Describes the UI state where: Inspector editing is active and the game
+    /// is paused.
     Enabled,
-    /// Describes the UI state where: Inspector editing is inactive and the game is being played.
+    /// Describes the UI state where: Inspector editing is inactive and the game
+    /// is being played.
     Disabled,
 }
 impl From<bool> for BoolishState {
@@ -95,7 +97,8 @@ macro_rules! impl_boolish {
 }
 
 /// Creates the `setup_boolish_states` function and trait impl for App.
-/// Will log to Debug whenever the state switches between $name::Enabled and $name::Disabled
+/// Will log to Debug whenever the state switches between $name::Enabled and
+/// $name::Disabled
 #[macro_export]
 macro_rules! setup_boolish {
     ($($name: ident)*) => {

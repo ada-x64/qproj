@@ -1,9 +1,8 @@
-#!/.venv/bin/python3
-
 import argparse
 import os
 import shutil
 import subprocess
+import os_release
 
 thispath = os.path.dirname(__file__)
 
@@ -26,10 +25,31 @@ args = parser.parse_args()
 print(args)
 
 if not args.no_deps:
-    subprocess.run(
-        "sudo apt update && sudo apt install -y pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0 llvm clang lld",
-        shell=True,
-    )
+    if os.environ.get("CI") == 'true':
+        like = 'ubuntu'
+    else:
+        release = os_release.current_release()
+        like = release.id_like or release.id;
+
+    if (like == 'debian' or like == 'ubuntu'):
+        subprocess.run(
+            "sudo apt update && sudo apt install -y pkg-config libx11-dev libasound2-dev libudev-dev libxkbcommon-x11-0 llvm clang lld",
+            shell=True,
+        )
+    elif (like == 'arch'):
+        subprocess.run(
+            "sudo pacman -S libx11 pkgconf alsa-lib",
+            shell=True
+        )
+        print("You may need some more packages.\nSee https://github.com/bevyengine/bevy/blob/latest/docs/linux_dependencies.md#arch--manjaro")
+    elif (like == "fedora"):
+        subprocess.run(
+            "sudo dnf install gcc-c++ libX11-devel alsa-lib-devel systemd-devel",
+            shell=True
+        )
+        print("You may need some more packages.\nSee https://github.com/bevyengine/bevy/blob/latest/docs/linux_dependencies.md#fedora")
+    else:
+        print("Could not determine packages to instsall.\nSee https://github.com/bevyengine/bevy/blob/latest/docs/linux_dependencies.md ")
 
 xwin_path=os.path.abspath(os.path.join(thispath, "..", ".xwin-cache"))
 if args.force or not os.path.exists(xwin_path):

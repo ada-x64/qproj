@@ -22,9 +22,21 @@ I highly recommend using [direnv](https://github.com/direnv/direnv) to manage en
 export RUST_LOG="warn,bevy_game=debug,worldgen=debug,"
 export RUST_BACKTRACE=1
 export CARGO_BUILD_TARGET="x86_64-pc-windows-msvc"
-export CARGO_FEATURE_DEV
-export CARGO_FEATURE_INSPECTOR
 export DEBUG_LEVEL=0
 export WINDBG_PORT=1234
 export RENDERDOC_PORT=2345
 ```
+
+## Development Scripts
+All development scripts (if you are using direnv) are acessible through Cargo. Many of them require python to be installed and the virtual environment to be set up.
+
+| script | description |
+| --- | --- |
+| cargo setup | Sets up all dependencies and activates the python venv. Will attempt to install system dependencies. Assumes you're on linux. |
+| cargo chk | Runs lints with clippy and [bevy_lint](https://github.com/TheBevyFlock/bevy_cli), checks headers, etc. This is also run in CI. |
+| cargo wsl | Builds the application for use on WSL. (May be outdated. Assumes a debian-based environment.) This uses the awesome [xwin](https://github.com/rust-cross/cargo-xwin) project for cross-compilation with the MSVC target. |
+| cargo ci | Runs CI tests locally using nektos/act |
+| cargo headers | Checks for headers. Part of cargo chk. |
+
+## Features
+By default, the crate builds with the `inspector` and `dev` feature flags enabled. This builds with bevy's dylib dependencies and the game inspector. For finished builds, you'll need to compile with `--no-default-features`.

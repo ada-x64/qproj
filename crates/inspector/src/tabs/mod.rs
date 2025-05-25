@@ -51,7 +51,12 @@ impl egui_dock::TabViewer for TabViewer<'_> {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Self::Tab) {
-        let type_registry = self.world.resource::<AppTypeRegistry>().0.clone();
+        let type_registry = self
+            .world
+            .get_resource::<AppTypeRegistry>()
+            .expect("Could not get app type registry!")
+            .0
+            .clone();
         let type_registry = type_registry.read();
         match tab {
             Tab::GameView => game_view::render_tab(self, ui),

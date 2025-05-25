@@ -1,11 +1,15 @@
+Arpeggio==2.0.2
 Brotli==1.1.0
 certifi==2025.1.31
 charset-normalizer==3.4.1
 idna==3.10
-pip==25.0.1
+nodeenv==1.9.1
+os-release==1.0.1
+pyright==1.1.401
 PyYAML==6.0.2
 requests==2.32.3
 setuptools==78.1.0
+typing_extensions==4.13.2
 urllib3==2.4.0
 wheel==0.45.1
 xxhash==3.5.0

@@ -1,11 +1,11 @@
 /target
 *.log
 *.exe
+*.local/**
+*.local
 build
 .xwin-cache
 .bin
-.env.*
 .venv
 __pycache__
-.local
 .trace

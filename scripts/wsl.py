@@ -1,13 +1,8 @@
-#!.venv/bin/python3
-
-import argparse
-import os
-import subprocess
-import xxhash
-import tomllib
-import common
-
-# SETUP #######################################################################
+#          •
+#  ┏┓┏┓┏┓┏┓┓
+#  ┗┫┣┛┛ ┗┛┃
+# --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
+#####
 
 temp = None
 try:
@@ -88,7 +83,6 @@ parser.add_argument(
     action="store_true",
     help="Runs with `-Fbevy/trace_tracy --release` and removes `-Fdev`. On Windows this requires running the built application as an administrator.",
 )
-parser.add_argument("wsl", help="(dummy argument)")
 parser.add_argument(
     "-f",
     "--no-default-features",
