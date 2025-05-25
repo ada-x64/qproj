@@ -4,10 +4,9 @@
 # --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 [tool.black]
 line-length = 80
-include="scripts/.*.py"
-exclude="__pycache__/.*"
+include = "scripts/.*.py"
+exclude = "__pycache__/.*"
 
 [tool.pyright]
-strict=["scripts"]
-include=["scripts"]
-exclude=["**/__pycache__"]
+include = ["scripts"]
+exclude = ["**/__pycache__"]

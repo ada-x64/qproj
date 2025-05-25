@@ -1,9 +1,15 @@
+#          •
+#  ┏┓┏┓┏┓┏┓┓
+#  ┗┫┣┛┛ ┗┛┃
+# --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
+
 import argparse
 import glob
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--fix", action="store_true", help="Write to disk.")
-args = parser.parse_args();
+args = parser.parse_args()
+
 
 def get_header(c: str):
     return f"""{c}         •
@@ -12,30 +18,39 @@ def get_header(c: str):
 {c}--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 """
 
-c_dict = {
-    'toml': '# ',
-    'py': '# ',
-    'rs': "//"
-}
 
-paths = ["crates/**", "scripts", "src", "./"]
+c_dict = {"toml": "# ", "py": "# ", "rs": "//"}
+
+paths = ["crates/**/*", "scripts/**/*", "src/**/*", "./*"]
 
 ok = True
 for key in c_dict.keys():
     for path in paths:
-        for file in glob.iglob(f"{path}/*.{key}", recursive=True):
+        for file in glob.iglob(f"{path}.{key}", recursive=True):
             with open(file, "r+") as f:
-                head = ''.join([next(f) for _ in range(4)])
+                # Read the first 4 lines to check header
+                head_lines: list[str] = []
+                for _ in range(4):
+                    try:
+                        head_lines.append(next(f))
+                    except StopIteration:
+                        break
+
+                head = "".join(head_lines)
                 header = get_header(c_dict[key])
                 if head != header:
                     ok = False
                     if args.fix:
-                        f.write(f"{header}\n{f.read()}")
-                        print(f"FIX {file}")
+                        f.seek(0)
+                        content = f.read()
+                        f.seek(0)
+                        f.write(f"{header}\n{content}")
+                        print(f"🟡 FIX {file}")
                     else:
-                        print(f"ERR {file}")
+                        print(f"🔴 ERR {file}")
 
-                else:
-                    print(f"OK {file}")
+if ok:
+    print("✅ Headers ok!")
 
-exit(0 if ok else 1)
+exit_code = 0 if ok or args.fix else 1
+exit(exit_code)

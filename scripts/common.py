@@ -2,13 +2,22 @@
 #  ┏┓┏┓┏┓┏┓┓
 #  ┗┫┣┛┛ ┗┛┃
 # --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
-int("> " + " ".join(cmd))
+
+import argparse
+import subprocess
+import sys
+
+
+def print_and_run(cmd: str | list[str], verbose: int = 1, **args: object):  # type: ignore
+    if verbose > 0:
+        if type(cmd) is list:
+            print("> " + " ".join(cmd))
         else:
             print(f"> {cmd}")
-    return subprocess.run(cmd, **args)
+    return subprocess.run(cmd, **args)  # type: ignore
 
 
-def parse_with_forward(parser, subprocess: str):
+def parse_with_forward(parser: argparse.ArgumentParser, subprocess: str):
     parser.add_argument(
         "--",
         help=f"Arguments passed after the '--' will be forwarded directly to {subprocess}",

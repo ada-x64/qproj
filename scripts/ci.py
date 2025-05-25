@@ -1,3 +1,8 @@
+#          •
+#  ┏┓┏┓┏┓┏┓┓
+#  ┗┫┣┛┛ ┗┛┃
+# --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
+
 import shutil
 import subprocess
 import requests
@@ -9,8 +14,6 @@ parser = argparse.ArgumentParser(
     description="Runs nektos/act to test CI.`",
 )
 
-# dummy
-parser.add_argument("ci", help="(dummy argument)")
 parser.add_argument("--act", action="store", help="Act command to execute.")
 parser.add_argument(
     "--no-install",
@@ -40,8 +43,8 @@ if not act:
 # TODO: This could be made more flexible with yaml parsing.
 image = "ubuntu-24.04=ghcr.io/catthehacker/ubuntu:act-24.04"
 with open("ci.log", mode="w") as f:
-    print("Running...\nSee ci.log");
+    print("Running...\nSee ci.log")
     subprocess.run(
         f"sudo {act} -P {image} {' '.join(args.forward)} 2>&1 | tee ci.log",
-        shell=True
+        shell=True,
     )
