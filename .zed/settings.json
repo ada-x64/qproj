@@ -1,0 +1,26 @@
+{
+  "languages": {
+    "Python": {
+      "language_servers": ["pyright"],
+      "format_on_save": {
+        "external": {
+          "command": ".venv/bin/python3 -m black"
+        }
+      }
+    }
+  },
+  "lsp": {
+    "rust-analyzer": {
+      "initialization_options": {
+        "check": {
+          "command": "clippy",
+          "extraArgs": [
+            "--locked",
+            "--no-deps",
+            "--target-dir=target/rust-analyzer"
+          ]
+        }
+      }
+    }
+  }
+}

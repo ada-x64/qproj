@@ -52,7 +52,8 @@ if not args.no_deps:
     elif "arch" in os_like:
         confirm = "--noconfirm" if args.non_interactive else "--confirm"
         subprocess.run(
-            f"sudo pacman -S {confirm} mold libx11 pkgconf alsa-lib", shell=True
+            f"sudo pacman -S {confirm} mold clang lld libx11 pkgconf alsa-lib",
+            shell=True,
         )
         print(
             "You may need some more packages.\nSee https://github.com/bevyengine/bevy/blob/latest/docs/linux_dependencies.md#arch--manjaro"
@@ -61,7 +62,7 @@ if not args.no_deps:
         # i don't use dnf so idk if this works :)
         y = "-y" if args.non_interactive else ""
         subprocess.run(
-            f"sudo dnf {y} install mold gcc-c++ libX11-devel alsa-lib-devel systemd-devel",
+            f"sudo dnf {y} install mold lld gcc-c++ libX11-devel alsa-lib-devel systemd-devel",
             shell=True,
         )
         print(
@@ -96,7 +97,7 @@ if args.force or not os.path.exists(bin_path):
     if not llvm_ar:
         print("WARN: Cannot find llvm-ar!")
     if not lld_link:
-        print("WARN: Cannot find lld_link!")
+        print("WARN: Cannot find lld-link!")
 
     os.mkdir(bin_path)
     os.symlink(f"{clang}", f"{bin_path}/clang-cl")

@@ -32,11 +32,8 @@ jobs:
           path: ${{github.workspace}}/.xwin-cache
           key: ${{ runner.OS }}-xwin-cache # doesn't need to hash
 
-      - run: curl -sfL https://direnv.net/install.sh | bash
-      - run: direnv allow
-      - run: direnv export gha >> "$GITHUB_ENV"
       - run: just setup --non-interactive
       - run: just check
-      - run: cargo build --release --target=${{matrix.target}}
+      - run: just build --release --no-default-features --target=${{matrix.target}}
       # TODO add tests
       # TODO zip up bin and assets, upload artefact
