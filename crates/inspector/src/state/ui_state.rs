@@ -3,13 +3,18 @@
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use crate::tabs::*;
-use bevy::{prelude::*, window::PrimaryWindow};
+use bevy::{
+    ecs::world::CommandQueue, prelude::*, tasks::IoTaskPool,
+    window::PrimaryWindow,
+};
 use bevy_egui::{
     EguiContext, EguiPostUpdateSet,
     egui::{self, mutex::Mutex},
 };
 use bevy_inspector_egui::bevy_inspector::hierarchy::SelectedEntities;
+use derivative::Derivative;
 use egui_dock::{DockArea, NodeIndex, Style};
+use q_tasks::TaskComponent;
 
 use super::UiSystems;
 
@@ -42,23 +47,132 @@ impl Default for DockState {
     }
 }
 
-#[derive(Resource, Debug)]
-pub struct UiState {
-    pub viewport_rect: egui::Rect,
-    pub selection: InspectorSelection,
-    pub selected_entities: SelectedEntities,
+#[derive(Debug)]
+pub enum FileType {
+    SaveScene,
+    LoadScene,
+    SaveLayout,
+    LoadLayout,
 }
-impl Default for UiState {
-    fn default() -> Self {
-        Self {
-            viewport_rect: egui::Rect::NOTHING,
-            selection: InspectorSelection::Entities,
-            selected_entities: SelectedEntities::default(),
-        }
+
+pub enum ToastType {
+    Success,
+    Error,
+    Warning,
+    Info,
+}
+
+pub fn show_toast_cmd(t: ToastType, msg: String) -> impl Command {
+    move |world: &mut World| {
+        let mut ui_state = world
+            .get_resource_mut::<UiState>()
+            .expect("Couldn't get UI state!");
+        match t {
+            ToastType::Success => ui_state.toasts.success(msg),
+            ToastType::Error => ui_state.toasts.error(msg),
+            ToastType::Warning => ui_state.toasts.warning(msg),
+            ToastType::Info => ui_state.toasts.info(msg),
+        };
     }
 }
+
+#[derive(Debug, Event)]
+pub enum UiEvent {
+    FileDialogFinished(FileType),
+    FileSaveFinished(FileType),
+}
+
+#[derive(Resource, Derivative)]
+#[derivative(Debug, Default)]
+pub struct UiState {
+    #[derivative(Default(value = "egui::Rect::NOTHING"))]
+    pub viewport_rect: egui::Rect,
+    #[derivative(Default(value = "InspectorSelection::Entities"))]
+    pub selection: InspectorSelection,
+    pub selected_entities: SelectedEntities,
+    #[derivative(Debug = "ignore")]
+    pub toasts: egui_notify::Toasts,
+}
 impl UiState {
-    pub fn ui(&mut self, world: &mut World, ctx: &mut egui::Context) {
+    fn save_scene(&mut self, world: &mut World) {
+        let mut component = world.spawn_empty();
+        let id = component.id();
+        let task = IoTaskPool::get().spawn(async move {
+            let mut command_queue = CommandQueue::default();
+            info!("Getting file handle...");
+            let handle = rfd::AsyncFileDialog::new()
+                .set_directory(std::env::current_dir().unwrap_or_default())
+                .add_filter("scene", &[".scn.ron"])
+                .save_file()
+                .await;
+            match handle {
+                Some(handle) => {
+                    info!("Got file handle...");
+                    command_queue.push(|world: &mut World| {
+                        let scene = DynamicScene::from_world(world);
+                        let type_registry = world.resource::<AppTypeRegistry>();
+                        let type_registry = type_registry.read();
+                        let serialized_scene =
+                            scene.serialize(&type_registry).unwrap();
+                        info!("Serialized scene...");
+                        IoTaskPool::get()
+                            .spawn(async move {
+                                let mut q = CommandQueue::default();
+                                let path =
+                                    handle.path().to_string_lossy().to_string();
+                                let res = handle
+                                    .write(serialized_scene.as_bytes())
+                                    .await;
+                                match res {
+                                    Err(e) => {
+                                        q.push(show_toast_cmd(
+                                            ToastType::Error,
+                                            e.to_string(),
+                                        ));
+                                    }
+                                    Ok(_) => q.push(show_toast_cmd(
+                                        ToastType::Success,
+                                        format!("Saved file to {path}"),
+                                    )),
+                                }
+                                q
+                            })
+                            .detach();
+                    });
+                }
+                None => {
+                    info!("Failed to get file handle");
+                    command_queue.push(show_toast_cmd(
+                        ToastType::Error,
+                        "Failed to save file".into(),
+                    ));
+                    command_queue.push(move |world: &mut World| {
+                        world.despawn(id);
+                    });
+                }
+            }
+            command_queue
+        });
+        component.insert(TaskComponent(task));
+    }
+    fn top_panel(&mut self, world: &mut World, ctx: &mut egui::Context) {
+        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
+            egui::menu::bar(ui, |ui| {
+                ui.menu_button("Scene", |ui| {
+                    if ui.button("Load Scene").clicked() {}
+                    if ui.button("Save Scene").clicked() {
+                        self.save_scene(world);
+                    }
+                });
+                ui.menu_button("Layout", |ui| {
+                    if ui.button("Load Layout").clicked() {}
+                    if ui.button("Save Layout").clicked() {}
+                    if ui.button("Save Layout As...").clicked() {}
+                });
+            })
+        });
+    }
+    fn main_zone(&mut self, world: &mut World, ctx: &mut egui::Context) {
         world.resource_scope::<DockState, _>(|world, mut dock_state| {
             DockArea::new(&mut dock_state.0)
                 .style(Style::from_egui(ctx.style().as_ref()))
@@ -71,9 +185,11 @@ impl UiState {
                 );
         });
     }
-    // pub fn enabled(world: &mut World) -> bool {
-    //     (*world.resource::<State<InspectorEnabled>>().get()).into()
-    // }
+    pub fn ui(&mut self, world: &mut World, ctx: &mut egui::Context) {
+        self.top_panel(world, ctx);
+        self.main_zone(world, ctx);
+        self.toasts.show(ctx);
+    }
 }
 
 // Plugin /////////////////////////////////////////////////////////////////////

@@ -106,6 +106,7 @@ q_worldgen = { path = "crates/worldgen" }
 q_player = { path = "crates/player" }
 q_inspector = { path = "crates/inspector" }
 q_utils = { path = "crates/utils" }
+q_tasks = { path = "crates/tasks" }
 
 ## Main Crate #################################################################
 [lints]
@@ -133,3 +134,4 @@ blake3 = { workspace = true }
 q_inspector = { workspace = true, optional = true }
 q_worldgen = { workspace = true }
 q_player = { workspace = true }
+q_tasks = { workspace = true }

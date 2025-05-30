@@ -34,6 +34,7 @@ fn main() -> AppExit {
         }),
         q_worldgen::WorldgenPlugin,
         q_player::PlayerPlugin,
+        q_tasks::TaskPlugin,
         PhysicsPlugins::default(),
     ))
     .insert_state(GameState::default());
