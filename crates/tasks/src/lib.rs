@@ -19,20 +19,29 @@ fn poll_tasks(mut commands: Commands, tasks: Query<&mut TaskComponent>) {
     }
 }
 
-// WWID?
-// Generalizing the pattern found in UiState::save_scene
-pub fn spawn_io_task(world: &mut World, task: impl AsyncFn(&mut CommandQueue)) {
-    let mut entity = world.spawn_empty();
-    let id = entity.id();
-    let task = IoTaskPool::get().spawn(async move {
-        let mut q = CommandQueue::default();
-        task(&mut q).await;
-        q.push(|world: &mut World| {
-            world.despawn(id);
-        });
-        q
-    });
-    entity.insert(TaskComponent(task));
+/// Arguments: an async move lambda taking &mut CommandQueue as argument.
+///
+/// Example usage:
+/// ```rust, ignore
+/// spawn_io_task!(async move |_q| { info!("do something") })(world)
+/// ```
+#[macro_export]
+macro_rules! task {
+    ($pool_type:path, $block:expr) => {
+        (move |world: &mut World| {
+            let mut entity = world.spawn_empty();
+            let id = entity.id();
+            let task = <$pool_type>::get().spawn(async move {
+                let mut q = CommandQueue::default();
+                ($block)(&mut q).await;
+                q.push(move |world: &mut World| {
+                    world.despawn(id);
+                });
+                q
+            });
+            entity.insert($crate::TaskComponent(task));
+        })
+    };
 }
 
 pub struct TaskPlugin;
@@ -40,4 +49,16 @@ impl Plugin for TaskPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, poll_tasks);
     }
+}
+
+#[test]
+fn test() {
+    let mut app = App::new();
+    let i = 0;
+    app.add_plugins((MinimalPlugins, TaskPlugin)).add_systems(
+        Update,
+        (move |world: &mut World| {
+            task!(IoTaskPool, async move |_q| { println!("{i}") })(world)
+        }),
+    );
 }

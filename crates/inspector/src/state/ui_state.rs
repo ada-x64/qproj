@@ -14,7 +14,7 @@ use bevy_egui::{
 use bevy_inspector_egui::bevy_inspector::hierarchy::SelectedEntities;
 use derivative::Derivative;
 use egui_dock::{DockArea, NodeIndex, Style};
-use q_tasks::TaskComponent;
+use q_tasks::task;
 
 use super::UiSystems;
 
@@ -62,8 +62,8 @@ pub enum ToastType {
     Info,
 }
 
-pub fn show_toast_cmd(t: ToastType, msg: String) -> impl Command {
-    move |world: &mut World| {
+pub fn show_toast(q: &mut CommandQueue, t: ToastType, msg: String) {
+    q.push(move |world: &mut World| {
         let mut ui_state = world
             .get_resource_mut::<UiState>()
             .expect("Couldn't get UI state!");
@@ -73,7 +73,7 @@ pub fn show_toast_cmd(t: ToastType, msg: String) -> impl Command {
             ToastType::Warning => ui_state.toasts.warning(msg),
             ToastType::Info => ui_state.toasts.info(msg),
         };
-    }
+    })
 }
 
 #[derive(Debug, Event)]
@@ -95,65 +95,41 @@ pub struct UiState {
 }
 impl UiState {
     fn save_scene(&mut self, world: &mut World) {
-        let mut component = world.spawn_empty();
-        let id = component.id();
-        let task = IoTaskPool::get().spawn(async move {
-            let mut command_queue = CommandQueue::default();
-            info!("Getting file handle...");
+        task!(IoTaskPool, async move |q: &mut CommandQueue| {
             let handle = rfd::AsyncFileDialog::new()
                 .set_directory(std::env::current_dir().unwrap_or_default())
                 .add_filter("scene", &[".scn.ron"])
                 .save_file()
                 .await;
-            match handle {
-                Some(handle) => {
-                    info!("Got file handle...");
-                    command_queue.push(|world: &mut World| {
-                        let scene = DynamicScene::from_world(world);
+            if let Some(handle) = handle {
+                q.push(|world: &mut World| {
+                    let scene = DynamicScene::from_world(world);
+                    let serialized_scene = {
                         let type_registry = world.resource::<AppTypeRegistry>();
                         let type_registry = type_registry.read();
-                        let serialized_scene =
-                            scene.serialize(&type_registry).unwrap();
-                        info!("Serialized scene...");
-                        IoTaskPool::get()
-                            .spawn(async move {
-                                let mut q = CommandQueue::default();
-                                let path =
-                                    handle.path().to_string_lossy().to_string();
-                                let res = handle
-                                    .write(serialized_scene.as_bytes())
-                                    .await;
-                                match res {
-                                    Err(e) => {
-                                        q.push(show_toast_cmd(
-                                            ToastType::Error,
-                                            e.to_string(),
-                                        ));
-                                    }
-                                    Ok(_) => q.push(show_toast_cmd(
-                                        ToastType::Success,
-                                        format!("Saved file to {path}"),
-                                    )),
-                                }
-                                q
-                            })
-                            .detach();
-                    });
-                }
-                None => {
-                    info!("Failed to get file handle");
-                    command_queue.push(show_toast_cmd(
-                        ToastType::Error,
-                        "Failed to save file".into(),
-                    ));
-                    command_queue.push(move |world: &mut World| {
-                        world.despawn(id);
-                    });
-                }
+                        scene.serialize(&type_registry).unwrap()
+                    };
+                    task!(IoTaskPool, async move |q: &mut CommandQueue| {
+                        let path = handle.path().to_string_lossy().to_string();
+                        let res =
+                            handle.write(serialized_scene.as_bytes()).await;
+                        match res {
+                            Err(e) => {
+                                show_toast(q, ToastType::Error, e.to_string())
+                            }
+                            Ok(_) => show_toast(
+                                q,
+                                ToastType::Success,
+                                format!("Saved file to {path}"),
+                            ),
+                        }
+                    })(world);
+                });
+            } else {
+                info!("Failed to get file handle");
+                (show_toast(q, ToastType::Error, "Failed to save file".into()));
             }
-            command_queue
-        });
-        component.insert(TaskComponent(task));
+        })(world)
     }
     fn top_panel(&mut self, world: &mut World, ctx: &mut egui::Context) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
