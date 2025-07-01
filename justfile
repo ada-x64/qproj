@@ -29,7 +29,7 @@ _venv:
         python3 -m pip install -r requirements.txt
     fi
 
-### user ######################################################################
+### workflow ##################################################################
 
 # Sets up the development environment. Run with --help for more info.
 setup *ARGS: _venv

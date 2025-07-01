@@ -2,6 +2,13 @@
 // ┏┓┏┓┏┓┏┓┓
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
+
+use std::time::Duration;
+
+//         •
+// ┏┓┏┓┏┓┏┓┓
+// ┗┫┣┛┛ ┗┛┃
+//--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use crate::tabs::*;
 use bevy::{
     ecs::world::CommandQueue, prelude::*, tasks::IoTaskPool,
@@ -15,6 +22,7 @@ use bevy_inspector_egui::bevy_inspector::hierarchy::SelectedEntities;
 use derivative::Derivative;
 use egui_dock::{DockArea, NodeIndex, Style};
 use q_tasks::task;
+use q_utils::text::TextUtils;
 
 use super::UiSystems;
 
@@ -62,16 +70,47 @@ pub enum ToastType {
     Info,
 }
 
-pub fn show_toast(q: &mut CommandQueue, t: ToastType, msg: String) {
+pub fn show_toast(q: &mut CommandQueue, t: ToastType, mut msg: String) {
     q.push(move |world: &mut World| {
         let mut ui_state = world
             .get_resource_mut::<UiState>()
             .expect("Couldn't get UI state!");
+        let duration =
+            Duration::from_secs_f32((msg.len() as f32 / 10.).max(1.));
+
         match t {
-            ToastType::Success => ui_state.toasts.success(msg),
-            ToastType::Error => ui_state.toasts.error(msg),
-            ToastType::Warning => ui_state.toasts.warning(msg),
-            ToastType::Info => ui_state.toasts.info(msg),
+            ToastType::Success => {
+                debug!(msg);
+                ui_state
+                    .toasts
+                    .success(msg.wrap_text(80, 5).clone())
+                    .duration(Some(duration))
+                    .closable(true)
+            }
+            ToastType::Error => {
+                error!(msg);
+                ui_state
+                    .toasts
+                    .error(msg.wrap_text(80, 5).clone())
+                    .duration(Some(duration))
+                    .closable(true)
+            }
+            ToastType::Warning => {
+                warn!(msg);
+                ui_state
+                    .toasts
+                    .warning(msg.wrap_text(80, 5).clone())
+                    .duration(Some(duration))
+                    .closable(true)
+            }
+            ToastType::Info => {
+                info!(msg);
+                ui_state
+                    .toasts
+                    .info(msg.wrap_text(80, 5).clone())
+                    .duration(Some(duration))
+                    .closable(true)
+            }
         };
     })
 }
@@ -107,9 +146,14 @@ impl UiState {
                     let serialized_scene = {
                         let type_registry = world.resource::<AppTypeRegistry>();
                         let type_registry = type_registry.read();
-                        scene.serialize(&type_registry).unwrap()
+                        scene.serialize(&type_registry)
                     };
                     task!(IoTaskPool, async move |q: &mut CommandQueue| {
+                        if let Err(e) = serialized_scene {
+                            show_toast(q, ToastType::Error, e.to_string());
+                            return;
+                        }
+                        let serialized_scene = serialized_scene.unwrap();
                         let path = handle.path().to_string_lossy().to_string();
                         let res =
                             handle.write(serialized_scene.as_bytes()).await;

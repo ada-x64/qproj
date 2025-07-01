@@ -3,6 +3,7 @@
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 pub mod boolish;
+pub mod text;
 pub use boolish::*;
 
 pub mod components;
