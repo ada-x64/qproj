@@ -1,6 +1,5 @@
 use avian3d::PhysicsPlugins;
 use bevy::{app::AppLabel, prelude::*};
-use q_player::prelude::PlayerState;
 
 #[derive(States, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum GameState {

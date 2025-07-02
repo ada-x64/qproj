@@ -2,7 +2,6 @@
 // ┏┓┏┓┏┓┏┓┓
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
-use avian3d::prelude::*;
 use bevy::prelude::*;
 use q_utils::boolish_states;
 
@@ -45,20 +44,20 @@ impl InspectorStatePlugin {
 
     /// TODO: Physics should be handled _outside_ the inspector
     fn pause_time(
-        mut time: ResMut<Time<Physics>>,
+        // mut time: ResMut<Time<Physics>>,
         mut cam: ResMut<NextState<InspectorCamState>>,
     ) {
-        time.pause();
+        // time.pause();
         cam.set(true.into())
     }
 
     /// TODO: Physics should be handled _outside_ the inspector
     fn unpause_time(
-        mut time: ResMut<Time<Physics>>,
+        // mut time: ResMut<Time<Physics>>,
         mut cam: ResMut<NextState<InspectorCamState>>,
         settings: Res<InspectorSettings>,
     ) {
-        time.unpause();
+        // time.unpause();
         if settings.switch_cams {
             cam.set(false.into())
         }

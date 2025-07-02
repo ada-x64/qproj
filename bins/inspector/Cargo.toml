@@ -35,8 +35,8 @@ q_app = { workspace = true }
 # others
 bevy = { workspace = true, features = ["bevy_dev_tools"] }
 bevy-inspector-egui = { workspace = true }
-avian3d = { workspace = true }
 bevy_dolly = { workspace = true }
+tiny_bail = { workspace = true }
 egui = "0.31"
 bevy_egui = "0.34.0"
 egui_dock = "0.16.0"

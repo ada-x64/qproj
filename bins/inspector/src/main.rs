@@ -3,7 +3,8 @@
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use bevy::prelude::*;
-use q_inspector::InspectorPlugin;
+use q_app::GameAppPlugin;
+use q_inspector::{InspectorPlugin, prelude::InspectorState};
 
 #[bevy_main]
 fn main() -> AppExit {
@@ -11,7 +12,13 @@ fn main() -> AppExit {
     app.add_plugins((
         DefaultPlugins,
         InspectorPlugin,
-        GameAppPlugin { main_app: false },
-    ));
+        // GameAppPlugin { main_app: false },
+    ))
+    .add_systems(
+        Startup,
+        |mut state: ResMut<NextState<InspectorState>>| {
+            state.set(InspectorState::Enabled);
+        },
+    );
     app.run()
 }

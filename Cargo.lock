@@ -4905,7 +4905,6 @@ dependencies = [
 name = "q_inspector"
 version = "0.1.0"
 dependencies = [
- "avian3d",
  "bevy",
  "bevy-inspector-egui",
  "bevy_dolly",
@@ -4920,6 +4919,7 @@ dependencies = [
  "q_utils",
  "q_worldgen",
  "rfd",
+ "tiny_bail",
 ]
 
 [[package]]

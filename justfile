@@ -84,7 +84,7 @@ test PKG *ARGS:
 # Runs the specified workspace binary.
 [group('runners')]
 run BIN *ARGS:
-    cargo run --bin {{BIN}} -- {{ARGS}}
+    cargo run -F dev --bin {{BIN}} -- {{ARGS}}
 
 # Plays the game.
 [group('runners')]
