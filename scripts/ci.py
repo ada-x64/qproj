@@ -1,4 +1,7 @@
-#!./.venv/bin/python3
+#          •
+#  ┏┓┏┓┏┓┏┓┓
+#  ┗┫┣┛┛ ┗┛┃
+# --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 
 import shutil
 import subprocess
@@ -7,12 +10,10 @@ import common
 import argparse
 
 parser = argparse.ArgumentParser(
-    prog="cargo ci",
+    prog="ci",
     description="Runs nektos/act to test CI.`",
 )
 
-# dummy
-parser.add_argument("ci", help="(dummy argument)")
 parser.add_argument("--act", action="store", help="Act command to execute.")
 parser.add_argument(
     "--no-install",
@@ -22,12 +23,7 @@ parser.add_argument(
 
 args = common.parse_with_forward(parser, "act")
 
-act = args.act
-try:
-    if subprocess.check_call(["gh", "act", "--version"], stderr=subprocess.DEVNULL) == 0:
-        act = "gh act"
-except:
-    act = shutil.which("act") or shutil.which(".bin/act")
+act: str | None = args.act or shutil.which("act") or shutil.which(".bin/act")
 
 
 if not act and not args.no_install:
@@ -35,11 +31,22 @@ if not act and not args.no_install:
     res = requests.get(
         "https://raw.githubusercontent.com/nektos/act/master/install.sh"
     )
+
+    subprocess.call(["mkdir", "-p", ".bin"])
     with open("./.bin/install-act.sh", mode="x") as f:
         f.write(res.text)
     subprocess.call(["bash", ".bin/install-act.sh", "-b", ".bin"])
     act = ".bin/act"
 
+if not act:
+    print("Could not find act! Exiting.")
+    exit(1)
+
 # TODO: This could be made more flexible with yaml parsing.
 image = "ubuntu-24.04=ghcr.io/catthehacker/ubuntu:act-24.04"
-subprocess.run([act, "-P", image, *args.forward])
+with open("ci.log", mode="w") as f:
+    print("Running...\nSee ci.log")
+    subprocess.run(
+        f"sudo {act} -P {image} --env-file='' {' '.join(args.forward)} 2>&1 | tee ci.log",
+        shell=True,
+    )

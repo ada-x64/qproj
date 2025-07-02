@@ -9,8 +9,15 @@ publish = false
 authors = ["<phoenix.mandala@pm.me>"]
 edition = "2024"
 
+[lints]
+workspace = true
+
+# see https://thebevyflock.github.io/bevy_cli/bevy_lint/lints/
+[package.metadata.bevy_lint]
+panicking_methods = "deny"
+pedantic = "warn"
+
 [features]
-debug = []                     # q_debug
 dev = ["bevy/dynamic_linking"]
 inspector = []                 # q_inspector
 

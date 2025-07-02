@@ -51,7 +51,12 @@ impl egui_dock::TabViewer for TabViewer<'_> {
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Self::Tab) {
-        let type_registry = self.world.resource::<AppTypeRegistry>().0.clone();
+        let type_registry = self
+            .world
+            .get_resource::<AppTypeRegistry>()
+            .expect("Could not get app type registry!")
+            .0
+            .clone();
         let type_registry = type_registry.read();
         match tab {
             Tab::GameView => game_view::render_tab(self, ui),
@@ -68,9 +73,9 @@ impl egui_dock::TabViewer for TabViewer<'_> {
                     extra_state: &mut (),
                 }
                 .show_with_default_filter::<(
-                    Without<Parent>,
                     Without<Observer>,
                     Without<InspectorIgnore>,
+                    Without<ChildOf>,
                 )>(ui);
 
                 if selected {
@@ -99,7 +104,7 @@ impl Plugin for TabsPlugin {
         app.add_systems(
             PostUpdate,
             (set_camera_viewport.after(UiStatePlugin::show_ui_system),)
-                .in_set(UISet),
+                .in_set(UiSystems),
         );
     }
 }

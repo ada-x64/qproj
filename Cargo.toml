@@ -2,6 +2,8 @@
 #  ┏┓┏┓┏┓┏┓┓
 #  ┗┫┣┛┛ ┗┛┃
 # --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
+
+## Package ####################################################################
 [package]
 name = "qproj"
 version = "0.1.0"
@@ -9,24 +11,24 @@ publish = false
 authors = ["<phoenix.mandala@pm.me>"]
 edition = "2024"
 
-[workspace]
-members = ["crates/*"]
+# see https://thebevyflock.github.io/bevy_cli/bevy_lint/lints/
+[package.metadata.bevy_lint]
+panicking_methods = "deny"
+pedantic = "warn"
 
+## Profiles ###################################################################
 [profile.dev.package."*"]
 opt-level = 3
 
 [profile.dev]
 opt-level = 1
 
-# This is used by trunk as it doesn't support custom profiles: https://github.com/trunk-rs/trunk/issues/605
-# xbuild also uses this profile for building android AABs because I couldn't find a configuration for it
 [profile.release]
 opt-level = "s"
 lto = true
 codegen-units = 1
 strip = true
 
-# Profile for distribution
 [profile.dist]
 inherits = "release"
 opt-level = 3
@@ -34,19 +36,22 @@ lto = true
 codegen-units = 1
 strip = true
 
-[features]
-dev = ["bevy/dynamic_linking"]
-debug = ["q_debug", "q_worldgen/debug", "q_player/debug", "bevy/bevy_dev_tools"]
-inspector = ["q_inspector", "q_worldgen/inspector"]
+## Workspace ##################################################################
+[workspace]
+members = ["crates/*"]
 
+[workspace.lints]
+rust.unexpected_cfgs = { level = "warn", check-cfg = ["cfg(bevy_lint)"] }
+clippy.too_many_arguments = "allow"
+clippy.type_complexity = "allow"
+clippy.nonstandard_macro_braces = "warn"
 
-# All of Bevy's default features exept for the audio related ones (bevy_audio, vorbis), since they clash with bevy_kira_audio
-#   and android_shared_stdcxx/android-game-activity, since those are covered in `mobile`
 [workspace.dependencies]
-
-meshopt = "0.4.1"
-
-bevy = { version = "0.15.3", default-features = false, features = [
+# All of Bevy's default features exept for the audio related ones
+#   (bevy_audio, vorbis), since they clash with bevy_kira_audio
+#   and android_shared_stdcxx/android-game-activity,
+#   since those are covered in `mobile`
+bevy = { version = "0.16", default-features = false, features = [
     "animation",
     "bevy_asset",
     "bevy_color",
@@ -77,7 +82,9 @@ bevy = { version = "0.15.3", default-features = false, features = [
     "tonemapping_luts",
     "x11",
 ] }
-bevy_kira_audio = { version = "0.22.0" }
+bevy_kira_audio = { version = "0.23.0" }
+
+meshopt = "0.4.1"
 blake3 = { version = "1.5", features = ["pure"] }
 rand = { version = "0.8.3" }
 itertools = "0.14.0"
@@ -90,19 +97,27 @@ noise_gui = { git = "https://github.com/ada-x64/noise_gui.git", branch = "quell"
 derive_more = { version = "2.0", features = ["from"] }
 anyhow = "1.0.97"
 thiserror = "2.0.12"
-bevy-inspector-egui = "0.29"
-avian3d = "0.2"
-bevy_dolly = "0.0.5"
+bevy-inspector-egui = "0.31"
+avian3d = "0.3"
+# TODO: Update this when the patch is merged.
+bevy_dolly = { git = "https://github.com/BlackPhlox/bevy_dolly.git", branch = "bevy_0.16" }
 derive_builder = "0.20.2"
 easy-ext = "1.0.2"
 
-## crates in the workspace
+## crates in the workspace ####################################################
 q_worldgen = { path = "crates/worldgen" }
-q_debug = { path = "crates/debug" }
 q_player = { path = "crates/player" }
 q_inspector = { path = "crates/inspector" }
 q_utils = { path = "crates/utils" }
 
+## Main Crate #################################################################
+[lints]
+workspace = true
+
+[features]
+default = ["dev", "inspector"]
+dev = ["bevy/dynamic_linking"]
+inspector = ["q_inspector", "q_worldgen/inspector"]
 
 [dependencies]
 # general deps
@@ -119,12 +134,6 @@ image = { version = "0.25", default-features = false }
 blake3 = { workspace = true }
 
 # local deps
-q_debug = { workspace = true, optional = true }
 q_inspector = { workspace = true, optional = true }
 q_worldgen = { workspace = true }
 q_player = { workspace = true }
-
-[dev-dependencies]
-cargo-husky = { version = "1", default-features = false, features = [
-    "user-hooks",
-] }

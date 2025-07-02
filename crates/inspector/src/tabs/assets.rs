@@ -39,7 +39,7 @@ pub fn render_tab(
                 };
 
                 if ui
-                    .selectable_label(selected, format!("{:?}", handle))
+                    .selectable_label(selected, format!("{handle:?}"))
                     .clicked()
                 {
                     state.selection = InspectorSelection::Asset(

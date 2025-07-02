@@ -10,7 +10,8 @@ use bevy::{
 
 use crate::generator::Vec2i32;
 
-/// Takes a size, squares it, and returns a map with (x,y) coordinates centered around the given point.
+/// Takes a size, squares it, and returns a map with (x,y) coordinates centered
+/// around the given point.
 pub fn iter_xy(radius: i32, center: Vec2i32) -> impl Iterator<Item = Vec2i32> {
     let r = radius;
     let d = 2 * r;
@@ -18,8 +19,8 @@ pub fn iter_xy(radius: i32, center: Vec2i32) -> impl Iterator<Item = Vec2i32> {
     (0..d * d).map(move |i| Vec2i32::new(cx + i % d - r, cy + i / d - r))
 }
 
-/// Returns an iterator of (x,y) coordinates that fit within a circle of the given radius
-/// centered around the passed position.
+/// Returns an iterator of (x,y) coordinates that fit within a circle of the
+/// given radius centered around the passed position.
 pub fn iter_radius_xy(
     radius: i32,
     center: Vec2i32,
@@ -73,6 +74,7 @@ pub fn euclidean_dist(p1: Vec2i32, p2: Vec2i32) -> f32 {
 #[derive(Event)]
 pub struct TerrainIntialized;
 
-/// Triggers when all chunks to be updated or spawned in `spawnAround` are complete
+/// Triggers when all chunks to be updated or spawned in `spawnAround` are
+/// complete
 #[derive(Event)]
 pub struct ChunksLoaded;

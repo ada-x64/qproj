@@ -108,14 +108,20 @@ impl WorldgenPlugin {
         command_queue.push(move |world: &mut World| {
             // debug!("SPAWNING CHUNK AT ({pos})");
             let default_material = world
-                .resource_mut::<ChunkGenerator>()
-                .default_material
-                .clone()
-                .expect("default_material was none!");
+                .get_resource_mut::<ChunkGenerator>()
+                .and_then(|g| g.default_material.clone());
+            if default_material.is_none() {
+                error!("Could not get chunk generator's default material!");
+                return;
+            }
+            let default_material = default_material.unwrap();
 
             let collider = Collider::trimesh_from_mesh(&mesh)
                 .expect("Could not create chunk collider");
-            let mesh_handle = world.resource_mut::<Assets<Mesh>>().add(mesh);
+            let mesh_handle = world
+                .get_resource_mut::<Assets<Mesh>>()
+                .expect("Could not get mesh assets!")
+                .add(mesh);
             let chunk_entt = world
                 .spawn((
                     transform,
@@ -130,11 +136,18 @@ impl WorldgenPlugin {
                 .id();
 
             let terrain_id = world
-                .resource_mut::<ChunkGenerator>()
+                .get_resource_mut::<ChunkGenerator>()
+                .expect("No chunk generator!")
                 .terrain_entt
                 .expect("Undefined terrain entt!");
-            world.entity_mut(terrain_id).add_child(chunk_entt);
-            world.entity_mut(task_child_id).despawn();
+            world
+                .get_entity_mut(terrain_id)
+                .expect("Could not get terrain entity!")
+                .add_child(chunk_entt);
+            world
+                .get_entity_mut(task_child_id)
+                .expect("Could not get task child entity!")
+                .despawn();
         });
         command_queue
     }
@@ -210,19 +223,21 @@ impl WorldgenPlugin {
         mut commands: Commands,
         mut generator: ResMut<ChunkGenerator>,
         tf: Query<(&SpawnAroundTracker, &Transform)>,
-    ) {
-        let Ok(tf) = tf.get_single() else { return };
+    ) -> Result<(), BevyError> {
+        let tf = tf.single()?;
         let pos = generator.world_pos_to_chunk_pos(tf.1.translation.xz());
         let trigger = generator.current_chunk.map(|c| pos != c).unwrap_or(true);
         if trigger {
             generator.current_chunk = Some(pos);
             commands.trigger(SpawnAround { pos })
         }
+        Ok(())
     }
 
     fn handle_tasks(mut commands: Commands, mut q: Query<&mut ComputeChunk>) {
         // https://github.com/bevyengine/bevy/blob/adbb53b87f146b8750cb932ca4deb4f875d3e6b6/examples/async_tasks/async_compute.rs#L111
-        // Iter through all ComputeChunk instances, poll their tasks, and if they're complete then run their command queue
+        // Iter through all ComputeChunk instances, poll their tasks, and if
+        // they're complete then run their command queue
         for mut task in &mut q {
             if let Some(mut queue) = block_on(future::poll_once(&mut task.0)) {
                 commands.append(&mut queue);
@@ -234,7 +249,7 @@ impl WorldgenPlugin {
     fn terrain_initialized(
         terrain: Query<&Terrain, With<Initialized>>,
     ) -> bool {
-        terrain.get_single().is_ok()
+        terrain.single().is_ok()
     }
 }
 

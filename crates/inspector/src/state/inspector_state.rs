@@ -27,7 +27,7 @@ impl Default for InspectorSettings {
 boolish_states!(InspectorState, GameViewState);
 
 #[derive(SystemSet, Clone, Copy, PartialEq, Eq, Hash, Debug)]
-pub struct UISet;
+pub struct UiSystems;
 
 // Plugin /////////////////////////////////////////////////////////////////////
 pub struct InspectorStatePlugin;
@@ -75,7 +75,7 @@ impl Plugin for InspectorStatePlugin {
             .add_systems(OnEnter(GameViewState::Enabled), Self::unpause_time)
             .configure_sets(
                 PostUpdate,
-                UISet.run_if(
+                UiSystems.run_if(
                     in_state(InspectorState::Enabled)
                         .or(in_state(InspectorState::Disabled)),
                 ),
