@@ -8,23 +8,21 @@ use bevy::{
     tasks::Task,
 };
 
-use crate::generator::Vec2i32;
-
 /// Takes a size, squares it, and returns a map with (x,y) coordinates centered
 /// around the given point.
-pub fn iter_xy(radius: i32, center: Vec2i32) -> impl Iterator<Item = Vec2i32> {
+pub fn iter_xy(radius: i32, center: IVec2) -> impl Iterator<Item = IVec2> {
     let r = radius;
     let d = 2 * r;
     let (cx, cy) = (center.x, center.y);
-    (0..d * d).map(move |i| Vec2i32::new(cx + i % d - r, cy + i / d - r))
+    (0..d * d).map(move |i| IVec2::new(cx + i % d - r, cy + i / d - r))
 }
 
 /// Returns an iterator of (x,y) coordinates that fit within a circle of the
 /// given radius centered around the passed position.
 pub fn iter_radius_xy(
     radius: i32,
-    center: Vec2i32,
-) -> impl Iterator<Item = Vec2i32> {
+    center: IVec2,
+) -> impl Iterator<Item = IVec2> {
     let r = radius;
     let d = 2 * r;
     let (cx, cy) = (center.x, center.y);
@@ -33,7 +31,7 @@ pub fn iter_radius_xy(
         let y = i / d - r;
         let xx = x - cx;
         let yy = y - cy;
-        (xx * xx + yy * yy < r * r).then_some(Vec2i32::new(cx + x, cy + y))
+        (xx * xx + yy * yy < r * r).then_some(IVec2::new(cx + x, cy + y))
     })
 }
 
@@ -51,7 +49,7 @@ pub struct SpawnAroundTracker;
 
 #[derive(Event)]
 pub struct SpawnAround {
-    pub pos: Vec2i32,
+    pub pos: IVec2,
 }
 
 #[derive(Event)]
@@ -63,7 +61,7 @@ pub struct Initialized;
 #[derive(Component)]
 pub struct ComputeChunk(pub Task<CommandQueue>);
 
-pub fn euclidean_dist(p1: Vec2i32, p2: Vec2i32) -> f32 {
+pub fn euclidean_dist(p1: IVec2, p2: IVec2) -> f32 {
     let dx = p1.x - p2.x;
     let dy = p1.y - p2.y;
     let sum = (dx * dx) + (dy * dy);
