@@ -502,7 +502,7 @@ dependencies = [
  "bevy_math",
  "bevy_transform_interpolation",
  "bitflags 2.9.0",
- "derive_more 1.0.0",
+ "derive_more",
  "itertools 0.13.0",
  "nalgebra",
  "parry3d",
@@ -665,7 +665,7 @@ dependencies = [
  "bevy_transform",
  "bevy_utils",
  "blake3",
- "derive_more 1.0.0",
+ "derive_more",
  "downcast-rs 2.0.1",
  "either",
  "petgraph",
@@ -722,7 +722,7 @@ dependencies = [
  "bitflags 2.9.0",
  "blake3",
  "crossbeam-channel",
- "derive_more 1.0.0",
+ "derive_more",
  "disqualified",
  "downcast-rs 2.0.1",
  "either",
@@ -762,7 +762,7 @@ dependencies = [
  "bevy_math",
  "bevy_reflect",
  "bytemuck",
- "derive_more 1.0.0",
+ "derive_more",
  "encase",
  "serde",
  "thiserror 2.0.12",
@@ -889,7 +889,7 @@ dependencies = [
  "bitflags 2.9.0",
  "bumpalo",
  "concurrent-queue",
- "derive_more 1.0.0",
+ "derive_more",
  "disqualified",
  "fixedbitset",
  "indexmap",
@@ -1126,7 +1126,7 @@ dependencies = [
  "bevy_platform",
  "bevy_reflect",
  "bevy_utils",
- "derive_more 1.0.0",
+ "derive_more",
  "log",
  "serde",
  "smol_str",
@@ -1245,7 +1245,7 @@ checksum = "f1a3a926d02dc501c6156a047510bdb538dcb1fa744eeba13c824b73ba88de55"
 dependencies = [
  "approx",
  "bevy_reflect",
- "derive_more 1.0.0",
+ "derive_more",
  "glam",
  "itertools 0.14.0",
  "libm",
@@ -1314,7 +1314,7 @@ dependencies = [
  "bevy_window",
  "bitflags 2.9.0",
  "bytemuck",
- "derive_more 1.0.0",
+ "derive_more",
  "fixedbitset",
  "nonmax",
  "offset-allocator",
@@ -1385,7 +1385,7 @@ dependencies = [
  "bevy_ptr",
  "bevy_reflect_derive",
  "bevy_utils",
- "derive_more 1.0.0",
+ "derive_more",
  "disqualified",
  "downcast-rs 2.0.1",
  "erased-serde",
@@ -1442,7 +1442,7 @@ dependencies = [
  "bitflags 2.9.0",
  "bytemuck",
  "codespan-reporting",
- "derive_more 1.0.0",
+ "derive_more",
  "downcast-rs 2.0.1",
  "encase",
  "fixedbitset",
@@ -1493,7 +1493,7 @@ dependencies = [
  "bevy_render",
  "bevy_transform",
  "bevy_utils",
- "derive_more 1.0.0",
+ "derive_more",
  "serde",
  "thiserror 2.0.12",
  "uuid",
@@ -1522,7 +1522,7 @@ dependencies = [
  "bevy_window",
  "bitflags 2.9.0",
  "bytemuck",
- "derive_more 1.0.0",
+ "derive_more",
  "fixedbitset",
  "nonmax",
  "radsort",
@@ -1571,7 +1571,7 @@ dependencies = [
  "cfg-if",
  "concurrent-queue",
  "crossbeam-queue",
- "derive_more 1.0.0",
+ "derive_more",
  "futures-channel",
  "futures-lite",
  "heapless",
@@ -1637,7 +1637,7 @@ dependencies = [
  "bevy_reflect",
  "bevy_tasks",
  "bevy_utils",
- "derive_more 1.0.0",
+ "derive_more",
  "serde",
  "thiserror 2.0.12",
 ]
@@ -1679,7 +1679,7 @@ dependencies = [
  "bevy_utils",
  "bevy_window",
  "bytemuck",
- "derive_more 1.0.0",
+ "derive_more",
  "nonmax",
  "serde",
  "smallvec",
@@ -2395,16 +2395,7 @@ version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a9b99b9cbbe49445b21764dc0625032a89b145a2642e67603e1c936f5458d05"
 dependencies = [
- "derive_more-impl 1.0.0",
-]
-
-[[package]]
-name = "derive_more"
-version = "2.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "093242cf7570c207c83073cf82f79706fe7b8317e98620a47d5be7c3d8497678"
-dependencies = [
- "derive_more-impl 2.0.1",
+ "derive_more-impl",
 ]
 
 [[package]]
@@ -2417,17 +2408,6 @@ dependencies = [
  "quote",
  "syn 2.0.100",
  "unicode-xid",
-]
-
-[[package]]
-name = "derive_more-impl"
-version = "2.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bda628edc44c4bb645fbe0f758797143e4e07926f7ebf4e9bdfbd3d2ce621df3"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.100",
 ]
 
 [[package]]
@@ -2530,12 +2510,6 @@ dependencies = [
  "proc-macro2",
  "proc-macro2-diagnostics",
 ]
-
-[[package]]
-name = "easy-ext"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cc5d6d6a8504f8caedd7de14576464383900cd3840b7033a7a3dce5ac00121ca"
 
 [[package]]
 name = "ecolor"
@@ -4911,6 +4885,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "q_app"
+version = "0.1.0"
+dependencies = [
+ "avian3d",
+ "bevy",
+ "bevy_kira_audio",
+ "blake3",
+ "image",
+ "itertools 0.14.0",
+ "q_player",
+ "q_tasks",
+ "q_worldgen",
+ "rand 0.8.5",
+ "winit",
+]
+
+[[package]]
 name = "q_inspector"
 version = "0.1.0"
 dependencies = [
@@ -4920,14 +4911,14 @@ dependencies = [
  "bevy_dolly",
  "bevy_egui",
  "derivative",
- "easy-ext",
  "egui",
  "egui-notify",
  "egui_dock",
- "log",
+ "q_app",
  "q_player",
  "q_tasks",
  "q_utils",
+ "q_worldgen",
  "rfd",
 ]
 
@@ -4935,17 +4926,13 @@ dependencies = [
 name = "q_player"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "avian3d",
  "bevy",
  "bevy-tnua",
  "bevy-tnua-avian3d",
  "bevy_dolly",
  "derive_builder",
- "derive_more 2.0.1",
- "easy-ext",
  "itertools 0.14.0",
- "log",
  "q_utils",
  "q_worldgen",
  "thiserror 2.0.12",
@@ -4955,11 +4942,8 @@ dependencies = [
 name = "q_tasks"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "bevy",
- "derive_more 2.0.1",
  "itertools 0.14.0",
- "log",
  "thiserror 2.0.12",
 ]
 
@@ -4967,11 +4951,8 @@ dependencies = [
 name = "q_template"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "bevy",
- "derive_more 2.0.1",
  "itertools 0.14.0",
- "log",
  "thiserror 2.0.12",
 ]
 
@@ -4986,11 +4967,9 @@ dependencies = [
 name = "q_worldgen"
 version = "0.1.0"
 dependencies = [
- "anyhow",
  "avian3d",
  "bevy",
  "bevy-inspector-egui",
- "derive_more 2.0.1",
  "itertools 0.14.0",
  "meshopt",
  "noise",
@@ -4998,7 +4977,6 @@ dependencies = [
  "rand 0.8.5",
  "ron",
  "serde",
- "serde_json",
  "thiserror 2.0.12",
  "tiny_bail",
  "wgpu",
@@ -5011,25 +4989,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f6d64c71eb498fe9eae14ce4ec935c555749aef511cca85b5568910d6e48001"
 dependencies = [
  "bytemuck",
-]
-
-[[package]]
-name = "quell"
-version = "0.1.0"
-dependencies = [
- "avian3d",
- "bevy",
- "bevy_kira_audio",
- "blake3",
- "image",
- "itertools 0.14.0",
- "log",
- "q_inspector",
- "q_player",
- "q_tasks",
- "q_worldgen",
- "rand 0.8.5",
- "winit",
 ]
 
 [[package]]

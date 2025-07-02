@@ -88,7 +88,7 @@ run BIN *ARGS:
 
 # Plays the game.
 [group('runners')]
-play *ARGS: (run "quell")
+play *ARGS: (run "q_app")
 
 # Runs the inspector
 [group('runners')]

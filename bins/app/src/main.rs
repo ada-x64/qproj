@@ -3,15 +3,11 @@
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use bevy::prelude::*;
-use q_inspector::InspectorPlugin;
+use quell::GameAppPlugin;
 
 #[bevy_main]
 fn main() -> AppExit {
     let mut app = App::new();
-    app.add_plugins((
-        DefaultPlugins,
-        InspectorPlugin,
-        GameAppPlugin { main_app: false },
-    ));
-    app.run()
+    app.add_plugins((DefaultPlugins, GameAppPlugin::default()))
+        .run()
 }

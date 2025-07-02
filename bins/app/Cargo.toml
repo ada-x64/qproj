@@ -3,7 +3,7 @@
 #  ┗┫┣┛┛ ┗┛┃
 # --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 [package]
-name = "quell"
+name = "q_app"
 version = "0.1.0"
 publish = false
 authors = ["<phoenix.mandala@pm.me>"]
@@ -18,7 +18,6 @@ workspace = true
 
 [features]
 dev = ["bevy/dynamic_linking"]
-inspector = ["q_inspector", "q_worldgen/inspector", "avian3d/serialize"]
 
 [dependencies]
 # general deps
@@ -26,7 +25,6 @@ bevy = { workspace = true }
 bevy_kira_audio = { workspace = true }
 rand = { workspace = true }
 itertools = { workspace = true }
-log = { workspace = true }
 avian3d = { workspace = true }
 
 # keep the following in sync with Bevy's dependencies
@@ -35,7 +33,6 @@ image = { version = "0.25", default-features = false }
 blake3 = { workspace = true }
 
 # local deps
-q_inspector = { workspace = true, optional = true }
 q_worldgen = { workspace = true }
 q_player = { workspace = true }
 q_tasks = { workspace = true }

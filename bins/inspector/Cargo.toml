@@ -29,14 +29,14 @@ debug = []
 q_utils = { workspace = true }
 q_player = { workspace = true }
 q_tasks = { workspace = true }
+q_worldgen = { workspace = true }
+q_app = { workspace = true }
 
 # others
 bevy = { workspace = true, features = ["bevy_dev_tools"] }
-log = { workspace = true }
 bevy-inspector-egui = { workspace = true }
 avian3d = { workspace = true }
 bevy_dolly = { workspace = true }
-easy-ext = { workspace = true }
 egui = "0.31"
 bevy_egui = "0.34.0"
 egui_dock = "0.16.0"
