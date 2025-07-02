@@ -71,7 +71,7 @@ freeze: _venv
 
 # Runs tests.
 test PKG *ARGS:
-    cargo nextest run -p {{PKG}} --no-default-features {{ARGS}}
+    cargo nextest run -p {{PKG}} {{ARGS}}
 
 ### run ######################################################################
 

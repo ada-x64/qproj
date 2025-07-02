@@ -1,10 +1,11 @@
-use crate::run_headless;
 use bevy::prelude::*;
 use q_worldgen::util::TerrainIntialized;
 
+use crate::Runner;
+
 #[test]
 fn serialize() -> AppExit {
-    run_headless(|app| {
+    Runner::new(|app| {
         app.add_plugins(q_worldgen::WorldgenPlugin);
         app.finish();
         app.cleanup();
@@ -18,9 +19,7 @@ fn serialize() -> AppExit {
             }
             world.send_event(AppExit::Success);
         });
-        info!("Running app.");
-        let res = app.run();
-        info!("Finished!");
-        res
+        app.run()
     })
+    .run()
 }

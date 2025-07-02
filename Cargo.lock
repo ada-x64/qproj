@@ -723,6 +723,8 @@ dependencies = [
  "bevy_ui",
  "bevy_utils",
  "bevy_window",
+ "ron",
+ "serde",
  "tracing",
 ]
 

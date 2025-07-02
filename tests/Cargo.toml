@@ -5,8 +5,8 @@ edition = "2024"
 
 [dependencies]
 # nonlocal
-bevy = { workspace = true }
-wgpu = "24.0.1"             # keep in sync with bevy
+bevy = { workspace = true, features = ["bevy_ci_testing"] }
+wgpu = "24.0.1"                                             # keep in sync with bevy
 
 # local crates
 q_inspector = { workspace = true }
@@ -16,3 +16,6 @@ q_player = { workspace = true }
 
 [lints]
 workspace = true
+
+[features]
+log = []
