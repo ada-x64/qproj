@@ -14,7 +14,7 @@ use std::mem::offset_of;
 use thiserror::Error;
 
 use crate::{
-    generator::{ChunkGenerationData, Vec2i32},
+    generator::ChunkGenerationData,
     mesh::{gen_list, gen_uvs},
 };
 
@@ -55,14 +55,14 @@ pub enum ChunkError {
 
 #[derive(Default, Component)]
 pub struct Chunk {
-    pub pos: Vec2i32,
+    pub pos: IVec2,
     pub size: usize,
     pub cells: Vec<Cell>,
     pub lod: f32,
 }
 
 impl Chunk {
-    pub fn new(gen_data: ChunkGenerationData, pos: Vec2i32, lod: f32) -> Self {
+    pub fn new(gen_data: ChunkGenerationData, pos: IVec2, lod: f32) -> Self {
         // accomodate for gap by adding +2
         // creates overlap but worth it for consistency
         let size = gen_data.size + 1;
@@ -152,7 +152,7 @@ fn f() {
             scale: 0.001,
             max_elevation: 100.,
         },
-        Vec2i32::new(0, 0),
+        IVec2::new(0, 0),
         1.,
     )
     .to_mesh();

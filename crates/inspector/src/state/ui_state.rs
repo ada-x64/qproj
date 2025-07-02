@@ -79,16 +79,19 @@ impl UiState {
 // Plugin /////////////////////////////////////////////////////////////////////
 pub struct UiStatePlugin;
 impl UiStatePlugin {
-    pub fn show_ui_system(world: &mut World) -> Result<(), BevyError> {
+    pub fn show_ui_system(world: &mut World) {
         let egui_context = world
             .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
-            .single(world)?;
-        let mut egui_context = egui_context.clone();
+            .single(world);
+        if egui_context.is_err() {
+            warn!("No window.");
+            return;
+        }
+        let mut egui_context = egui_context.unwrap().clone();
 
         world.resource_scope::<UiState, _>(|world, mut ui_state| {
             ui_state.ui(world, egui_context.get_mut())
         });
-        Ok(())
     }
 }
 impl Plugin for UiStatePlugin {

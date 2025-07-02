@@ -14,7 +14,7 @@ _check check='' fix='': (_headers fix)
     cargo fmt -- {{ check }}
     cargo clippy --locked --workspace {{ fix }} -- --no-deps
     bevy_lint
-    cargo deny check advisories bans sources --hide-inclusion-graph
+    cargo deny --workspace -L error check advisories bans sources --hide-inclusion-graph
 
 _headers fix='': _venv
     {{ python }} ./scripts/headers.py {{ fix }}
@@ -35,21 +35,6 @@ _venv:
 setup *ARGS: _venv
     {{ python }} ./scripts/setup.py {{ ARGS }}
 
-# Run the game with the default flags. On WSL2, this will run ./scripts/wsl.py.
-run *ARGS: _venv
-    #!/bin/bash
-    if [[ "$WSL_DISTRO_NAME" ]]; then
-        set -exuo pipefail
-        {{ python }} ./scripts/wsl.py {{ ARGS }};
-    else
-        set -exuo pipefail
-        cargo run {{ ARGS }};
-    fi
-
-# Runs cargo build with MSVC target env vars set.
-build *ARGS:
-    cargo build {{ ARGS }}
-
 # Format everything.
 fmt: _venv (_headers "--fix")
     cargo fmt
@@ -68,3 +53,35 @@ ci *ARGS: _venv
 # Freeze pip requirements.
 freeze: _venv
     {{ python }} -m pip freeze --all > requirements.txt
+
+# Runs tests.
+test PKG *ARGS:
+    cargo nextest run -p {{PKG}} {{ARGS}}
+
+test_in_ci:
+    cargo nextest run --workspace
+
+### run ######################################################################
+
+# Run the game with the default flags. On WSL2, this will run ./scripts/wsl.py.
+run *ARGS: _venv
+    #!/bin/bash
+    if [[ "$WSL_DISTRO_NAME" ]]; then
+        set -exuo pipefail
+        {{ python }} ./scripts/wsl.py {{ ARGS }};
+    else
+        set -exuo pipefail
+        cargo run {{ ARGS }};
+    fi
+
+# Plays the game as if in release.
+play *ARGS:
+    cargo run -F dev --bin qproj {{ARGS}};
+
+# Opens the inspector.
+inspect *ARGS:
+    cargo run -F dev --bin qproj -F inspector {{ARGS}};
+
+# Runs a tool.
+# tool NAME *ARGS:
+#     cargo run --bin {{NAME}} {{ARGS}}

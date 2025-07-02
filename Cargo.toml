@@ -38,7 +38,7 @@ strip = true
 
 ## Workspace ##################################################################
 [workspace]
-members = ["crates/*"]
+members = ["crates/*", "tests"]
 
 [workspace.lints]
 rust.unexpected_cfgs = { level = "warn", check-cfg = ["cfg(bevy_lint)"] }
@@ -47,10 +47,6 @@ clippy.type_complexity = "allow"
 clippy.nonstandard_macro_braces = "warn"
 
 [workspace.dependencies]
-# All of Bevy's default features exept for the audio related ones
-#   (bevy_audio, vorbis), since they clash with bevy_kira_audio
-#   and android_shared_stdcxx/android-game-activity,
-#   since those are covered in `mobile`
 bevy = { version = "0.16", default-features = false, features = [
     "animation",
     "bevy_asset",
@@ -70,6 +66,7 @@ bevy = { version = "0.16", default-features = false, features = [
     "bevy_text",
     "bevy_ui",
     "bevy_ui_picking_backend",
+    "bevy_log",
     "bevy_window",
     "bevy_winit",
     "custom_cursor",
@@ -84,6 +81,7 @@ bevy = { version = "0.16", default-features = false, features = [
 ] }
 bevy_kira_audio = { version = "0.23.0" }
 
+tiny_bail = "0.4.3"
 meshopt = "0.4.1"
 blake3 = { version = "1.5", features = ["pure"] }
 rand = { version = "0.8.3" }
@@ -92,7 +90,6 @@ log = { version = "0.4", features = [
     "max_level_debug",
     "release_max_level_warn",
 ] }
-rayon = { version = "1.10" }
 noise_gui = { git = "https://github.com/ada-x64/noise_gui.git", branch = "quell", package = "noise_expr" }
 derive_more = { version = "2.0", features = ["from"] }
 anyhow = "1.0.97"
@@ -115,9 +112,8 @@ q_utils = { path = "crates/utils" }
 workspace = true
 
 [features]
-default = ["dev", "inspector"]
 dev = ["bevy/dynamic_linking"]
-inspector = ["q_inspector", "q_worldgen/inspector"]
+inspector = ["q_inspector", "q_worldgen/inspector", "avian3d/serialize"]
 
 [dependencies]
 # general deps

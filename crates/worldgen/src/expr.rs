@@ -7,10 +7,11 @@ use bevy::{
     prelude::*,
 };
 use noise::NoiseFn;
+use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
-#[derive(Asset, TypePath, Deref, Clone)]
+#[derive(Asset, TypePath, Deref, Clone, Serialize, Deserialize)]
 pub struct Expr(pub noise_gui::Expr);
 
 #[derive(Deref, DerefMut, Clone)]

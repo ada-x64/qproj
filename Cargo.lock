@@ -399,6 +399,7 @@ dependencies = [
  "nalgebra",
  "parry3d",
  "parry3d-f64",
+ "serde",
  "thread_local",
 ]
 
@@ -722,6 +723,8 @@ dependencies = [
  "bevy_ui",
  "bevy_utils",
  "bevy_window",
+ "ron",
+ "serde",
  "tracing",
 ]
 
@@ -972,6 +975,7 @@ checksum = "34ccc861fea2ff58c67f4df119512e204050bd7631a3a9c65e1a5e9d162cce28"
 dependencies = [
  "bevy_math",
  "bevy_reflect",
+ "serde",
 ]
 
 [[package]]
@@ -1537,6 +1541,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72c7c6c4e6a3d5415b3a29a17bd20c17cd0e2f068b96b24e263316d58d5346ea"
 dependencies = [
  "bevy",
+ "serde",
 ]
 
 [[package]]
@@ -3321,6 +3326,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "integration"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "q_inspector",
+ "q_player",
+ "q_worldgen",
+ "wgpu",
+]
+
+[[package]]
 name = "interpolate_name"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3739,6 +3755,7 @@ dependencies = [
  "num-complex",
  "num-rational",
  "num-traits",
+ "serde",
  "simba",
  "typenum",
 ]
@@ -3910,6 +3927,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73f88a1307638156682bada9d7604135552957b7818057dcef22705b4d509495"
 dependencies = [
  "num-traits",
+ "serde",
 ]
 
 [[package]]
@@ -4374,6 +4392,7 @@ dependencies = [
  "rayon",
  "rstar",
  "rustc-hash 2.1.1",
+ "serde",
  "simba",
  "slab",
  "smallvec",
@@ -4401,6 +4420,7 @@ dependencies = [
  "rayon",
  "rstar",
  "rustc-hash 2.1.1",
+ "serde",
  "simba",
  "slab",
  "smallvec",
@@ -4690,16 +4710,16 @@ dependencies = [
  "bevy-inspector-egui",
  "derive_more 2.0.1",
  "itertools 0.14.0",
- "log",
  "meshopt",
  "noise",
  "noise_expr",
  "rand 0.8.5",
- "rayon",
  "ron",
  "serde",
  "serde_json",
  "thiserror 2.0.12",
+ "tiny_bail",
+ "wgpu",
 ]
 
 [[package]]
@@ -5726,6 +5746,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "tiny_bail"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "425cf2e86c5941892b64bcf4a89cc1b468c754ef4946d15a7244a17205e7424d"
+dependencies = [
+ "tracing",
+]
+
+[[package]]
 name = "tinystr"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5790,6 +5819,7 @@ version = "0.1.41"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "784e0ac535deb450455cbfa28a6f0df145ea1bb7ae51b821cf5e7927fdcfbdd0"
 dependencies = [
+ "log",
  "pin-project-lite",
  "tracing-attributes",
  "tracing-core",

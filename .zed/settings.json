@@ -12,7 +12,8 @@
           "extraArgs": [
             "--locked",
             "--no-deps",
-            "--target-dir=target/rust-analyzer"
+            "--target-dir=target/rust-analyzer",
+            "--all-features"
           ]
         }
       }

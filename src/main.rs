@@ -55,7 +55,7 @@ fn main() -> AppExit {
             |mut player_state: ResMut<NextState<PlayerState>>| {
                 player_state.set(PlayerState::Enabled)
             },
-        );
+        )
     };
 
     app.run()
