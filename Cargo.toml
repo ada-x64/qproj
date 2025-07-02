@@ -81,6 +81,7 @@ bevy = { version = "0.16", default-features = false, features = [
 ] }
 bevy_kira_audio = { version = "0.23.0" }
 
+tiny_bail = "0.4.3"
 meshopt = "0.4.1"
 blake3 = { version = "1.5", features = ["pure"] }
 rand = { version = "0.8.3" }

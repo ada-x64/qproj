@@ -62,9 +62,13 @@ pub struct ChunkGenerator {
 }
 impl FromWorld for ChunkGenerator {
     fn from_world(world: &mut World) -> Self {
-        let expr = world.resource::<AssetServer>().load("terrain/test.ron");
+        let expr = world
+            .get_resource::<AssetServer>()
+            .expect("AssetServer")
+            .load("terrain/test.ron");
         let material = world
-            .resource_mut::<Assets<StandardMaterial>>()
+            .get_resource_mut::<Assets<StandardMaterial>>()
+            .expect("AssetServer<StandardMaterial>")
             .add(StandardMaterial::default());
         let terrain = world
             .spawn((

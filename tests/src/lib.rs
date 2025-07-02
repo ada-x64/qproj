@@ -5,7 +5,6 @@ use bevy::{
     core_pipeline::CorePipelinePlugin,
     dev_tools::ci_testing::CiTestingPlugin,
     diagnostic::FrameCountPlugin,
-    log::{Level, LogPlugin},
     pbr::PbrPlugin,
     prelude::*,
     render::{
@@ -82,7 +81,7 @@ impl Runner {
                 ScheduleRunnerPlugin::default(),
                 CiTestingPlugin,
                 #[cfg(feature = "log")]
-                LogPlugin::default(),
+                bevy::log::LogPlugin::default(),
             ));
             debug!("Initializing headless app.");
 
@@ -90,11 +89,11 @@ impl Runner {
             let adapter = instance
                 .request_adapter(&RequestAdapterOptions::default())
                 .await
-                .unwrap();
+                .expect("Failed to get wgpu adapter.");
             let (device, queue) = adapter
                 .request_device(&DeviceDescriptor::default(), None)
                 .await
-                .unwrap();
+                .expect("Failed to get wpu device.");
             let adapter_info = adapter.get_info();
 
             app.add_plugins((

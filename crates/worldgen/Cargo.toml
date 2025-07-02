@@ -37,3 +37,4 @@ meshopt = { workspace = true }
 bevy-inspector-egui = { workspace = true, optional = true }
 avian3d = { workspace = true }
 wgpu = "24.0.3"                                             # keep in sync with bevy
+tiny_bail = { workspace = true }
