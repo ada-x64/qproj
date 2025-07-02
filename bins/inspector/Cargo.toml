@@ -9,6 +9,9 @@ publish = false
 authors = ["<phoenix.mandala@pm.me>"]
 edition = "2024"
 
+[lib]
+name = "q_inspector"
+
 [lints]
 workspace = true
 

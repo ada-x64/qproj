@@ -3,42 +3,10 @@
 #  ┗┫┣┛┛ ┗┛┃
 # --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 
-## Package ####################################################################
-[package]
-name = "qproj"
-version = "0.1.0"
-publish = false
-authors = ["<phoenix.mandala@pm.me>"]
-edition = "2024"
-
-# see https://thebevyflock.github.io/bevy_cli/bevy_lint/lints/
-[package.metadata.bevy_lint]
-panicking_methods = "deny"
-pedantic = "warn"
-
-## Profiles ###################################################################
-[profile.dev.package."*"]
-opt-level = 3
-
-[profile.dev]
-opt-level = 1
-
-[profile.release]
-opt-level = "s"
-lto = true
-codegen-units = 1
-strip = true
-
-[profile.dist]
-inherits = "release"
-opt-level = 3
-lto = true
-codegen-units = 1
-strip = true
 
 ## Workspace ##################################################################
 [workspace]
-members = ["crates/*", "tests"]
+members = ["libs/*", "bins/*", "tests"]
 
 [workspace.lints]
 rust.unexpected_cfgs = { level = "warn", check-cfg = ["cfg(bevy_lint)"] }
@@ -102,36 +70,33 @@ derive_builder = "0.20.2"
 easy-ext = "1.0.2"
 
 ## crates in the workspace ####################################################
-q_worldgen = { path = "crates/worldgen" }
-q_player = { path = "crates/player" }
-q_inspector = { path = "crates/inspector" }
-q_utils = { path = "crates/utils" }
-q_tasks = { path = "crates/tasks" }
 
-## Main Crate #################################################################
-[lints]
-workspace = true
+## libs
+q_worldgen = { path = "libs/worldgen" }
+q_player = { path = "libs/player" }
+q_utils = { path = "libs/utils" }
+q_tasks = { path = "libs/tasks" }
 
-[features]
-dev = ["bevy/dynamic_linking"]
-inspector = ["q_inspector", "q_worldgen/inspector", "avian3d/serialize"]
+## bins
+q_inspector = { path = "bins/inspector" }
+quell = { path = "bins/quell" }
 
-[dependencies]
-# general deps
-bevy = { workspace = true }
-bevy_kira_audio = { workspace = true }
-rand = { workspace = true }
-itertools = { workspace = true }
-log = { workspace = true }
-avian3d = { workspace = true }
+## Profiles ###################################################################
+[profile.dev.package."*"]
+opt-level = 3
 
-# keep the following in sync with Bevy's dependencies
-winit = { version = "0.30", default-features = false }
-image = { version = "0.25", default-features = false }
-blake3 = { workspace = true }
+[profile.dev]
+opt-level = 1
 
-# local deps
-q_inspector = { workspace = true, optional = true }
-q_worldgen = { workspace = true }
-q_player = { workspace = true }
-q_tasks = { workspace = true }
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
+
+[profile.dist]
+inherits = "release"
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

@@ -3,12 +3,6 @@
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 
-use std::time::Duration;
-
-//         •
-// ┏┓┏┓┏┓┏┓┓
-// ┗┫┣┛┛ ┗┛┃
-//--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use crate::tabs::*;
 use bevy::{
     ecs::world::CommandQueue, prelude::*, tasks::IoTaskPool,
@@ -23,6 +17,7 @@ use derivative::Derivative;
 use egui_dock::{DockArea, NodeIndex, Style};
 use q_tasks::task;
 use q_utils::text::TextUtils;
+use std::time::Duration;
 
 use super::UiSystems;
 

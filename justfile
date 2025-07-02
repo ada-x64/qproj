@@ -5,6 +5,9 @@ python := ". ./.venv/bin/activate && python3"
 set dotenv-load := true
 set dotenv-required := false
 
+_default:
+    just -l
+
 _check check='' fix='': (_headers fix)
     #!/bin/bash
     . .venv/bin/activate
@@ -54,34 +57,23 @@ ci *ARGS: _venv
 freeze: _venv
     {{ python }} -m pip freeze --all > requirements.txt
 
-# Runs tests.
+# Runs tests for a specific package
 test PKG *ARGS:
-    cargo nextest run -p {{PKG}} {{ARGS}}
-
-test_in_ci:
-    cargo nextest run --workspace
-
-### run ######################################################################
-
-# Run the game with the default flags. On WSL2, this will run ./scripts/wsl.py.
-run *ARGS: _venv
     #!/bin/bash
-    if [[ "$WSL_DISTRO_NAME" ]]; then
-        set -exuo pipefail
-        {{ python }} ./scripts/wsl.py {{ ARGS }};
+    if [[ "{{PKG}}" = 'all' ]]; then
+        cargo nextest run --workspace
     else
-        set -exuo pipefail
-        cargo run {{ ARGS }};
+        cargo nextest run -p {{PKG}} {{ARGS}}
     fi
 
-# Plays the game as if in release.
+# Runs the specified workspace binary.
+run BIN *ARGS:
+    cargo run {{BIN}} -- {{ARGS}}
+
+# Plays the game.
 play *ARGS:
-    cargo run -F dev --bin qproj {{ARGS}};
+    cargo run quell -- {{ARGS}}
 
-# Opens the inspector.
+# Runs the inspector
 inspect *ARGS:
-    cargo run -F dev --bin qproj -F inspector {{ARGS}};
-
-# Runs a tool.
-# tool NAME *ARGS:
-#     cargo run --bin {{NAME}} {{ARGS}}
+    cargo run q_inspector -- {{ARGS}}

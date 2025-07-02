@@ -5,7 +5,7 @@
 use bevy::{
     ecs::world::CommandQueue,
     prelude::*,
-    tasks::{IoTaskPool, Task, block_on, futures_lite::future},
+    tasks::{Task, block_on, futures_lite::future},
 };
 
 #[derive(Component)]
@@ -57,8 +57,10 @@ fn test() {
     let i = 0;
     app.add_plugins((MinimalPlugins, TaskPlugin)).add_systems(
         Update,
-        (move |world: &mut World| {
-            task!(IoTaskPool, async move |_q| { println!("{i}") })(world)
-        }),
+        move |world: &mut World| {
+            task!(bevy::tasks::IoTaskPool, async move |_q| { println!("{i}") })(
+                world,
+            )
+        },
     );
 }
