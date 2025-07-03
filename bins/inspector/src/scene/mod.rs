@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use bevy::{ecs::world::CommandQueue, prelude::*, tasks::IoTaskPool};
 use q_tasks::task;
+use tiny_bail::prelude::*;
 
 use crate::{
     scene::{gizmos::GizmosPlugin, inspector_cam::InspectorCamPlugin},
@@ -44,13 +45,12 @@ fn save_scene(trigger: Trigger<SaveSceneEvent>, world: &mut World) {
             }
             let scene = scene.unwrap();
             let default_scene = DynamicScene::default();
-            let scene = world
-                .resource::<Assets<DynamicScene>>()
+            let scene = r!(world.get_resource::<Assets<DynamicScene>>())
                 .get(scene.id())
                 .unwrap_or(&default_scene);
 
             let serialized_scene = {
-                let type_registry = world.resource::<AppTypeRegistry>();
+                let type_registry = r!(world.get_resource::<AppTypeRegistry>());
                 let type_registry = type_registry.read();
                 scene.serialize(&type_registry)
             };

@@ -28,7 +28,6 @@ pub fn render(
     )>,
     mut commands: Commands,
 ) {
-    info!("Rendering top bar");
     let winrect = set.p0().size();
     let pickerrect = egui::Vec2::new(650.0, 370.0);
     let default_pos = egui::pos2(

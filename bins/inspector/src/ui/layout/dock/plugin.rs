@@ -22,7 +22,6 @@ impl Plugin for DockPlugin {
 /// Renders the DockArea, which renders each Tab
 /// through the TabViewer.
 fn render(world: &mut World) {
-    info!("Rendering dock.");
     world.resource_scope(|world, mut ui_state: Mut<UiState>| {
         world.resource_scope(|world, mut dock_state: Mut<DockState>| {
             let mut ctx =
