@@ -7,16 +7,16 @@ use bevy_egui::egui::{self, mutex::Mutex};
 use bevy_inspector_egui::bevy_inspector::hierarchy::SelectedEntities;
 use derivative::Derivative;
 use egui_dock::NodeIndex;
-use game_view::set_camera_viewport;
+use scene_editor::set_camera_viewport;
 use std::any::TypeId;
 
 use crate::prelude::*;
 
 pub mod assets;
-pub mod game_view;
 pub mod hierarchy;
 pub mod inspector;
 pub mod resources;
+pub mod scene_editor;
 
 #[derive(Resource, Deref, DerefMut)]
 pub struct DockState(egui_dock::DockState<Tab>);
@@ -30,7 +30,7 @@ impl Default for DockState {
         // TODO ? Load layout from disk
         // Set up dock tree.
         let mut dock_state =
-            DockState::new(vec![Tab::GameView, Tab::NoiseEditor]);
+            DockState::new(vec![Tab::SceneEditor, Tab::NoiseEditor]);
         let tree = dock_state.main_surface_mut();
         let [_game, _inspector] =
             tree.split_right(NodeIndex::root(), 0.75, vec![Tab::Inspector]);
@@ -55,7 +55,7 @@ pub enum InspectorSelection {
 
 #[derive(Debug)]
 pub enum Tab {
-    GameView,
+    SceneEditor,
     Inspector,
     Hierarchy,
     Resources,
@@ -87,7 +87,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
     }
 
     fn clear_background(&self, tab: &Self::Tab) -> bool {
-        !matches!(tab, Tab::GameView)
+        !matches!(tab, Tab::SceneEditor)
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, tab: &mut Self::Tab) {
@@ -99,7 +99,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
             .clone();
         let type_registry = type_registry.read();
         match tab {
-            Tab::GameView => game_view::render_tab(self, ui),
+            Tab::SceneEditor => scene_editor::render_tab(self, ui),
             Tab::Inspector => inspector::render_tab(self, ui, &type_registry),
             Tab::Hierarchy => hierarchy::render_tab(self, ui, &type_registry),
             Tab::Resources => resources::render_tab::<ReflectResource>(

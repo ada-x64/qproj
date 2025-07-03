@@ -7,7 +7,7 @@ mod player_cam;
 use crate::{
     prelude::*,
     scene::inspector_cam::{InspectorCam, InspectorCamPlugin},
-    ui::tabs::game_view,
+    ui::tabs::scene_editor,
 };
 use bevy::{
     asset::RenderAssetUsages,
@@ -40,7 +40,7 @@ impl Plugin for GizmosPlugin {
                 Update,
                 (
                     Self::draw_cam_gizmo,
-                    Self::render_axes.after(game_view::set_camera_viewport),
+                    Self::render_axes.after(scene_editor::set_camera_viewport),
                 )
                     .in_set(GizmoSystems),
             )

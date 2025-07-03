@@ -41,7 +41,7 @@ pub fn render_tab(
             Without<ChildOf>,
         )>(ui)
     } else {
-        hierarchy.show_with_default_filter::<With<SceneRoot>>(ui)
+        hierarchy.show_with_default_filter::<With<DynamicSceneRoot>>(ui)
     };
 
     if selected {

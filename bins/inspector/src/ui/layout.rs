@@ -22,11 +22,21 @@ impl Layout {
         world: &mut World,
         ctx: &mut egui::Context,
     ) {
+        let mut query = world.query::<&bevy::window::Window>();
+        let window = query.single(world).expect("Did you add a second window?");
+        let winrect = window.size();
+        let pickerrect = egui::Vec2::new(650.0, 370.0);
+        let default_pos = egui::pos2(
+            winrect.x / 2. - pickerrect.x / 2.,
+            winrect.y / 2. - pickerrect.y / 2.,
+        );
+
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 ui.menu_button("Scene", |ui| {
                     if ui.button("Load Scene").clicked() {
                         ui_state.file_dialog = FileDialog::new()
+                            .default_pos(default_pos)
                             .add_file_filter_extensions(
                                 "Scene File",
                                 vec!["scn.ron", "scn", "ron"],
@@ -41,6 +51,7 @@ impl Layout {
                     if ui.button("Save Scene").clicked() {
                         ui_state.file_dialog = FileDialog::new()
                             .add_save_extension("Scene File", "scn.ron")
+                            .default_pos(default_pos)
                             .allow_file_overwrite(true)
                             .initial_directory(
                                 PathBuf::from_str("./assets/scenes").unwrap(),
@@ -57,6 +68,7 @@ impl Layout {
                                 "Layout File",
                                 vec!["layout.ron", "layout", "ron"],
                             )
+                            .default_pos(default_pos)
                             .initial_directory(
                                 PathBuf::from_str("./assets/inspector/layouts")
                                     .unwrap(),
@@ -68,6 +80,7 @@ impl Layout {
                     if ui.button("Save Layout").clicked() {
                         ui_state.file_dialog = FileDialog::new()
                             .add_save_extension("Layout File", "layout.ron")
+                            .default_pos(default_pos)
                             .allow_file_overwrite(true)
                             .initial_directory(
                                 PathBuf::from_str("./assets/inspector/layouts")
