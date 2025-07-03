@@ -2,11 +2,11 @@
 // ┏┓┏┓┏┓┏┓┓
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
-use bevy::prelude::*;
+mod data;
+mod plugin;
+mod render;
+pub mod tabs;
 
-pub struct TemplatePlugin;
-impl Plugin for TemplatePlugin {
-    fn build(&self, _app: &mut App) {
-        todo!()
-    }
-}
+pub use data::*;
+pub use plugin::*;
+pub use render::*;

@@ -7,7 +7,7 @@ mod player_cam;
 use crate::{
     prelude::*,
     scene::inspector_cam::{InspectorCam, InspectorCamPlugin},
-    ui::tabs::scene_editor,
+    ui::layout::dock::tabs::scene_editor,
 };
 use bevy::{
     asset::RenderAssetUsages,

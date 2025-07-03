@@ -8,14 +8,14 @@ use bevy_egui::egui;
 use bevy_inspector_egui::bevy_inspector::hierarchy::Hierarchy;
 use q_utils::InspectorIgnore;
 
-use crate::tabs::{InspectorSelection, TabViewer};
+use crate::ui::layout::dock::{InspectorSelection, TabViewer};
 
 pub fn render_tab(
     viewer: &mut TabViewer,
     ui: &mut egui::Ui,
     type_registry: &TypeRegistry,
 ) {
-    let mut state = viewer.state.lock();
+    let mut state = viewer.ui_state.lock();
     let state = &mut state.tab_data;
     let show_all = &mut state.show_all_entities;
     let text = if *show_all {

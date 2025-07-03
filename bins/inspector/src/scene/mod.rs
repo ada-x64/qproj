@@ -5,7 +5,7 @@ use q_tasks::task;
 
 use crate::{
     scene::{gizmos::GizmosPlugin, inspector_cam::InspectorCamPlugin},
-    ui::toast::Toast,
+    ui::modals::toast::Toast,
 };
 
 pub mod gizmos;

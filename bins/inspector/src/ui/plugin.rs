@@ -3,12 +3,13 @@
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 
-use crate::{
-    tabs::*,
-    ui::{file_dialog::UiFileState, layout::Layout},
+use crate::ui::{
+    layout::{LayoutPlugin, dock::TabData},
+    modals::ModalsPlugin,
+    modals::file_dialog::UiFileState,
 };
-use bevy::{prelude::*, window::PrimaryWindow};
-use bevy_egui::{EguiContext, EguiPostUpdateSet};
+use bevy::prelude::*;
+use bevy_egui::EguiPostUpdateSet;
 use derivative::Derivative;
 
 #[derive(Resource, Derivative)]
@@ -19,42 +20,25 @@ pub struct UiState {
     pub toasts: egui_notify::Toasts,
     pub file_dialog: egui_file_dialog::FileDialog,
     pub file_dialog_state: UiFileState,
-    pub layout: Layout,
 }
 
 #[derive(SystemSet, Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct UiSystems;
 
 pub struct UiPlugin;
-impl UiPlugin {
-    pub fn show_ui_system(world: &mut World) {
-        let egui_context = world
-            .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
-            .single(world);
-        if egui_context.is_err() {
-            warn!("No window.");
-            return;
-        }
-        let mut egui_context = egui_context.unwrap().clone();
 
-        world.resource_scope::<UiState, _>(|world, mut ui_state| {
-            Layout::render(&mut ui_state, world, egui_context.get_mut())
-        });
-    }
-}
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<DockState>()
+        app.add_plugins((LayoutPlugin, ModalsPlugin))
             .init_resource::<UiState>()
-            .add_systems(
+            .configure_sets(
                 PostUpdate,
-                (Self::show_ui_system
+                UiSystems
                     .before(EguiPostUpdateSet::ProcessOutput)
                     .before(bevy_egui::end_pass_system)
                     .before(
                         bevy::transform::TransformSystem::TransformPropagate,
-                    ))
-                .in_set(UiSystems),
+                    ),
             );
     }
 }

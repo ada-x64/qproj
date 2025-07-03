@@ -12,9 +12,8 @@ use q_utils::BoolishStateTrait;
 use crate::{
     prelude::*,
     scene::inspector_cam::{InspectorCam, InspectorCamCanScroll},
+    ui::layout::dock::TabViewer,
 };
-
-use super::TabViewer;
 
 pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
     let can_scroll = viewer
@@ -48,7 +47,7 @@ pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
     //     let delta = click_and_drag.drag_delta();
     // }
 
-    viewer.state.lock().tab_data.viewport_rect = ui.clip_rect();
+    viewer.ui_state.lock().tab_data.viewport_rect = ui.clip_rect();
     viewer
         .world
         .resource_scope::<State<GameViewState>, _>(|world, physics| {

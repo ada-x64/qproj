@@ -5,7 +5,7 @@
 use bevy::reflect::{TypeData, TypeRegistry};
 use bevy_egui::egui;
 
-use super::{InspectorSelection, TabViewer};
+use crate::ui::layout::dock::{InspectorSelection, TabViewer};
 
 pub fn render_tab<T: TypeData>(
     viewer: &mut TabViewer,
@@ -24,7 +24,7 @@ pub fn render_tab<T: TypeData>(
         .collect();
     resources.sort_by(|(name_a, _), (name_b, _)| name_a.cmp(name_b));
 
-    let mut state = viewer.state.lock();
+    let mut state = viewer.ui_state.lock();
     let state = &mut state.tab_data;
     for (resource_name, type_id) in resources {
         let selected = match state.selection {

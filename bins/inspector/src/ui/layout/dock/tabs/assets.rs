@@ -2,10 +2,11 @@
 // ┏┓┏┓┏┓┏┓┓
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
+use bevy::prelude::*;
 use bevy::{asset::ReflectAsset, reflect::TypeRegistry};
 use bevy_egui::egui;
 
-use super::{InspectorSelection, TabViewer};
+use crate::ui::layout::dock::{InspectorSelection, TabViewer};
 
 pub fn render_tab(
     tab_viewer: &mut TabViewer,
@@ -29,7 +30,7 @@ pub fn render_tab(
         let handles: Vec<_> = reflect_asset.ids(tab_viewer.world).collect();
 
         ui.collapsing(format!("{asset_name} ({})", handles.len()), |ui| {
-            let mut state = tab_viewer.state.lock();
+            let mut state = tab_viewer.ui_state.lock();
             let state = &mut state.tab_data;
             for handle in handles {
                 let selected = match state.selection {

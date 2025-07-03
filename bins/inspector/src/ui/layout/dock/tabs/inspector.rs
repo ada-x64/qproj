@@ -8,14 +8,14 @@ use bevy_inspector_egui::bevy_inspector::{
     self, ui_for_entities_shared_components, ui_for_entity_with_children,
 };
 
-use super::{InspectorSelection, TabViewer};
+use crate::ui::layout::dock::{InspectorSelection, TabViewer};
 
 pub fn render_tab(
     viewer: &mut TabViewer,
     ui: &mut egui::Ui,
     type_registry: &TypeRegistry,
 ) {
-    let state = viewer.state.lock();
+    let state = viewer.ui_state.lock();
     let state = &state.tab_data;
     match state.selection {
         InspectorSelection::Entities => {
