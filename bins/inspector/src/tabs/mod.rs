@@ -4,15 +4,14 @@
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use bevy::{asset::UntypedAssetId, prelude::*};
 use bevy_egui::egui::{self, mutex::Mutex};
-use bevy_inspector_egui::bevy_inspector::hierarchy::Hierarchy;
 use game_view::set_camera_viewport;
-use q_utils::InspectorIgnore;
 use std::any::TypeId;
 
 use crate::prelude::*;
 
 pub mod assets;
 pub mod game_view;
+pub mod hierarchy;
 pub mod inspector;
 pub mod resources;
 
@@ -61,27 +60,7 @@ impl egui_dock::TabViewer for TabViewer<'_> {
         match tab {
             Tab::GameView => game_view::render_tab(self, ui),
             Tab::Inspector => inspector::render_tab(self, ui, &type_registry),
-            Tab::Hierarchy => {
-                let mut state = self.state.lock();
-                let selected = &mut state.selected_entities;
-                let selected = Hierarchy {
-                    world: self.world,
-                    type_registry: &type_registry,
-                    selected,
-                    context_menu: None,
-                    shortcircuit_entity: None,
-                    extra_state: &mut (),
-                }
-                .show_with_default_filter::<(
-                    Without<Observer>,
-                    Without<InspectorIgnore>,
-                    Without<ChildOf>,
-                )>(ui);
-
-                if selected {
-                    state.selection = InspectorSelection::Entities;
-                }
-            }
+            Tab::Hierarchy => hierarchy::render_tab(self, ui, &type_registry),
             Tab::Resources => resources::render_tab::<ReflectResource>(
                 self,
                 ui,

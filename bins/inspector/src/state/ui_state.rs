@@ -3,7 +3,10 @@
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 
-use crate::tabs::*;
+use crate::{
+    tabs::{hierarchy::HierarchyState, *},
+    widgets::toast::Toast,
+};
 use bevy::{
     ecs::world::CommandQueue, prelude::*, tasks::IoTaskPool,
     window::PrimaryWindow,
@@ -15,9 +18,9 @@ use bevy_egui::{
 use bevy_inspector_egui::bevy_inspector::hierarchy::SelectedEntities;
 use derivative::Derivative;
 use egui_dock::{DockArea, NodeIndex, Style};
+use egui_file_dialog::FileDialog;
 use q_tasks::task;
-use q_utils::text::TextUtils;
-use std::time::Duration;
+use std::{path::PathBuf, str::FromStr};
 
 use super::UiSystems;
 
@@ -58,134 +61,147 @@ pub enum FileType {
     LoadLayout,
 }
 
-pub enum ToastType {
-    Success,
-    Error,
-    Warning,
-    Info,
-}
-
-pub fn show_toast(q: &mut CommandQueue, t: ToastType, mut msg: String) {
-    q.push(move |world: &mut World| {
-        let mut ui_state = world
-            .get_resource_mut::<UiState>()
-            .expect("Couldn't get UI state!");
-        let duration =
-            Duration::from_secs_f32((msg.len() as f32 / 10.).max(1.));
-
-        match t {
-            ToastType::Success => {
-                debug!(msg);
-                ui_state
-                    .toasts
-                    .success(msg.wrap_text(80, 5).clone())
-                    .duration(Some(duration))
-                    .closable(true)
-            }
-            ToastType::Error => {
-                error!(msg);
-                ui_state
-                    .toasts
-                    .error(msg.wrap_text(80, 5).clone())
-                    .duration(Some(duration))
-                    .closable(true)
-            }
-            ToastType::Warning => {
-                warn!(msg);
-                ui_state
-                    .toasts
-                    .warning(msg.wrap_text(80, 5).clone())
-                    .duration(Some(duration))
-                    .closable(true)
-            }
-            ToastType::Info => {
-                info!(msg);
-                ui_state
-                    .toasts
-                    .info(msg.wrap_text(80, 5).clone())
-                    .duration(Some(duration))
-                    .closable(true)
-            }
-        };
-    })
-}
-
-#[derive(Debug, Event)]
-pub enum UiEvent {
-    FileDialogFinished(FileType),
-    FileSaveFinished(FileType),
+#[derive(Debug, Default)]
+pub enum UiFileState {
+    #[default]
+    None,
+    SavingScene,
+    LoadingScene,
+    SavingLayout,
+    LoadingLayout,
 }
 
 #[derive(Resource, Derivative)]
 #[derivative(Debug, Default)]
 pub struct UiState {
+    pub hierarchy: HierarchyState,
     #[derivative(Default(value = "egui::Rect::NOTHING"))]
     pub viewport_rect: egui::Rect,
     #[derivative(Default(value = "InspectorSelection::Entities"))]
     pub selection: InspectorSelection,
     pub selected_entities: SelectedEntities,
+    pub show_all_entities: bool,
     #[derivative(Debug = "ignore")]
     pub toasts: egui_notify::Toasts,
+    pub file_dialog: egui_file_dialog::FileDialog,
+    pub file_dialog_state: UiFileState,
 }
+
 impl UiState {
-    fn save_scene(&mut self, world: &mut World) {
+    fn save_scene(&mut self, world: &mut World, path: PathBuf) {
+        debug!("save_scene");
         task!(IoTaskPool, async move |q: &mut CommandQueue| {
-            let handle = rfd::AsyncFileDialog::new()
-                .set_directory(std::env::current_dir().unwrap_or_default())
-                .add_filter("scene", &[".scn.ron"])
-                .save_file()
-                .await;
-            if let Some(handle) = handle {
-                q.push(|world: &mut World| {
-                    let scene = DynamicScene::from_world(world);
-                    let serialized_scene = {
-                        let type_registry = world.resource::<AppTypeRegistry>();
-                        let type_registry = type_registry.read();
-                        scene.serialize(&type_registry)
-                    };
-                    task!(IoTaskPool, async move |q: &mut CommandQueue| {
-                        if let Err(e) = serialized_scene {
-                            show_toast(q, ToastType::Error, e.to_string());
-                            return;
-                        }
-                        let serialized_scene = serialized_scene.unwrap();
-                        let path = handle.path().to_string_lossy().to_string();
-                        let res =
-                            handle.write(serialized_scene.as_bytes()).await;
-                        match res {
-                            Err(e) => {
-                                show_toast(q, ToastType::Error, e.to_string())
-                            }
-                            Ok(_) => show_toast(
-                                q,
-                                ToastType::Success,
-                                format!("Saved file to {path}"),
-                            ),
-                        }
-                    })(world);
-                });
-            } else {
-                info!("Failed to get file handle");
-                (show_toast(q, ToastType::Error, "Failed to save file".into()));
-            }
+            q.push(|world: &mut World| {
+                debug!("Serializing scene...");
+                // TODO: This should serialize the state of the game app's
+                // current scene.
+                let scene = DynamicScene::from_world(world);
+                let serialized_scene = {
+                    let type_registry = world.resource::<AppTypeRegistry>();
+                    let type_registry = type_registry.read();
+                    scene.serialize(&type_registry)
+                };
+                task!(IoTaskPool, async move |q: &mut CommandQueue| {
+                    if let Err(e) = serialized_scene {
+                        Toast::Error.from_queue(q, e.to_string());
+                        return;
+                    }
+                    let serialized_scene = serialized_scene.unwrap();
+                    debug!("Saving scene to {path:?}");
+                    let res =
+                        std::fs::write(&path, serialized_scene.as_bytes());
+                    match res {
+                        Err(e) => Toast::Error.from_queue(q, e.to_string()),
+                        Ok(_) => Toast::Success
+                            .from_queue(q, format!("Saved file to {path:#?}")),
+                    }
+                })(world);
+            });
         })(world)
     }
     fn top_panel(&mut self, world: &mut World, ctx: &mut egui::Context) {
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             egui::menu::bar(ui, |ui| {
                 ui.menu_button("Scene", |ui| {
-                    if ui.button("Load Scene").clicked() {}
+                    if ui.button("Load Scene").clicked() {
+                        self.file_dialog = FileDialog::new()
+                            .add_file_filter_extensions(
+                                "Scene File",
+                                vec!["scn.ron", "scn", "ron"],
+                            )
+                            .initial_directory(
+                                PathBuf::from_str("./assets/scenes").unwrap(),
+                            );
+                        self.file_dialog.pick_file();
+                        self.file_dialog_state = UiFileState::LoadingScene;
+                        ui.close_menu();
+                    }
                     if ui.button("Save Scene").clicked() {
-                        self.save_scene(world);
+                        self.file_dialog = FileDialog::new()
+                            .add_save_extension("Scene File", "scn.ron")
+                            .allow_file_overwrite(true)
+                            .initial_directory(
+                                PathBuf::from_str("./assets/scenes").unwrap(),
+                            );
+                        self.file_dialog.save_file();
+                        self.file_dialog_state = UiFileState::SavingScene;
+                        ui.close_menu();
                     }
                 });
                 ui.menu_button("Layout", |ui| {
-                    if ui.button("Load Layout").clicked() {}
-                    if ui.button("Save Layout").clicked() {}
-                    if ui.button("Save Layout As...").clicked() {}
+                    if ui.button("Load Layout").clicked() {
+                        self.file_dialog = FileDialog::new()
+                            .add_file_filter_extensions(
+                                "Layout File",
+                                vec!["layout.ron", "layout", "ron"],
+                            )
+                            .initial_directory(
+                                PathBuf::from_str("./assets/inspector/layouts")
+                                    .unwrap(),
+                            );
+                        self.file_dialog.pick_file();
+                        self.file_dialog_state = UiFileState::LoadingScene;
+                        ui.close_menu();
+                    }
+                    if ui.button("Save Layout").clicked() {
+                        self.file_dialog = FileDialog::new()
+                            .add_save_extension("Layout File", "layout.ron")
+                            .allow_file_overwrite(true)
+                            .initial_directory(
+                                PathBuf::from_str("./assets/inspector/layouts")
+                                    .unwrap(),
+                            );
+                        self.file_dialog.save_file();
+                        self.file_dialog_state = UiFileState::SavingScene;
+                        ui.close_menu();
+                    }
                 });
             })
         });
+        // file dialog handles
+        if let Some(path) = self.file_dialog.take_picked() {
+            match self.file_dialog_state {
+                UiFileState::None => Toast::Error.from_ui_state(
+                    self,
+                    "Got picked file when UiFileState was None".into(),
+                ),
+                UiFileState::SavingScene => {
+                    self.save_scene(world, path);
+                }
+                UiFileState::LoadingScene => {
+                    Toast::Warning.from_ui_state(self, "Todo!".into());
+                    self.file_dialog_state = UiFileState::None;
+                }
+                UiFileState::SavingLayout => {
+                    Toast::Warning.from_ui_state(self, "Todo!".into());
+                    self.file_dialog_state = UiFileState::None;
+                }
+                UiFileState::LoadingLayout => {
+                    Toast::Warning.from_ui_state(self, "Todo!".into());
+                    self.file_dialog_state = UiFileState::None;
+                }
+            }
+        }
     }
     fn main_zone(&mut self, world: &mut World, ctx: &mut egui::Context) {
         world.resource_scope::<DockState, _>(|world, mut dock_state| {
@@ -204,6 +220,7 @@ impl UiState {
         self.top_panel(world, ctx);
         self.main_zone(world, ctx);
         self.toasts.show(ctx);
+        self.file_dialog.update(ctx);
     }
 }
 

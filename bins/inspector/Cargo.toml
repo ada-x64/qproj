@@ -40,6 +40,6 @@ tiny_bail = { workspace = true }
 egui = "0.31"
 bevy_egui = "0.34.0"
 egui_dock = "0.16.0"
-rfd = "0.15.3"
 egui-notify = "0.19.0"
 derivative = "2.2.0"
+egui-file-dialog = "0.10.0"
