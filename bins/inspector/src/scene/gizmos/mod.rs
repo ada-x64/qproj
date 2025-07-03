@@ -4,7 +4,11 @@
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 mod player_cam;
 
-use crate::prelude::*;
+use crate::{
+    prelude::*,
+    scene::inspector_cam::{InspectorCam, InspectorCamPlugin},
+    ui::tabs::game_view,
+};
 use bevy::{
     asset::RenderAssetUsages,
     prelude::*,
@@ -138,9 +142,10 @@ impl GizmosPlugin {
         **cam2_tf = cam_tf.with_translation(
             Vec3::new(0., 0., 0.) - cam_tf.forward().as_vec3() * 15.,
         );
-        node.top = Val::Px(ui_state.viewport_rect.top());
+        let state = &ui_state.tab_data;
+        node.top = Val::Px(state.viewport_rect.top());
         node.right = Val::Px(
-            window.physical_width() as f32 - ui_state.viewport_rect.right(),
+            window.physical_width() as f32 - state.viewport_rect.right(),
         );
     }
 

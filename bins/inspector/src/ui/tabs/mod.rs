@@ -4,6 +4,9 @@
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use bevy::{asset::UntypedAssetId, prelude::*};
 use bevy_egui::egui::{self, mutex::Mutex};
+use bevy_inspector_egui::bevy_inspector::hierarchy::SelectedEntities;
+use derivative::Derivative;
+use egui_dock::NodeIndex;
 use game_view::set_camera_viewport;
 use std::any::TypeId;
 
@@ -15,8 +18,36 @@ pub mod hierarchy;
 pub mod inspector;
 pub mod resources;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Resource, Deref, DerefMut)]
+pub struct DockState(egui_dock::DockState<Tab>);
+impl DockState {
+    pub fn new(tabs: Vec<Tab>) -> Self {
+        Self(egui_dock::DockState::new(tabs))
+    }
+}
+impl Default for DockState {
+    fn default() -> Self {
+        // TODO ? Load layout from disk
+        // Set up dock tree.
+        let mut dock_state =
+            DockState::new(vec![Tab::GameView, Tab::NoiseEditor]);
+        let tree = dock_state.main_surface_mut();
+        let [_game, _inspector] =
+            tree.split_right(NodeIndex::root(), 0.75, vec![Tab::Inspector]);
+        let [_game, _heirarchy] =
+            tree.split_left(NodeIndex::root(), 0.25, vec![Tab::Hierarchy]);
+        let [_game, _bottom] = tree.split_below(
+            NodeIndex::root(),
+            0.8,
+            vec![Tab::Resources, Tab::Assets, Tab::States],
+        );
+        dock_state
+    }
+}
+
+#[derive(Default, Debug, Eq, PartialEq)]
 pub enum InspectorSelection {
+    #[default]
     Entities,
     Resource(TypeId, String),
     Asset(TypeId, String, UntypedAssetId),
@@ -31,6 +62,16 @@ pub enum Tab {
     Assets,
     NoiseEditor,
     States,
+}
+
+#[derive(Debug, Derivative)]
+#[derivative(Default)]
+pub struct TabData {
+    #[derivative(Default(value = "egui::Rect::NOTHING"))]
+    pub viewport_rect: egui::Rect,
+    pub selection: InspectorSelection,
+    pub selected_entities: SelectedEntities,
+    pub show_all_entities: bool,
 }
 
 pub struct TabViewer<'a> {
@@ -80,10 +121,10 @@ impl egui_dock::TabViewer for TabViewer<'_> {
 pub struct TabsPlugin;
 impl Plugin for TabsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
+        app.init_resource::<DockState>().add_systems(
             PostUpdate,
-            (set_camera_viewport.after(UiStatePlugin::show_ui_system),)
-                .in_set(UiSystems),
+            (set_camera_viewport.after(UiPlugin::show_ui_system),)
+                .in_set(crate::ui::UiSystems),
         );
     }
 }

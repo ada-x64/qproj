@@ -3,18 +3,13 @@
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 
-pub(crate) mod gizmos;
-pub(crate) mod inspector_cam;
 pub(crate) mod scene;
 pub(crate) mod state;
-pub(crate) mod tabs;
-pub(crate) mod widgets;
+pub(crate) mod ui;
 
 pub mod prelude {
-    pub use crate::gizmos::*;
-    pub use crate::inspector_cam::*;
     pub use crate::state::*;
-    pub use crate::tabs::*;
+    pub use crate::ui::*;
 }
 
 use bevy::{pbr::wireframe::WireframePlugin, prelude::*};
@@ -36,10 +31,8 @@ impl Plugin for InspectorPlugin {
                 bevy_egui::EguiPlugin {
                     enable_multipass_for_primary_context: false,
                 },
-                InspectorCamPlugin,
                 InspectorStatePlugin,
-                UiStatePlugin,
-                GizmosPlugin,
+                UiPlugin,
             ))
         };
     }

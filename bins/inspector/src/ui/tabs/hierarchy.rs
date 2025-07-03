@@ -10,18 +10,14 @@ use q_utils::InspectorIgnore;
 
 use crate::tabs::{InspectorSelection, TabViewer};
 
-#[derive(Debug, Default)]
-pub struct HierarchyState {
-    show_all: bool,
-}
-
 pub fn render_tab(
     viewer: &mut TabViewer,
     ui: &mut egui::Ui,
     type_registry: &TypeRegistry,
 ) {
     let mut state = viewer.state.lock();
-    let show_all = &mut state.hierarchy.show_all;
+    let state = &mut state.tab_data;
+    let show_all = &mut state.show_all_entities;
     let text = if *show_all {
         "Show scene only"
     } else {

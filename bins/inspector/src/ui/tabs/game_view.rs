@@ -9,7 +9,10 @@ use bevy_egui::{
 };
 use q_utils::BoolishStateTrait;
 
-use crate::prelude::*;
+use crate::{
+    prelude::*,
+    scene::inspector_cam::{InspectorCam, InspectorCamCanScroll},
+};
 
 use super::TabViewer;
 
@@ -45,7 +48,7 @@ pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
     //     let delta = click_and_drag.drag_delta();
     // }
 
-    viewer.state.lock().viewport_rect = ui.clip_rect();
+    viewer.state.lock().tab_data.viewport_rect = ui.clip_rect();
     viewer
         .world
         .resource_scope::<State<GameViewState>, _>(|world, physics| {
@@ -65,7 +68,6 @@ pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
         });
 }
 
-// TODO: This isn't working.
 // make camera only render to view not obstructed by UI
 pub fn set_camera_viewport(
     ui_state: Res<UiState>,
@@ -76,9 +78,9 @@ pub fn set_camera_viewport(
     let scale_factor =
         window.scale_factor() * egui_settings.single()?.scale_factor;
 
-    let viewport_pos =
-        ui_state.viewport_rect.left_top().to_vec2() * scale_factor;
-    let viewport_size = ui_state.viewport_rect.size() * scale_factor;
+    let state = &ui_state.tab_data;
+    let viewport_pos = state.viewport_rect.left_top().to_vec2() * scale_factor;
+    let viewport_size = state.viewport_rect.size() * scale_factor;
 
     let physical_position =
         UVec2::new(viewport_pos.x as u32, viewport_pos.y as u32);

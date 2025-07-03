@@ -1,7 +1,8 @@
-use crate::state::UiState;
 use bevy::{ecs::world::CommandQueue, prelude::*};
 use q_utils::text::TextUtils;
 use std::time::Duration;
+
+use crate::ui::UiState;
 
 pub enum Toast {
     Success,

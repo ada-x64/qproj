@@ -30,6 +30,7 @@ pub fn render_tab(
 
         ui.collapsing(format!("{asset_name} ({})", handles.len()), |ui| {
             let mut state = tab_viewer.state.lock();
+            let state = &mut state.tab_data;
             for handle in handles {
                 let selected = match state.selection {
                     InspectorSelection::Asset(_, _, selected_id) => {

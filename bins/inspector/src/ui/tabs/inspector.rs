@@ -16,6 +16,7 @@ pub fn render_tab(
     type_registry: &TypeRegistry,
 ) {
     let state = viewer.state.lock();
+    let state = &state.tab_data;
     match state.selection {
         InspectorSelection::Entities => {
             match state.selected_entities.as_slice() {
