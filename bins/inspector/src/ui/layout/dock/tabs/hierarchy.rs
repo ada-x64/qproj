@@ -4,6 +4,7 @@
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use bevy::{prelude::*, reflect::TypeRegistry};
 use bevy_egui::egui;
+use tiny_bail::prelude::*;
 
 use bevy_inspector_egui::bevy_inspector::hierarchy::Hierarchy;
 use q_utils::InspectorIgnore;
@@ -27,11 +28,12 @@ pub fn render_tab(
 
     let show_all = *show_all;
     let selected = &mut state.selected_entities;
+    let context_menu = &mut context_menu;
     let mut hierarchy = Hierarchy {
         world: viewer.world,
         type_registry,
         selected,
-        context_menu: None,
+        context_menu: Some(context_menu),
         shortcircuit_entity: None,
         extra_state: &mut (),
     };
@@ -46,5 +48,25 @@ pub fn render_tab(
 
     if selected {
         state.selection = InspectorSelection::Entities;
+    }
+}
+
+fn context_menu(
+    ui: &mut egui::Ui,
+    entity: Entity,
+    world: &mut World,
+    _: &mut (),
+) {
+    let mut scene = world.query_filtered::<Entity, With<DynamicSceneRoot>>();
+    let scene = r!(scene.single(world));
+    if ui.button("Delete").clicked() {
+        // careful now... should add a warning
+        world.despawn(entity);
+    }
+    if ui.button("New Entity").clicked() {
+        world.spawn((Name::new("New Entity"), ChildOf(scene)));
+    }
+    if ui.button("Add Child").clicked() {
+        world.spawn((Name::new("New Entity"), ChildOf(entity)));
     }
 }
