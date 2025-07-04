@@ -11,7 +11,7 @@ pub enum Toast {
     Info,
 }
 impl Toast {
-    pub fn from_ui_state(self, ui_state: &mut UiState, mut msg: String) {
+    pub fn from_ui_state<'a>(self, ui_state: &'a mut UiState, mut msg: String) {
         let duration =
             Duration::from_secs_f32((msg.len() as f32 / 10.).max(1.));
 
@@ -50,13 +50,13 @@ impl Toast {
             }
         };
     }
-    pub fn from_world(self, world: &mut World, msg: String) {
+    pub fn from_world<'a>(self, world: &'a mut World, msg: String) {
         let mut ui_state = world
             .get_resource_mut::<UiState>()
             .expect("Couldn't get UI state!");
         self.from_ui_state(ui_state.as_mut(), msg);
     }
-    pub fn from_queue(self, q: &mut CommandQueue, msg: String) {
+    pub fn from_queue<'a>(self, q: &'a mut CommandQueue, msg: String) {
         q.push(move |world: &mut World| {
             self.from_world(world, msg);
         })
