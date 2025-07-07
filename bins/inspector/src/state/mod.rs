@@ -3,6 +3,7 @@
 // ┗┫┣┛┛ ┗┛┃
 //--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
 use bevy::prelude::*;
+use bevy_egui::EguiContextPass;
 use q_utils::boolish_states;
 
 use crate::{
@@ -75,7 +76,7 @@ impl Plugin for InspectorStatePlugin {
             .add_systems(OnEnter(GameViewState::Disabled), Self::pause_time)
             .add_systems(OnEnter(GameViewState::Enabled), Self::unpause_time)
             .configure_sets(
-                PostUpdate,
+                EguiContextPass,
                 UiSystems.run_if(
                     in_state(InspectorState::Enabled)
                         .or(in_state(InspectorState::Disabled)),

@@ -1,5 +1,5 @@
 use bevy::{prelude::*, window::PrimaryWindow};
-use bevy_egui::EguiContext;
+use bevy_egui::{EguiContext, EguiContextPass};
 use egui::mutex::Mutex;
 use tiny_bail::prelude::*;
 
@@ -14,8 +14,8 @@ pub struct DockPlugin;
 impl Plugin for DockPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<DockState>()
-            .add_systems(PostUpdate, (set_camera_viewport.after(UiSystems),))
-            .add_systems(PostUpdate, (render).in_set(UiSystems));
+            .add_systems(PostUpdate, set_camera_viewport)
+            .add_systems(EguiContextPass, (render).in_set(UiSystems));
     }
 }
 

@@ -1,14 +1,14 @@
 use std::{path::PathBuf, str::FromStr};
 
 use bevy::{prelude::*, window::PrimaryWindow};
-use bevy_egui::EguiContext;
+use bevy_egui::{EguiContext, EguiContextPass};
 use egui_file_dialog::FileDialog;
 
 use crate::{
-    scene::SaveSceneEvent,
+    scene::SceneCommands,
     ui::{
-        UiState, UiSystems, modals::file_dialog::UiFileState,
-        modals::toast::Toast,
+        UiState, UiSystems,
+        modals::{file_dialog::UiFileState, toast::Toast},
     },
 };
 
@@ -16,7 +16,7 @@ use crate::{
 pub struct TopBarPlugin;
 impl Plugin for TopBarPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PostUpdate, render.in_set(UiSystems));
+        app.add_systems(EguiContextPass, render.in_set(UiSystems));
     }
 }
 
@@ -26,7 +26,7 @@ pub fn render(
         Single<&Window, With<PrimaryWindow>>,
         Single<&mut EguiContext, With<PrimaryWindow>>,
     )>,
-    mut commands: Commands,
+    commands: Commands,
 ) {
     let winrect = set.p0().size();
     let pickerrect = egui::Vec2::new(650.0, 370.0);
@@ -104,22 +104,20 @@ pub fn render(
         match ui_state.file_dialog_state {
             UiFileState::None => Toast::Error.from_ui_state(
                 ui_state.as_mut(),
-                "Got picked file when UiFileState was None".into(),
+                "Got picked file when UiFileState was None",
             ),
             UiFileState::SavingScene => {
-                debug!("sending SaveSceneEvent({path:?})");
-                commands.trigger(SaveSceneEvent(path));
+                commands.trigger_scene_save(path);
             }
             UiFileState::LoadingScene => {
-                Toast::Warning.from_ui_state(ui_state.as_mut(), "Todo!".into());
-                ui_state.file_dialog_state = UiFileState::None;
+                commands.trigger_scene_load(path);
             }
             UiFileState::SavingLayout => {
-                Toast::Warning.from_ui_state(ui_state.as_mut(), "Todo!".into());
+                Toast::Warning.from_ui_state(ui_state.as_mut(), "Todo!");
                 ui_state.file_dialog_state = UiFileState::None;
             }
             UiFileState::LoadingLayout => {
-                Toast::Warning.from_ui_state(ui_state.as_mut(), "Todo!".into());
+                Toast::Warning.from_ui_state(ui_state.as_mut(), "Todo!");
                 ui_state.file_dialog_state = UiFileState::None;
             }
         }

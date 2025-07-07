@@ -32,7 +32,7 @@ macro_rules! task {
             let mut entity = world.spawn_empty();
             let id = entity.id();
             let task = <$pool_type>::get().spawn(async move {
-                let mut q = CommandQueue::default();
+                let mut q = bevy::ecs::world::CommandQueue::default();
                 ($block)(&mut q).await;
                 q.push(move |world: &mut World| {
                     world.despawn(id);

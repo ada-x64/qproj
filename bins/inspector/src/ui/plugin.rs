@@ -9,7 +9,6 @@ use crate::ui::{
     modals::file_dialog::UiFileState,
 };
 use bevy::prelude::*;
-use bevy_egui::EguiPostUpdateSet;
 use derivative::Derivative;
 
 #[derive(Resource, Derivative)]
@@ -30,15 +29,6 @@ pub struct UiPlugin;
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((LayoutPlugin, ModalsPlugin))
-            .init_resource::<UiState>()
-            .configure_sets(
-                PostUpdate,
-                UiSystems
-                    .before(EguiPostUpdateSet::ProcessOutput)
-                    .before(bevy_egui::end_pass_system)
-                    .before(
-                        bevy::transform::TransformSystem::TransformPropagate,
-                    ),
-            );
+            .init_resource::<UiState>();
     }
 }

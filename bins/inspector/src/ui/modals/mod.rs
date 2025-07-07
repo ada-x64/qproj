@@ -1,5 +1,5 @@
 use bevy::{prelude::*, window::PrimaryWindow};
-use bevy_egui::EguiContext;
+use bevy_egui::{EguiContext, EguiContextPass};
 
 use crate::ui::{UiState, UiSystems};
 
@@ -9,7 +9,7 @@ pub mod toast;
 pub struct ModalsPlugin;
 impl Plugin for ModalsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PostUpdate, render.in_set(UiSystems));
+        app.add_systems(EguiContextPass, render.in_set(UiSystems));
     }
 }
 
