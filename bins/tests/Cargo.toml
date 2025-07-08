@@ -1,3 +1,6 @@
+#  𝒒𝒑𝒓𝒐𝒋-- copyright (c) the contributors
+#  SPDX-License-Identifier: MIT OR Apache-2.0
+
 [package]
 name = "q_tests"
 version = "0.1.0"
@@ -7,6 +10,7 @@ edition = "2024"
 # nonlocal
 bevy = { workspace = true, features = ["bevy_ci_testing"] }
 wgpu = "24.0.1"                                             # keep in sync with bevy
+libtest-mimic = "0.8.1"
 
 # local crates
 q_inspector = { workspace = true }

@@ -1,7 +1,9 @@
-#          •
-#  ┏┓┏┓┏┓┏┓┓
-#  ┗┫┣┛┛ ┗┛┃
-# --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
+#  𝒒𝒑𝒓𝒐𝒋-- copyright (c) the contributors
+#  SPDX-License-Identifier: MIT OR Apache-2.0
+
+#  𝒒𝒑𝒓𝒐𝒋 -- copyright (c) the contributors
+#  SPDX-License-Identifier: MIT OR Apache-2.0
+
 
 import argparse
 import glob
@@ -12,16 +14,15 @@ args = parser.parse_args()
 
 
 def get_header(c: str):
-    return f"""{c}         •
-{c} ┏┓┏┓┏┓┏┓┓
-{c} ┗┫┣┛┛ ┗┛┃
-{c}--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
+    return f"""\
+{c} 𝒒𝒑𝒓𝒐𝒋-- copyright (c) the contributors
+{c} SPDX-License-Identifier: MIT OR Apache-2.0
 """
 
 
 c_dict = {"toml": "# ", "py": "# ", "rs": "//"}
 
-paths = ["crates/**/*", "scripts/**/*", "src/**/*", "./*"]
+paths = ["libs/**/*", "scripts/**/*", "bins/**/*", "./*"]
 
 ok = True
 for key in c_dict.keys():

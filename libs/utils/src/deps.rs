@@ -1,3 +1,6 @@
+// 𝒒𝒑𝒓𝒐𝒋-- copyright (c) the contributors
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 #[macro_export]
 macro_rules! as_expr {
     ($e:expr) => {

@@ -1,7 +1,7 @@
-#          •
-#  ┏┓┏┓┏┓┏┓┓
-#  ┗┫┣┛┛ ┗┛┃
-# --┗┛-----┛------------------------------------------ (c) 2025 contributors ---
+#  𝒒𝒑𝒓𝒐𝒋-- copyright (c) the contributors
+#  SPDX-License-Identifier: MIT OR Apache-2.0
+
+
 [package]
 name = "q_player"
 version = "0.1.0"

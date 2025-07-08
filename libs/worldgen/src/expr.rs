@@ -1,7 +1,6 @@
-//         •
-// ┏┓┏┓┏┓┏┓┓
-// ┗┫┣┛┛ ┗┛┃
-//--┗┛-----┛------------------------------------------ (c) 2025 contributors ---
+// 𝒒𝒑𝒓𝒐𝒋-- copyright (c) the contributors
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use bevy::{
     asset::{AssetLoader, AsyncReadExt},
     prelude::*,

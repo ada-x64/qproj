@@ -25,3 +25,6 @@ Read more about it [on my blog.](https://www.cubething.dev/qproj/architecture-1-
 - bash
 
 Run `just setup` to install all the build dependencies.
+
+## License
+This project is available under the terms of either the [Apache 2.0 license](./LICENSE-APACHE.txt) or the [MIT license](./LICENSE-MIT.txt).
