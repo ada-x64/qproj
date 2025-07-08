@@ -1,9 +1,5 @@
-#  𝒒𝒑𝒓𝒐𝒋-- copyright (c) the contributors
-#  SPDX-License-Identifier: MIT OR Apache-2.0
-
 #  𝒒𝒑𝒓𝒐𝒋 -- copyright (c) the contributors
 #  SPDX-License-Identifier: MIT OR Apache-2.0
-
 
 import argparse
 import glob
@@ -15,7 +11,7 @@ args = parser.parse_args()
 
 def get_header(c: str):
     return f"""\
-{c} 𝒒𝒑𝒓𝒐𝒋-- copyright (c) the contributors
+{c} 𝒒𝒑𝒓𝒐𝒋 -- copyright (c) the contributors
 {c} SPDX-License-Identifier: MIT OR Apache-2.0
 """
 
@@ -29,21 +25,32 @@ for key in c_dict.keys():
     for path in paths:
         for file in glob.iglob(f"{path}.{key}", recursive=True):
             with open(file, "r+") as f:
-                # Read the first 4 lines to check header
+                # get header
+                header = get_header(c_dict[key])
+
+                # Read the first n lines to check header
+                num_lines = get_header("").count("\n")
                 head_lines: list[str] = []
-                for _ in range(4):
+                for _ in range(num_lines):
                     try:
                         head_lines.append(next(f))
                     except StopIteration:
                         break
-
                 head = "".join(head_lines)
-                header = get_header(c_dict[key])
-                if head != header:
+                bad_head = head != header
+
+                # check for duplicates
+                f.seek(0)
+                content = f.read()
+                last = content.rfind(header)
+                has_dupes = last != -1 and last != 0
+                f.seek(0)
+
+                if bad_head or has_dupes:
+                    print(file, head, header, bad_head, has_dupes)
                     ok = False
                     if args.fix:
-                        f.seek(0)
-                        content = f.read()
+                        content = content.replace(header, "")
                         f.seek(0)
                         f.write(f"{header}\n{content}")
                         print(f"🟡 FIX {file}")
