@@ -12,7 +12,11 @@ pub mod prelude {
     pub use crate::ui::*;
 }
 
-use bevy::{pbr::wireframe::WireframePlugin, prelude::*};
+use bevy::{
+    gizmos::GizmoPlugin, input::InputPlugin, pbr::wireframe::WireframePlugin,
+    picking::PickingPlugin, prelude::*, sprite::SpritePlugin,
+    state::app::StatesPlugin,
+};
 use bevy_egui::EguiPlugin;
 use bevy_inspector_egui::DefaultInspectorConfigPlugin;
 use prelude::*;
@@ -33,7 +37,12 @@ impl Plugin for InspectorPlugin {
                     EguiPlugin {
                         enable_multipass_for_primary_context: false
                     }
-                )
+                ),
+                SpritePlugin,
+                (PickingPlugin, PickingPlugin::default()),
+                StatesPlugin,
+                InputPlugin,
+                GizmoPlugin,
             );
             app.add_plugins((
                 crate::scene::ScenePlugin,

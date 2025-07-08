@@ -22,6 +22,8 @@ use bevy::{
 use wgpu::{DeviceDescriptor, InstanceDescriptor, RequestAdapterOptions};
 
 #[cfg(test)]
+pub mod inspector;
+#[cfg(test)]
 pub mod worldgen;
 
 #[allow(clippy::test_attr_in_doctest)]

@@ -14,9 +14,9 @@ fn main() -> AppExit {
     app.add_plugins((
         DefaultPlugins.set(AssetPlugin {
             unapproved_path_mode: UnapprovedPathMode::Allow,
-            watch_for_changes_override: Some(true),
-            mode: AssetMode::Processed,
-            meta_check: AssetMetaCheck::Always,
+            // watch_for_changes_override: Some(true),
+            // mode: AssetMode::Processed,
+            // meta_check: AssetMetaCheck::Always,
             ..Default::default()
         }),
         InspectorPlugin,

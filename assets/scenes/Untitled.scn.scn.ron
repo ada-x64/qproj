@@ -5,6 +5,7 @@
       components: {
         "bevy_ecs::hierarchy::Children": ([
           4294967311,
+          4294967315,
         ]),
         "bevy_ecs::name::Name": "Scene Root",
         "bevy_render::view::visibility::InheritedVisibility": (true),
@@ -23,6 +24,37 @@
       },
     ),
     4294967311: (
+      components: {
+        "bevy_ecs::hierarchy::ChildOf": (4294967305),
+        "bevy_ecs::hierarchy::Children": ([
+          4294967312,
+          4294967314,
+        ]),
+        "bevy_ecs::name::Name": "New Entity",
+      },
+    ),
+    4294967312: (
+      components: {
+        "bevy_ecs::hierarchy::ChildOf": (4294967311),
+        "bevy_ecs::hierarchy::Children": ([
+          4294967313,
+        ]),
+        "bevy_ecs::name::Name": "New Entity",
+      },
+    ),
+    4294967313: (
+      components: {
+        "bevy_ecs::hierarchy::ChildOf": (4294967312),
+        "bevy_ecs::name::Name": "New Entity",
+      },
+    ),
+    4294967314: (
+      components: {
+        "bevy_ecs::hierarchy::ChildOf": (4294967311),
+        "bevy_ecs::name::Name": "New Entity",
+      },
+    ),
+    4294967315: (
       components: {
         "bevy_ecs::hierarchy::ChildOf": (4294967305),
         "bevy_ecs::name::Name": "New Entity",

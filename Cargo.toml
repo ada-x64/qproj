@@ -6,7 +6,7 @@
 
 ## Workspace ##################################################################
 [workspace]
-members = ["libs/*", "bins/*", "tests"]
+members = ["libs/*", "bins/*"]
 resolver = "3"
 
 [workspace.lints]
@@ -73,6 +73,7 @@ q_tasks = { path = "libs/tasks" }
 ## bins
 q_inspector = { path = "bins/inspector" }
 q_app = { path = "bins/app" }
+q_tests = { path = "bins/tests" }
 
 ## Profiles ###################################################################
 [profile.dev.package."*"]

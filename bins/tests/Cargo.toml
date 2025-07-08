@@ -1,5 +1,5 @@
 [package]
-name = "integration"
+name = "q_tests"
 version = "0.1.0"
 edition = "2024"
 

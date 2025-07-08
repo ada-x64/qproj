@@ -1,8 +1,12 @@
 use std::{any::TypeId, ffi::OsStr, path::PathBuf};
 
 use bevy::{
-    asset::AssetPath, ecs::world::CommandQueue, platform::collections::HashSet,
-    prelude::*, scene::SceneLoader, tasks::IoTaskPool,
+    asset::AssetPath,
+    ecs::world::CommandQueue,
+    platform::collections::HashSet,
+    prelude::*,
+    scene::SceneLoader,
+    tasks::{ComputeTaskPool, IoTaskPool},
 };
 use q_tasks::task;
 use tiny_bail::prelude::*;
@@ -100,6 +104,7 @@ fn extract<'w>(
 #[derive(Event)]
 pub struct SaveSceneEvent(pub PathBuf);
 fn save_scene(trigger: Trigger<SaveSceneEvent>, world: &mut World) {
+    debug!("SaveSceneEvent");
     let mut path = trigger.0.clone();
     r!(world.get_resource_mut::<NextState<SaveStatus>>())
         .set(SaveStatus::AwaitingSave(path.clone()));
@@ -165,6 +170,22 @@ fn load_scene(trigger: Trigger<LoadSceneEvent>, world: &mut World) {
         );
         return;
     }
+    // let asset_server = r!(world.get_resource::<AssetServer>()).to_owned();
+    // task!(ComputeTaskPool, async move |_q: &mut CommandQueue| {
+    //     let a = asset_server
+    //         .get_asset_loader_with_extension("scn")
+    //         .await
+    //         .map(|l| l.type_name());
+    //     let b = asset_server
+    //         .get_asset_loader_with_extension("ron")
+    //         .await
+    //         .map(|l| l.type_name());
+    //     let c = asset_server
+    //         .get_asset_loader_with_extension("scn.ron")
+    //         .await
+    //         .map(|l| l.type_name());
+    //     info!("scn: {a:#?}\nron: {b:#?}\nscn.ron: {c:#?}");
+    // })(world);
     let asset_server = r!(world.get_resource::<AssetServer>());
     let path = AssetPath::from_path(&path);
     let full_ext = path.get_full_extension();
@@ -175,6 +196,7 @@ fn load_scene(trigger: Trigger<LoadSceneEvent>, world: &mut World) {
     next_state.set(LoadStatus::AwaitingLoad(scene_handle));
 }
 
+// NOTE: Could just use asset_server.wait_for_load
 fn await_loaded_scene(
     asset_server: Res<AssetServer>,
     state: Res<State<LoadStatus>>,
@@ -204,6 +226,7 @@ fn apply_scene(_trigger: Trigger<ApplySceneEvent>, world: &mut World) {
         Toast::Error.from_world(world, "Tried to apply empty scene!");
         return;
     }
+    let scene = scene.unwrap();
     let id = {
         let mut root = world.query::<&mut DynamicSceneRoot>();
         let root = root.single_mut(world);
@@ -227,7 +250,7 @@ fn apply_scene(_trigger: Trigger<ApplySceneEvent>, world: &mut World) {
 
             let scene = {
                 let assets = r!(world.get_resource::<Assets<Scene>>());
-                let scene = assets.get(scene.unwrap().id());
+                let scene = assets.get(scene.id()); // is failing to recognize the extension
                 if scene.is_none() {
                     Toast::Error.from_world(
                         world,

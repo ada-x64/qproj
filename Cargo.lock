@@ -3360,17 +3360,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "integration"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "q_inspector",
- "q_player",
- "q_worldgen",
- "wgpu",
-]
-
-[[package]]
 name = "interpolate_name"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4755,6 +4744,17 @@ dependencies = [
  "bevy",
  "itertools 0.14.0",
  "thiserror 2.0.12",
+]
+
+[[package]]
+name = "q_tests"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "q_inspector",
+ "q_player",
+ "q_worldgen",
+ "wgpu",
 ]
 
 [[package]]

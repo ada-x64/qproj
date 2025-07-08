@@ -86,6 +86,11 @@ test PKG *ARGS:
 run BIN *ARGS:
     cargo run -F dev --bin {{BIN}} -- {{ARGS}}
 
+# Builds the specified workspace binary.
+[group('workflow')]
+build PKG *ARGS:
+    cargo build -F dev -p {{PKG}} -- {{ARGS}}
+
 # Plays the game.
 [group('runners')]
 play *ARGS: (run "q_app")

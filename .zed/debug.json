@@ -1,0 +1,26 @@
+// Project-local debug tasks
+//
+// For more documentation on how to configure debug tasks,
+// see: https://zed.dev/docs/debugger
+[
+  {
+    "label": "Debug inspector",
+    "adapter": "CodeLLDB",
+    "build": {
+      "command": "cargo",
+      "args": ["build", "-p", "q_inspector"]
+    },
+    "sourceLanguages": ["rust"]
+  },
+  {
+    "label": "Debug game",
+    "adapter": "CodeLLDB",
+    "build": {
+      "command": "just build quell",
+      "args": []
+    },
+    "program": "$ZED_WORKTREE_ROOT/target/debug/q_inspector",
+    "request": "launch",
+    "sourceLanguages": ["rust"]
+  }
+]
