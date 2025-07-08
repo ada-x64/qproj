@@ -1,11 +1,12 @@
 // 𝒒𝒑𝒓𝒐𝒋 -- copyright (c) the contributors
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-pub mod scene;
-pub mod state;
-pub mod ui;
+mod scene;
+mod state;
+mod ui;
 
 pub mod prelude {
+    pub use crate::scene::*;
     pub use crate::state::*;
     pub use crate::ui::*;
 }
@@ -20,6 +21,8 @@ use bevy_inspector_egui::DefaultInspectorConfigPlugin;
 use prelude::*;
 use q_tasks::TaskPlugin;
 use q_utils::plugin_deps;
+
+use crate::state::InspectorStatePlugin;
 
 pub struct InspectorPlugin;
 impl Plugin for InspectorPlugin {

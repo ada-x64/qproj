@@ -9,7 +9,7 @@ use q_utils::boolish_states;
 
 use crate::prelude::*;
 
-boolish_states!(PlayerState);
+boolish_states!(Player);
 
 pub struct IntegrationPlugin;
 impl IntegrationPlugin {
@@ -35,6 +35,6 @@ impl IntegrationPlugin {
 impl Plugin for IntegrationPlugin {
     fn build(&self, app: &mut App) {
         app.setup_boolish_states()
-            .add_systems(OnExit(PlayerState::Init), Self::spawn);
+            .add_systems(OnExit(PlayerStates::Init), Self::spawn);
     }
 }

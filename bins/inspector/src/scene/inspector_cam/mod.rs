@@ -8,7 +8,7 @@ mod bundle;
 pub use bundle::*;
 use q_utils::{BoolishStateTrait, boolish_states};
 
-boolish_states!(InspectorCamState, InspectorCamCanScroll);
+boolish_states!(InspectorCam, InspectorCamScroll);
 pub struct InspectorCamPlugin;
 impl InspectorCamPlugin {
     pub fn spawn_camera(mut commands: Commands) {
@@ -24,7 +24,7 @@ impl InspectorCamPlugin {
         mouse_btn: Res<ButtonInput<MouseButton>>,
         mut rig: Single<&mut Rig, With<InspectorCam>>,
         mut mouse_motion_events: EventReader<MouseMotion>,
-        can_scroll: Res<State<InspectorCamCanScroll>>,
+        can_scroll: Res<State<InspectorCamScrollStates>>,
     ) {
         let time_delta_seconds: f32 = time.delta_secs();
         let boost_mult = 5.0f32;
@@ -99,18 +99,18 @@ impl InspectorCamPlugin {
 impl Plugin for InspectorCamPlugin {
     fn build(&self, app: &mut App) {
         app.setup_boolish_states()
-            .add_systems(OnExit(InspectorCamState::Init), Self::spawn_camera)
+            .add_systems(OnExit(InspectorCamStates::Init), Self::spawn_camera)
             .add_systems(
                 Update,
                 (Dolly::<InspectorCam>::update_active, Self::update_camera)
-                    .run_if(in_state(InspectorCamState::Enabled)),
+                    .run_if(in_state(InspectorCamStates::Enabled)),
             )
             .add_systems(
-                OnEnter(InspectorCamState::Disabled),
+                OnEnter(InspectorCamStates::Disabled),
                 Self::set_cam_active::<false>,
             )
             .add_systems(
-                OnEnter(InspectorCamState::Enabled),
+                OnEnter(InspectorCamStates::Enabled),
                 Self::set_cam_active::<true>,
             );
     }

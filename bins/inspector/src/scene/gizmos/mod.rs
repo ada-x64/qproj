@@ -21,7 +21,7 @@ use q_utils::{InspectorIgnore, boolish_states};
 )]
 pub struct GizmoSystems;
 
-boolish_states!(GizmosState);
+boolish_states!(Gizmos);
 
 pub struct GizmosPlugin;
 impl Plugin for GizmosPlugin {
@@ -29,7 +29,7 @@ impl Plugin for GizmosPlugin {
         app.setup_boolish_states()
             .init_gizmo_group::<RenderToTextureGroup>()
             .add_systems(
-                OnExit(GizmosState::Init),
+                OnExit(GizmosStates::Init),
                 (Self::setup_overlay_ui, Self::setup_gizmo_grps)
                     // look into sub camera views
                     // https://docs.rs/bevy/0.15.3/bevy/render/camera/struct.SubCameraView.html
@@ -45,7 +45,7 @@ impl Plugin for GizmosPlugin {
             )
             .configure_sets(
                 Update,
-                GizmoSystems.run_if(in_state(GizmosState::Enabled)),
+                GizmoSystems.run_if(in_state(GizmosStates::Enabled)),
             );
     }
 }

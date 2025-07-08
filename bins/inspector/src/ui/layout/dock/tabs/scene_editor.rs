@@ -10,14 +10,15 @@ use q_utils::BoolishStateTrait;
 
 use crate::{
     prelude::*,
-    scene::inspector_cam::{InspectorCam, InspectorCamCanScroll},
+    scene::inspector_cam::{InspectorCam, InspectorCamScrollStates},
+    state::GameViewStates,
     ui::layout::dock::TabViewer,
 };
 
 pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
     let can_scroll = viewer
         .world
-        .get_resource::<State<InspectorCamCanScroll>>()
+        .get_resource::<State<InspectorCamScrollStates>>()
         .unwrap()
         .as_bool();
     let click_and_drag = ui.interact(
@@ -30,13 +31,13 @@ pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
     if click_and_drag.hovered() && !can_scroll {
         viewer
             .world
-            .get_resource_mut::<NextState<InspectorCamCanScroll>>()
+            .get_resource_mut::<NextState<InspectorCamScrollStates>>()
             .unwrap()
             .set(true.into());
     } else if !click_and_drag.hovered() && can_scroll {
         viewer
             .world
-            .get_resource_mut::<NextState<InspectorCamCanScroll>>()
+            .get_resource_mut::<NextState<InspectorCamScrollStates>>()
             .unwrap()
             .set(false.into());
     }
@@ -47,9 +48,8 @@ pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
     // }
 
     viewer.ui_state.lock().tab_data.viewport_rect = ui.clip_rect();
-    viewer
-        .world
-        .resource_scope::<State<GameViewState>, _>(|world, physics| {
+    viewer.world.resource_scope::<State<GameViewStates>, _>(
+        |world, physics| {
             let btn_text = if physics.as_bool() {
                 "\u{23f9}"
             } else {
@@ -58,12 +58,13 @@ pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
             ui.horizontal(|ui| {
                 if ui.add(egui::Button::new(btn_text)).clicked() {
                     world
-                        .get_resource_mut::<NextState<GameViewState>>()
+                        .get_resource_mut::<NextState<GameViewStates>>()
                         .unwrap()
                         .set(physics.toggle());
                 }
             });
-        });
+        },
+    );
 }
 
 // make camera only render to view not obstructed by UI

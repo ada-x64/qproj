@@ -1,0 +1,39 @@
+(
+  resources: {},
+  entities: {
+    4294967302: (
+      components: {
+        "bevy_ecs::hierarchy::Children": ([
+          4294967303,
+          4294967304,
+          4294967305,
+        ]),
+        "bevy_ecs::name::Name": "Scene Root",
+        "bevy_render::view::visibility::InheritedVisibility": (false),
+        "bevy_render::view::visibility::ViewVisibility": (false),
+        "bevy_render::view::visibility::Visibility": Inherited,
+        "bevy_scene::components::DynamicSceneRoot": (Weak(Uuid(
+          uuid: "97128bb1-2588-480b-bdc6-87b4adbec477",
+        ))),
+      },
+    ),
+    4294967303: (
+      components: {
+        "bevy_ecs::hierarchy::ChildOf": (4294967302),
+        "bevy_ecs::name::Name": "a",
+      },
+    ),
+    4294967304: (
+      components: {
+        "bevy_ecs::hierarchy::ChildOf": (4294967302),
+        "bevy_ecs::name::Name": "b",
+      },
+    ),
+    4294967305: (
+      components: {
+        "bevy_ecs::hierarchy::ChildOf": (4294967302),
+        "bevy_ecs::name::Name": "c",
+      },
+    ),
+  },
+)

@@ -11,7 +11,7 @@ use crate::prelude::*;
 use bevy::prelude::*;
 use bevy_dolly::prelude::*;
 
-boolish_states!(PlayerCamState);
+boolish_states!(PlayerCam);
 
 pub struct PlayerCamPlugin;
 impl PlayerCamPlugin {
@@ -47,17 +47,17 @@ impl Plugin for PlayerCamPlugin {
     fn build(&self, app: &mut App) {
         app.setup_boolish_states()
             .add_systems(
-                OnEnter(PlayerCamState::Enabled),
+                OnEnter(PlayerCamStates::Enabled),
                 Self::set_cam_active::<true>,
             )
             .add_systems(
-                OnEnter(PlayerCamState::Disabled),
+                OnEnter(PlayerCamStates::Disabled),
                 Self::set_cam_active::<false>,
             )
             .add_systems(
                 Update,
                 (Dolly::<PlayerCam>::update_active, Self::update_camera)
-                    .run_if(in_state(PlayerState::Enabled)),
+                    .run_if(in_state(PlayerStates::Enabled)),
             );
     }
 }

@@ -8,7 +8,7 @@ use bevy_egui::{EguiContext, EguiContextPass};
 use egui_file_dialog::FileDialog;
 
 use crate::{
-    scene::SceneCommands,
+    scene::{ACCEPTED_SCENE_EXTENSIONS, SceneCommands},
     ui::{
         UiState, UiSystems,
         modals::{file_dialog::UiFileState, toast::Toast},
@@ -48,7 +48,7 @@ pub fn render(
                         .default_pos(default_pos)
                         .add_file_filter_extensions(
                             "Scene File",
-                            vec!["scn.ron", "scn", "ron"],
+                            ACCEPTED_SCENE_EXTENSIONS.to_vec(),
                         )
                         .initial_directory(
                             PathBuf::from_str("./assets/scenes").unwrap(),
@@ -59,7 +59,7 @@ pub fn render(
                 }
                 if ui.button("Save Scene").clicked() {
                     ui_state.file_dialog = FileDialog::new()
-                        .add_save_extension("Scene File", "scn.ron")
+                        .add_save_extension("Scene File", "scn")
                         .default_pos(default_pos)
                         .allow_file_overwrite(true)
                         .initial_directory(

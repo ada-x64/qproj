@@ -1,11 +1,8 @@
 // 𝒒𝒑𝒓𝒐𝒋 -- copyright (c) the contributors
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-use bevy::{
-    asset::{AssetMetaCheck, UnapprovedPathMode},
-    prelude::*,
-};
-use q_inspector::{InspectorPlugin, prelude::InspectorState};
+use bevy::{asset::UnapprovedPathMode, prelude::*};
+use q_inspector::{InspectorPlugin, prelude::InitInspector};
 
 #[bevy_main]
 fn main() -> AppExit {
@@ -20,11 +17,8 @@ fn main() -> AppExit {
         }),
         InspectorPlugin,
     ))
-    .add_systems(
-        Startup,
-        |mut state: ResMut<NextState<InspectorState>>| {
-            state.set(InspectorState::Enabled);
-        },
-    );
+    .add_systems(Startup, |mut commands: Commands| {
+        commands.trigger(InitInspector)
+    });
     app.run()
 }

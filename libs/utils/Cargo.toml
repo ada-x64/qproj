@@ -23,6 +23,7 @@ inspector = []                 # q_inspector
 
 [dependencies]
 bevy = { workspace = true }
+paste = "1.0.15"
 # itertools = { workspace = true }
 # thiserror = { workspace = true }
 # avian3d = { workspace = true }

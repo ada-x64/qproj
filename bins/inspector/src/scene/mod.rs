@@ -22,18 +22,23 @@ use crate::{
 pub mod gizmos;
 pub mod inspector_cam;
 
+pub const PREFERRED_SCENE_EXTENSION: &str = "scn";
+pub const ACCEPTED_SCENE_EXTENSIONS: [&str; 3] = ["scn", "scn.ron", "ron"];
+
 #[derive(Resource, Clone, Default)]
 pub struct CurrentScene(Option<Handle<Scene>>);
 
 #[derive(States, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub enum LoadStatus {
     #[default]
+    Init,
     Complete,
     AwaitingLoad(Handle<Scene>),
 }
 #[derive(States, Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub enum SaveStatus {
     #[default]
+    Init,
     Complete,
     AwaitingSave(PathBuf),
 }
@@ -111,7 +116,7 @@ fn save_scene(trigger: Trigger<SaveSceneEvent>, world: &mut World) {
     let mut path = trigger.0.clone();
     r!(world.get_resource_mut::<NextState<SaveStatus>>())
         .set(SaveStatus::AwaitingSave(path.clone()));
-    path.set_extension("scn.ron");
+    path.set_extension(PREFERRED_SCENE_EXTENSION);
     let scene = {
         let mut scene =
             world.query_filtered::<Entity, With<DynamicSceneRoot>>();
@@ -173,22 +178,22 @@ fn load_scene(trigger: Trigger<LoadSceneEvent>, world: &mut World) {
         );
         return;
     }
-    // let asset_server = r!(world.get_resource::<AssetServer>()).to_owned();
-    // task!(ComputeTaskPool, async move |_q: &mut CommandQueue| {
-    //     let a = asset_server
-    //         .get_asset_loader_with_extension("scn")
-    //         .await
-    //         .map(|l| l.type_name());
-    //     let b = asset_server
-    //         .get_asset_loader_with_extension("ron")
-    //         .await
-    //         .map(|l| l.type_name());
-    //     let c = asset_server
-    //         .get_asset_loader_with_extension("scn.ron")
-    //         .await
-    //         .map(|l| l.type_name());
-    //     info!("scn: {a:#?}\nron: {b:#?}\nscn.ron: {c:#?}");
-    // })(world);
+    let asset_server = r!(world.get_resource::<AssetServer>()).to_owned();
+    task!(ComputeTaskPool, async move |_q: &mut CommandQueue| {
+        let a = asset_server
+            .get_asset_loader_with_extension("scn")
+            .await
+            .map(|l| l.type_name());
+        let b = asset_server
+            .get_asset_loader_with_extension("ron")
+            .await
+            .map(|l| l.type_name());
+        let c = asset_server
+            .get_asset_loader_with_extension("scn.ron")
+            .await
+            .map(|l| l.type_name());
+        debug!("scn: {a:#?}\nron: {b:#?}\nscn.ron: {c:#?}");
+    })(world);
     let asset_server = r!(world.get_resource::<AssetServer>());
     let path = AssetPath::from_path(&path);
     let full_ext = path.get_full_extension();

@@ -7,7 +7,10 @@ use q_utils::boolish_states;
 
 use crate::{
     prelude::*,
-    scene::{gizmos::GizmosState, inspector_cam::InspectorCamState},
+    scene::{
+        gizmos::SetGizmosEnabled,
+        inspector_cam::{InspectorCamStates, SetInspectorCamEnabled},
+    },
 };
 
 // Resources //////////////////////////////////////////////////////////////////
@@ -26,28 +29,17 @@ impl Default for InspectorSettings {
     }
 }
 
-boolish_states!(InspectorState, GameViewState);
+boolish_states!(Inspector, GameView);
 
 // Plugin /////////////////////////////////////////////////////////////////////
 
 /// Controls state for the entire application.
 pub struct InspectorStatePlugin;
 impl InspectorStatePlugin {
-    fn init(
-        settings: Res<InspectorSettings>,
-        mut game_view: ResMut<NextState<GameViewState>>,
-        mut cam: ResMut<NextState<InspectorCamState>>,
-        mut gizmos: ResMut<NextState<GizmosState>>,
-    ) {
-        game_view.set(GameViewState::Disabled);
-        cam.set(InspectorCamState::Enabled);
-        gizmos.set(settings.enable_gizmo_overlay.into())
-    }
-
     /// TODO: Physics should be handled _outside_ the inspector
     fn pause_time(
         // mut time: ResMut<Time<Physics>>,
-        mut cam: ResMut<NextState<InspectorCamState>>,
+        mut cam: ResMut<NextState<InspectorCamStates>>,
     ) {
         // time.pause();
         cam.set(true.into())
@@ -56,7 +48,7 @@ impl InspectorStatePlugin {
     /// TODO: Physics should be handled _outside_ the inspector
     fn unpause_time(
         // mut time: ResMut<Time<Physics>>,
-        mut cam: ResMut<NextState<InspectorCamState>>,
+        mut cam: ResMut<NextState<InspectorCamStates>>,
         settings: Res<InspectorSettings>,
     ) {
         // time.unpause();
@@ -71,15 +63,30 @@ impl Plugin for InspectorStatePlugin {
         app.setup_boolish_states()
             .init_resource::<InspectorSettings>()
             .register_type::<InspectorSettings>()
-            .add_systems(OnExit(InspectorState::Init), Self::init)
-            .add_systems(OnEnter(GameViewState::Disabled), Self::pause_time)
-            .add_systems(OnEnter(GameViewState::Enabled), Self::unpause_time)
+            .add_observer(trigger_init)
+            .add_systems(OnEnter(GameViewStates::Disabled), Self::pause_time)
+            .add_systems(OnEnter(GameViewStates::Enabled), Self::unpause_time)
             .configure_sets(
                 EguiContextPass,
-                UiSystems.run_if(
-                    in_state(InspectorState::Enabled)
-                        .or(in_state(InspectorState::Disabled)),
-                ),
+                UiSystems.run_if(not(in_state(InspectorStates::Init))),
             );
     }
+}
+
+#[derive(Resource, Debug)]
+struct InitializedServices {
+    game_view: bool,
+    inspector_cam: bool,
+    gizmos: bool,
+}
+
+fn trigger_init(
+    _trigger: Trigger<InitInspector>,
+    settings: Res<InspectorSettings>,
+    mut commands: Commands,
+) {
+    commands.trigger(SetGameViewEnabled(false));
+    commands.trigger(SetInspectorCamEnabled(true));
+    commands.trigger(SetGizmosEnabled(settings.enable_gizmo_overlay));
+    // wait for all the other initialization events
 }
