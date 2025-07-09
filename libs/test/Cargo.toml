@@ -3,22 +3,19 @@
 
 
 [package]
-name = "q_tests"
+name = "q_test"
 version = "0.1.0"
 edition = "2024"
+description = "A headless test runner for Bevy."
 
 [dependencies]
 # nonlocal
 bevy = { workspace = true, features = ["bevy_ci_testing"] }
 wgpu = "24.0.1"                                             # keep in sync with bevy
-libtest-mimic = "0.8.1"
-
-# local crates
-q_inspector = { workspace = true }
-q_worldgen = { workspace = true }
-q_player = { workspace = true }
-q_test = { workspace = true }
-
 
 [lints]
 workspace = true
+
+[features]
+log = []
+default = ["log"]
