@@ -8,7 +8,7 @@ use bevy_egui::{EguiContext, EguiContextPass};
 use egui_file_dialog::FileDialog;
 
 use crate::{
-    scene::{ACCEPTED_SCENE_EXTENSIONS, SceneCommands},
+    scene::serialize::{ACCEPTED_SCENE_EXTENSIONS, SceneCommands},
     ui::{
         UiState, UiSystems,
         modals::{file_dialog::UiFileState, toast::Toast},

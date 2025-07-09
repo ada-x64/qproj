@@ -6,7 +6,7 @@ use bevy_egui::{
     EguiContextSettings,
     egui::{self},
 };
-use q_utils::BoolishStateTrait;
+use q_utils::ServiceStates;
 
 use crate::{
     prelude::*,
@@ -20,7 +20,7 @@ pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
         .world
         .get_resource::<State<InspectorCamScrollStates>>()
         .unwrap()
-        .as_bool();
+        .is_enabled();
     let click_and_drag = ui.interact(
         ui.clip_rect(),
         "gameview_interact".into(),
@@ -50,17 +50,14 @@ pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
     viewer.ui_state.lock().tab_data.viewport_rect = ui.clip_rect();
     viewer.world.resource_scope::<State<GameViewStates>, _>(
         |world, physics| {
-            let btn_text = if physics.as_bool() {
+            let btn_text = if physics.is_enabled() {
                 "\u{23f9}"
             } else {
                 "\u{25B6}"
             };
             ui.horizontal(|ui| {
                 if ui.add(egui::Button::new(btn_text)).clicked() {
-                    world
-                        .get_resource_mut::<NextState<GameViewStates>>()
-                        .unwrap()
-                        .set(physics.toggle());
+                    world.trigger(EnableGameView(!physics.is_enabled()))
                 }
             });
         },
@@ -102,7 +99,7 @@ pub fn set_camera_viewport(
             depth: 0.0..1.0,
         });
     } else {
-        warn!("Attempted to set camera viewport beyond render target size.")
+        // warn!("Attempted to set camera viewport beyond render target size.")
     }
 
     Ok(())

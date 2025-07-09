@@ -8,8 +8,8 @@ use std::{
 
 use bevy::{prelude::*, scene::SceneInstance};
 use q_inspector::prelude::{
-    InspectorInitialized, LoadSceneEvent, LoadStatus, SaveSceneEvent,
-    SaveStatus, SetInspectorEnabled,
+    InitInspector, InspectorInitialized,
+    serialize::{LoadSceneEvent, LoadStatus, SaveSceneEvent, SaveStatus},
 };
 
 use crate::Runner;
@@ -30,7 +30,7 @@ fn load_scene() -> AppExit {
         app
             .init_resource::<SavedStructure>()
             .add_systems(Startup, |mut commands: Commands| {
-                commands.trigger(SetInspectorEnabled(true));
+                commands.trigger(InitInspector);
             })
             .add_observer(
                 |

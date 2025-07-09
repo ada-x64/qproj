@@ -5,13 +5,13 @@ mod bundle;
 mod driver;
 pub use bundle::*;
 pub use driver::*;
-use q_utils::boolish_states;
+use q_utils::service;
 
 use crate::prelude::*;
 use bevy::prelude::*;
 use bevy_dolly::prelude::*;
 
-boolish_states!(PlayerCam);
+service!(PlayerCam);
 
 pub struct PlayerCamPlugin;
 impl PlayerCamPlugin {
@@ -45,7 +45,7 @@ impl PlayerCamPlugin {
 }
 impl Plugin for PlayerCamPlugin {
     fn build(&self, app: &mut App) {
-        app.setup_boolish_states()
+        app.add_plugins(PlayerCamServicePlugin)
             .add_systems(
                 OnEnter(PlayerCamStates::Enabled),
                 Self::set_cam_active::<true>,

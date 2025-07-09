@@ -3,13 +3,13 @@
 
 use bevy::prelude::*;
 use bevy_egui::EguiContextPass;
-use q_utils::boolish_states;
+use q_utils::service;
 
 use crate::{
     prelude::*,
     scene::{
-        gizmos::SetGizmosEnabled,
-        inspector_cam::{InspectorCamStates, SetInspectorCamEnabled},
+        gizmos::{EnableGizmos, GizmosInitialized, InitGizmos},
+        inspector_cam::{InitInspectorCam, InspectorCamStates},
     },
 };
 
@@ -28,8 +28,6 @@ impl Default for InspectorSettings {
         }
     }
 }
-
-boolish_states!(Inspector, GameView);
 
 // Plugin /////////////////////////////////////////////////////////////////////
 
@@ -58,35 +56,66 @@ impl InspectorStatePlugin {
     }
 }
 
+service!(GameView);
+service!(Inspector, init_inspector);
+// Wait for all subservices to initialize.
+fn init_inspector(_trigger: Trigger<InitInspector>, mut commands: Commands) {
+    commands.trigger(InitGameView);
+    commands.trigger(InitInspectorCam);
+}
 impl Plugin for InspectorStatePlugin {
     fn build(&self, app: &mut App) {
-        app.setup_boolish_states()
+        app.add_plugins((InspectorServicePlugin, GameViewServicePlugin))
             .init_resource::<InspectorSettings>()
             .register_type::<InspectorSettings>()
-            .add_observer(trigger_init)
+            .init_resource::<ServiceStatus>()
+            .register_type::<ServiceStatus>()
+            .add_observer(on_gameview_initialized)
+            .add_observer(on_gizmos_initialized)
             .add_systems(OnEnter(GameViewStates::Disabled), Self::pause_time)
             .add_systems(OnEnter(GameViewStates::Enabled), Self::unpause_time)
             .configure_sets(
                 EguiContextPass,
-                UiSystems.run_if(not(in_state(InspectorStates::Init))),
+                UiSystems.run_if(not(in_state(InspectorStates::Initializing)
+                    .or(in_state(InspectorStates::Uninitialized)))),
             );
     }
 }
 
-#[derive(Resource, Debug)]
-struct InitializedServices {
-    game_view: bool,
-    inspector_cam: bool,
-    gizmos: bool,
+#[derive(Resource, Debug, Default, Reflect)]
+struct ServiceStatus {
+    game_view: Option<Result<bool, String>>,
+    inspector_cam: Option<Result<bool, String>>,
+    gizmos: Option<Result<bool, String>>,
 }
 
-fn trigger_init(
-    _trigger: Trigger<InitInspector>,
-    settings: Res<InspectorSettings>,
+//NB Gizmos must be triggered _after_ inspector cam is initialized
+fn on_gameview_initialized(
+    trigger: Trigger<GameViewInitialized>,
+    mut services: ResMut<ServiceStatus>,
     mut commands: Commands,
 ) {
-    commands.trigger(SetGameViewEnabled(false));
-    commands.trigger(SetInspectorCamEnabled(true));
-    commands.trigger(SetGizmosEnabled(settings.enable_gizmo_overlay));
-    // wait for all the other initialization events
+    services.game_view = Some(trigger.0.clone());
+    commands.trigger(InitGizmos);
+    check_if_done(services.as_ref(), commands);
+}
+
+fn on_gizmos_initialized(
+    trigger: Trigger<GizmosInitialized>,
+    mut services: ResMut<ServiceStatus>,
+    mut commands: Commands,
+    settings: Res<InspectorSettings>,
+) {
+    services.gizmos = Some(trigger.0.clone());
+    commands.trigger(EnableGizmos(settings.enable_gizmo_overlay));
+    check_if_done(services.as_ref(), commands);
+}
+
+fn check_if_done(services: &ServiceStatus, mut commands: Commands) {
+    let ok = services.game_view.is_some()
+        && services.inspector_cam.is_some()
+        && services.gizmos.is_some();
+    if ok {
+        commands.trigger(InspectorInitialized(Ok(true)))
+    }
 }

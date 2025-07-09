@@ -3,9 +3,9 @@
 
 use bevy::prelude::*;
 
-mod cam;
-mod controls;
-mod player;
+pub mod cam;
+pub mod controls;
+pub mod player;
 
 pub mod prelude {
     pub use crate::cam::*;
