@@ -50,8 +50,9 @@ fn add_service_inner<T: ServiceName, D: ServiceData, E: ServiceError>(
         return;
     }
     let is_startup = spec.is_startup;
-    let entity = commands.spawn(Service::<T, D, E>::from_spec(spec)).id();
+    let name = spec.name.clone();
+    commands.spawn(Service::<T, D, E>::from_spec(spec));
     if is_startup {
-        commands.init_service::<T, D, E>(entity);
+        commands.init_service::<T, D, E>(name);
     }
 }

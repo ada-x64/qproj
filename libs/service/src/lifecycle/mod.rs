@@ -9,45 +9,45 @@ pub use data::*;
 mod commands;
 
 pub trait ServiceLifecycleCommands {
-    fn init_service<T, D, E>(&mut self, entity: Entity)
+    fn init_service<T, D, E>(&mut self, name: T)
     where
         T: ServiceName,
         D: ServiceData,
         E: ServiceError;
-    fn enable_service<T, D, E>(&mut self, entity: Entity)
+    fn enable_service<T, D, E>(&mut self, name: T)
     where
         T: ServiceName,
         D: ServiceData,
         E: ServiceError;
-    fn disable_service<T, D, E>(&mut self, entity: Entity)
+    fn disable_service<T, D, E>(&mut self, name: T)
     where
         T: ServiceName,
         D: ServiceData,
         E: ServiceError;
 }
 impl<'w, 's> ServiceLifecycleCommands for Commands<'w, 's> {
-    fn init_service<T, D, E>(&mut self, entity: Entity)
+    fn init_service<T, D, E>(&mut self, name: T)
     where
         T: ServiceName,
         D: ServiceData,
         E: ServiceError,
     {
-        self.queue(InitService::<T, D, E>::new(entity));
+        self.queue(InitService::<T, D, E>::new(name));
     }
-    fn enable_service<T, D, E>(&mut self, entity: Entity)
+    fn enable_service<T, D, E>(&mut self, name: T)
     where
         T: ServiceName,
         D: ServiceData,
         E: ServiceError,
     {
-        self.queue(EnableService::<T, D, E>::new(entity));
+        self.queue(EnableService::<T, D, E>::new(name));
     }
-    fn disable_service<T, D, E>(&mut self, entity: Entity)
+    fn disable_service<T, D, E>(&mut self, name: T)
     where
         T: ServiceName,
         D: ServiceData,
         E: ServiceError,
     {
-        self.queue(DisableService::<T, D, E>::new(entity));
+        self.queue(DisableService::<T, D, E>::new(name));
     }
 }

@@ -106,10 +106,7 @@ where
 }
 
 #[derive(Deref)]
-pub(crate) struct CommandInput<T, D, E>(
-    #[deref] Entity,
-    PhantomService<T, D, E>,
-)
+pub(crate) struct CommandInput<T, D, E>(#[deref] T, PhantomService<T, D, E>)
 where
     T: ServiceName,
     D: ServiceData,
@@ -120,7 +117,10 @@ where
     D: ServiceData,
     E: ServiceError,
 {
-    pub(crate) fn new(id: Entity) -> Self {
-        Self(id, PhantomService::default())
+    pub(crate) fn new(name: T) -> Self {
+        Self(name, PhantomService::default())
+    }
+    pub(crate) fn name(&self) -> &T {
+        &self.0
     }
 }

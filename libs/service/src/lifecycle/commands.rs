@@ -19,8 +19,8 @@ macro_rules! commands {
             D: ServiceData,
             E: ServiceError,
         {
-            pub fn new(entity: Entity) -> Self {
-                Self(CommandInput::new(entity))
+            pub fn new(name: T) -> Self {
+                Self(CommandInput::new(name))
             }
         }
 
@@ -38,7 +38,17 @@ macro_rules! impl_command {
             E: ServiceError,
         {
             fn apply(self, world: &mut World) {
-                $fn::<T, D, E>(world, self.entity());
+                let mut entt = world.query::<(Entity, &Service<T, D, E>)>();
+                let entt =
+                    entt.iter(world).find(|(_, s)| &s.name == self.name());
+                if entt.is_none() {
+                    error!(
+                        "Could not find service with name {:?}",
+                        self.name()
+                    );
+                    return;
+                }
+                $fn::<T, D, E>(world, entt.unwrap().0);
             }
         }
     };

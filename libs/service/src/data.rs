@@ -127,7 +127,7 @@ impl<T: ServiceName, D: ServiceData, E: ServiceError> ServiceSpec<T, D, E> {
             initial_data: D::default(),
         }
     }
-    pub fn with_startup(self, is_startup: bool) -> Self {
+    pub fn is_startup(self, is_startup: bool) -> Self {
         Self { is_startup, ..self }
     }
     pub fn with_deps(self, deps: Vec<T>) -> Self {
