@@ -1,85 +1,44 @@
-pub use bevy::prelude::*;
-use bevy::{log::LogPlugin, platform::collections::HashMap};
-use q_service::*;
+use bevy::{log::LogPlugin, prelude::*};
+use q_service::prelude::*;
 
-/// ServiceNames is auto impled
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-enum TestServices {
-    One,
-    Two,
-    Three,
-}
-
-type TestService = Service<TestServices>;
-type TestServiceDependencies = ServiceDependencies<TestServices>;
-
-#[test]
-fn basic() {
-    // set up specs
-    let spec1 = ServiceSpec::new(TestServices::One);
-    let spec2 = ServiceSpec::new(TestServices::Two).with_startup(true);
-    let spec3 = ServiceSpec::new(TestServices::Three)
-        .with_deps(vec![TestServices::One, TestServices::Two]);
-
-    // set up app
-    let mut app = App::new();
-    app.add_plugins((
-        LogPlugin::default(),
-        ServicePlugin::<TestServices> {
-            services: vec![spec1, spec2, spec3],
-        },
-    ));
-    app.update();
-
-    // check world structure
-    let world = app.world_mut();
-    let mut manager = world.query::<(&ServiceManager, &Children)>();
-    let (_manager, children) = manager.single(world).unwrap();
-
-    children.iter().for_each(|child| {
-        let service = world.get::<TestService>(child).unwrap();
-        let state = world.get::<ServiceState>(child).unwrap();
-        if **service == TestServices::Two {
-            assert!(matches!(**state, ServiceStatus::Enabled));
-        } else {
-            assert!(matches!(**state, ServiceStatus::Uinitialized));
-        }
-    });
-
-    let deps = world.resource::<TestServiceDependencies>();
-    let expected = HashMap::from_iter(vec![
-        (TestServices::One, vec![]),
-        (TestServices::Two, vec![]),
-        (
-            TestServices::Three,
-            vec![TestServices::One, TestServices::Two],
-        ),
-    ]);
-    assert_eq!(deps.0, expected);
+#[derive(Debug, thiserror::Error, Clone, Copy, PartialEq, Eq)]
+enum TestErr {
+    #[error("A")]
+    A,
 }
 
 #[test]
-fn init_failure() {
-    // set up specs
-    let spec1 = ServiceSpec::new(TestServices::One)
-        .with_startup(true)
-        .on_init(|_| Err("uh oh".into()));
-
-    // set up app
+fn simple() {
     let mut app = App::new();
-    app.add_plugins((
-        LogPlugin::default(),
-        ServicePlugin::<TestServices> {
-            services: vec![spec1],
-        },
-    ));
+    app.add_plugins(LogPlugin::default());
+    app.add_service(SimpleServiceSpec::<TestErr>::new("MyService".to_string()));
     app.update();
-
     let world = app.world_mut();
-    let mut q = world.query::<(&TestService, &ServiceState)>();
-    let (_, state) = q
+    let mut services = world.query::<&SimpleService<TestErr>>();
+    let s = services
         .iter(world)
-        .find(|(s, _)| ***s == TestServices::One)
+        .find(|s| s.name == "MyService")
         .unwrap();
-    assert!(matches!(**state, ServiceStatus::Failed(_)));
+    assert_eq!(s.name, "MyService");
+    assert_eq!(s.hooks, ServiceHooks::<TestErr>::default());
+    assert_eq!(s.state, ServiceState::Uninitialized)
+}
+
+#[test]
+fn hook_failure() {
+    let mut app = App::new();
+    app.add_plugins(LogPlugin::default());
+    app.add_service(
+        SimpleServiceSpec::<TestErr>::new("MyService".to_string())
+            .on_init(|_| Err(TestErr::A)),
+    );
+    app.update();
+    let world = app.world_mut();
+    let mut services = world.query::<&SimpleService<TestErr>>();
+    let s = services
+        .iter(world)
+        .find(|s| s.name == "MyService")
+        .unwrap();
+    assert_eq!(s.name, "MyService");
+    assert_eq!(s.state, ServiceState::Failed(TestErr::A));
 }

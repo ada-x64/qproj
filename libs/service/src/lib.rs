@@ -2,54 +2,56 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 mod data;
+pub mod helpers;
 mod lifecycle;
 
-pub use data::*;
-pub use lifecycle::*;
+use data::*;
+use lifecycle::*;
 
-use bevy::prelude::*;
-
-/// Plugin for service management.
-pub struct ServicePlugin<T: ServiceNames> {
-    pub services: Vec<ServiceSpec<T>>,
+pub mod prelude {
+    pub use crate::{
+        ServiceExt,
+        data::*,
+        helpers::*,
+        lifecycle::{
+            EnterServiceState, ExitServiceState, ServiceHooks,
+            ServiceLifecycleCommands, ServiceStateChange,
+        },
+    };
 }
 
-impl<T: ServiceNames> Plugin for ServicePlugin<T> {
-    fn build(&self, app: &mut App) {
-        let specs = self.services.clone();
-        app
-            .init_resource::<ServiceDependencies<T>>()
-            .init_resource::<ServiceLifecycles<T>>()
-            .add_systems(
-            Startup,
-            move |mut commands: Commands,
-                  query: Query<Entity, With<ServiceManager>>,
-                  services: Query<&Service<T>>,
-                  mut lifecycles: ResMut<ServiceLifecycles<T>>,
-                  mut deps: ResMut<ServiceDependencies<T>>| {
-                      let manager = query.single().unwrap_or_else(|_|{
-                          commands.spawn(ServiceManager).id()
-                      });
-                specs.iter().filter(|spec| {
-                    let found = services
-                        .iter()
-                        .any(|service| **service == spec.name);
-                    if found {
-                        warn!(
-                            "Tried to add already existing service {:?}",
-                            spec.name
-                        );
-                    }
-                    !found
-                    }).for_each(|spec| {
-                        deps.insert(spec.name, spec.deps.clone());
-                        lifecycles.insert(spec.name, spec.lifecycle);
-                        commands.entity(manager).with_child(ServiceBundle::from(spec));
-                        if spec.is_startup {
-                            commands.init_service(spec.name);
-                        }
-                    });
-            },
-        );
+use bevy::{ecs::system::RunSystemOnce, prelude::*};
+
+/// Plugin for service management.
+pub trait ServiceExt<T: ServiceName, D: ServiceData, E: ServiceError> {
+    fn add_service(&mut self, spec: ServiceSpec<T, D, E>) -> &mut Self;
+}
+impl<T: ServiceName, D: ServiceData, E: ServiceError> ServiceExt<T, D, E>
+    for App
+{
+    fn add_service(&mut self, spec: ServiceSpec<T, D, E>) -> &mut Self {
+        let world = self.world_mut();
+        world
+            .run_system_once_with(add_service_inner, spec)
+            .expect("Failed to add service! Spec: {spec:?}");
+        self
+    }
+}
+
+fn add_service_inner<T: ServiceName, D: ServiceData, E: ServiceError>(
+    spec: In<ServiceSpec<T, D, E>>,
+    mut commands: Commands,
+    services: Query<&Service<T, D, E>>,
+) {
+    let spec = spec.clone();
+    let found = services.iter().any(|service| service.name == spec.name);
+    if found {
+        warn!("Tried to add already existing service {:?}", spec.name);
+        return;
+    }
+    let is_startup = spec.is_startup;
+    let entity = commands.spawn(Service::<T, D, E>::from_spec(spec)).id();
+    if is_startup {
+        commands.init_service::<T, D, E>(entity);
     }
 }
