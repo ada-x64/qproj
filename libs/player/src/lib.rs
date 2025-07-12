@@ -6,6 +6,7 @@ use bevy::prelude::*;
 pub mod cam;
 pub mod controls;
 pub mod player;
+mod services;
 
 pub mod prelude {
     pub use crate::cam::*;
@@ -13,6 +14,7 @@ pub mod prelude {
     pub use crate::player::*;
 }
 use prelude::*;
+
 pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {

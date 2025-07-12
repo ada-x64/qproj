@@ -7,6 +7,13 @@ enum TestErr {
     A,
 }
 
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+enum TestServiceNames {
+    A,
+}
+
+alias!(Test, TestServiceNames, TestErr);
+
 fn setup() -> App {
     let mut app = App::new();
     app.add_plugins((
@@ -22,16 +29,16 @@ fn setup() -> App {
 #[test]
 fn simple() {
     let mut app = setup();
-    app.add_service(SimpleServiceSpec::<TestErr>::new("MyService".to_string()));
+    app.add_service(TestServiceSpec::new(TestServiceNames::A));
     app.update();
     let world = app.world_mut();
-    let mut services = world.query::<&SimpleService<TestErr>>();
+    let mut services = world.query::<&TestService>();
     let s = services
         .iter(world)
-        .find(|s| s.name == "MyService")
+        .find(|s| s.name == TestServiceNames::A)
         .unwrap();
-    assert_eq!(s.name, "MyService");
-    assert_eq!(s.hooks, ServiceHooks::<TestErr>::default());
+    assert_eq!(s.name, TestServiceNames::A);
+    assert_eq!(s.hooks, TestServiceHooks::default());
     assert_eq!(s.state, ServiceState::Uninitialized)
 }
 
@@ -39,39 +46,38 @@ fn simple() {
 fn hook_failure() {
     let mut app = setup();
     app.add_service(
-        SimpleServiceSpec::<TestErr>::new("MyService".to_string())
+        TestServiceSpec::new(TestServiceNames::A)
             .is_startup(true)
             .on_init(|_| Err(TestErr::A)),
     );
     let world = app.world_mut();
-    let mut services = world.query::<&SimpleService<TestErr>>();
+    let mut services = world.query::<&TestService>();
     let s = services
         .iter(world)
-        .find(|s| s.name == "MyService")
+        .find(|s| s.name == TestServiceNames::A)
         .unwrap();
-    assert_eq!(s.name, "MyService");
     assert_eq!(s.state, ServiceState::Failed(TestErr::A));
 }
 
 #[test]
 fn manual_init() {
     let mut app = setup();
-    app.add_service(SimpleServiceSpec::<TestErr>::new("MyService".to_string()));
+    app.add_service(TestServiceSpec::new(TestServiceNames::A));
     app.update();
     app.world_mut()
         .commands()
-        .init_service::<String, (), TestErr>("MyService".to_string());
+        .init_service(TestServiceNames::A, TEST_SERVICE_MARKER);
     app.update();
     let world = app.world_mut();
-    let mut services = world.query::<&SimpleService<TestErr>>();
+    let mut services = world.query::<&TestService>();
     let s = services
         .iter(world)
-        .find(|s| s.name == "MyService")
+        .find(|s| s.name == TestServiceNames::A)
         .unwrap();
-    assert_eq!(s.name, "MyService");
     assert_eq!(s.state, ServiceState::Enabled);
 }
 
 // TODO: Test hooks
+// TODO: Don't require that hooks are exclusive
 // TODO: Test dependencies
 // TODO: Test run conditions

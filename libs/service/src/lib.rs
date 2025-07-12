@@ -10,15 +10,15 @@ use lifecycle::*;
 
 pub mod prelude {
     pub use crate::{
-        ServiceExt,
+        ServiceExt, alias,
         data::*,
-        helpers::*,
         lifecycle::{
             EnterServiceState, ExitServiceState, ServiceHooks,
             ServiceLifecycleCommands, ServiceStateChange,
         },
     };
 }
+pub use paste;
 
 use bevy::{ecs::system::RunSystemOnce, prelude::*};
 
@@ -53,6 +53,6 @@ fn add_service_inner<T: ServiceName, D: ServiceData, E: ServiceError>(
     let name = spec.name.clone();
     commands.spawn(Service::<T, D, E>::from_spec(spec));
     if is_startup {
-        commands.init_service::<T, D, E>(name);
+        commands.init_service(name, ServiceMarker::<T, D, E>::default());
     }
 }

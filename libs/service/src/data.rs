@@ -1,20 +1,37 @@
 use std::{error::Error, fmt::Debug, hash::Hash, marker::PhantomData};
 
-use bevy::{platform::collections::HashMap, prelude::*};
+use bevy::prelude::*;
 
 use crate::lifecycle::*;
 
-#[derive(Component, Debug, Default)]
-pub struct ServiceManager;
-
-/// Maps service dependencies. (A,B) means A depends on B.
-// TODO: Cycle detection.
-#[derive(Resource, Debug, PartialEq, Eq, Deref, DerefMut)]
-pub struct ServiceDependencies<T: ServiceName>(pub HashMap<T, Vec<T>>);
-impl<T: ServiceName> FromWorld for ServiceDependencies<T> {
-    fn from_world(_world: &mut World) -> Self {
-        Self(HashMap::default())
-    }
+/// A type which can be used as the unique identifer of a service.
+/// Typically this will be a String or enum.
+pub trait ServiceName:
+    Send + Sync + Clone + PartialEq + Eq + Debug + Hash + 'static
+{
+}
+impl<T> ServiceName for T where
+    T: Send + Sync + Clone + PartialEq + Eq + Debug + Hash + 'static
+{
+}
+/// An arbitrary data type which can be used as extra state information for a
+/// service.
+pub trait ServiceData:
+    Clone + Debug + PartialEq + Eq + Hash + Send + Sync + Default + 'static
+{
+}
+impl<T> ServiceData for T where
+    T: Clone + Debug + Send + Sync + Default + PartialEq + Eq + Hash + 'static
+{
+}
+/// The error type for a service.
+pub trait ServiceError:
+    Error + Clone + PartialEq + Send + Sync + 'static
+{
+}
+impl<T> ServiceError for T where
+    T: Error + Clone + PartialEq + Send + Sync + 'static
+{
 }
 
 /// A component which represents a service.
@@ -23,9 +40,13 @@ impl<T: ServiceName> FromWorld for ServiceDependencies<T> {
 // the crate.
 #[derive(Component, Debug)]
 pub struct Service<T: ServiceName, D: ServiceData, E: ServiceError> {
+    /// The unique name of a service. This will be used for all access checks.
     pub name: T,
+    /// Arbitrary data store.
     pub data: D,
+    /// Lifecycle hooks.
     pub hooks: ServiceHooks<E>,
+    /// The current state of the service.
     pub state: ServiceState<E>,
 }
 impl<T: ServiceName, D: ServiceData, E: ServiceError> Service<T, D, E> {
@@ -39,16 +60,17 @@ impl<T: ServiceName, D: ServiceData, E: ServiceError> Service<T, D, E> {
     }
 }
 
-pub(crate) struct PhantomService<T, D, E>(
-    PhantomData<T>,
-    PhantomData<D>,
-    PhantomData<E>,
+/// ZST marker. Helps reduce type overhead.
+pub struct ServiceMarker<T, D, E>(
+    pub PhantomData<T>,
+    pub PhantomData<D>,
+    pub PhantomData<E>,
 )
 where
     T: ServiceName,
     D: ServiceData,
     E: ServiceError;
-impl<T, D, E> Default for PhantomService<T, D, E>
+impl<T, D, E> Default for ServiceMarker<T, D, E>
 where
     T: ServiceName,
     D: ServiceData,
@@ -57,25 +79,6 @@ where
     fn default() -> Self {
         Self(PhantomData, PhantomData, PhantomData)
     }
-}
-
-// /// A unique identifier / marker struct for a service.
-// pub trait ServiceName:
-//     Debug + PartialEq + Eq + Hash + Sync + Send + Clone + Copy + 'static
-// {
-// }
-// impl<T> ServiceName for T where
-//     T: Debug + PartialEq + Eq + Hash + Sync + Send + Clone + Copy + 'static
-// {
-// }
-
-pub trait ServiceName:
-    Send + Sync + Clone + PartialEq + Eq + Debug + Hash + 'static
-{
-}
-impl<T> ServiceName for T where
-    T: Send + Sync + Clone + PartialEq + Eq + Debug + Hash + 'static
-{
 }
 
 /// Tracks the current state of the service.
@@ -90,18 +93,6 @@ pub enum ServiceState<E: ServiceError> {
     Disabled,
     Failed(E),
 }
-
-pub trait ServiceData:
-    Clone + Debug + PartialEq + Eq + Hash + Send + Sync + Default + 'static
-{
-}
-impl<T> ServiceData for T where
-    T: Clone + Debug + Send + Sync + Default + PartialEq + Eq + Hash + 'static
-{
-}
-
-pub trait ServiceError: Error + Clone + Send + Sync + 'static {}
-impl<T> ServiceError for T where T: Error + Clone + Send + Sync + 'static {}
 
 /// Use this to specify a new service.
 #[derive(Clone, Debug)]

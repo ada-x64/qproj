@@ -7,17 +7,17 @@ pub use bundle::*;
 use bevy::{ecs::system::RunSystemOnce, prelude::*};
 use q_service::prelude::*;
 
-use crate::prelude::*;
-
-#[derive(Debug, Clone, thiserror::Error)]
-pub enum PlayerError {}
+use crate::{
+    prelude::*,
+    services::{PlayerServiceSpec, ServiceNames},
+};
 
 pub struct IntegrationPlugin;
 impl IntegrationPlugin {}
 impl Plugin for IntegrationPlugin {
     fn build(&self, app: &mut App) {
         app.add_service(
-            SimpleServiceSpec::<PlayerError>::new("Player".to_string())
+            PlayerServiceSpec::new(ServiceNames::Player)
                 .is_startup(true)
                 .on_init(|world| {
                     world.run_system_once(spawn).unwrap();

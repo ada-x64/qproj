@@ -5,18 +5,12 @@ mod bundle;
 mod driver;
 pub use bundle::*;
 pub use driver::*;
-use q_service::prelude::*;
+use q_service::{helpers::service_has_state, prelude::*};
 use tiny_bail::prelude::*;
 
-use crate::prelude::*;
+use crate::{prelude::*, services::*};
 use bevy::prelude::*;
 use bevy_dolly::prelude::*;
-
-#[derive(Debug, Clone, thiserror::Error)]
-pub enum PlayerCamError {
-    #[error("No player camera")]
-    NoCam,
-}
 
 pub fn update_camera(
     mut set: ParamSet<(
@@ -40,7 +34,7 @@ pub struct PlayerCamPlugin;
 impl Plugin for PlayerCamPlugin {
     fn build(&self, app: &mut App) {
         app.add_service(
-            SimpleServiceSpec::<PlayerCamError>::new("PlayerCam".into())
+            PlayerCamServiceSpec::new(ServiceNames::PlayerCam)
                 .is_startup(true)
                 .on_enable(set_cam_active::<true>)
                 .on_disable(set_cam_active::<true>),
@@ -48,26 +42,15 @@ impl Plugin for PlayerCamPlugin {
         app.add_systems(
             Update,
             (Dolly::<PlayerCam>::update_active, update_camera).run_if(
-                |services: Query<&SimpleService<PlayerError>>| {
-                    let s = r!(services.iter().find(|s| &s.name == "Player"));
-                    matches!(s.state, ServiceState::Enabled)
-                },
+                service_has_state(
+                    ServiceNames::Player,
+                    ServiceState::Enabled,
+                    PLAYER_SERVICE_MARKER,
+                ),
             ),
         );
     }
 }
-
-// pub const CAM_SERVICE_SPEC: ServiceSpec<PlayerServices> = ServiceSpec::<_> {
-//     name: PlayerServices::Cam,
-//     deps: vec![],
-//     is_startup: true,
-//     hooks: ServiceHooks {
-//         on_enable: set_cam_active::<true>,
-//         on_disable: set_cam_active::<false>,
-//         on_init: default_init,
-//         on_failure: default_fail,
-//     },
-// };
 
 // enable/disable hook
 fn set_cam_active<const VAL: bool>(

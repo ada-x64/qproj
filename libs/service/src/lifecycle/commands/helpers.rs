@@ -106,7 +106,7 @@ where
 }
 
 #[derive(Deref)]
-pub(crate) struct CommandInput<T, D, E>(#[deref] T, PhantomService<T, D, E>)
+pub(crate) struct CommandInput<T, D, E>(#[deref] T, ServiceMarker<T, D, E>)
 where
     T: ServiceName,
     D: ServiceData,
@@ -118,7 +118,7 @@ where
     E: ServiceError,
 {
     pub(crate) fn new(name: T) -> Self {
-        Self(name, PhantomService::default())
+        Self(name, ServiceMarker::default())
     }
     pub(crate) fn name(&self) -> &T {
         &self.0

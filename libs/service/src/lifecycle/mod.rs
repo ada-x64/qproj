@@ -9,24 +9,33 @@ pub use data::*;
 mod commands;
 
 pub trait ServiceLifecycleCommands {
-    fn init_service<T, D, E>(&mut self, name: T)
-    where
+    fn init_service<T, D, E>(
+        &mut self,
+        name: T,
+        marker: ServiceMarker<T, D, E>,
+    ) where
         T: ServiceName,
         D: ServiceData,
         E: ServiceError;
-    fn enable_service<T, D, E>(&mut self, name: T)
-    where
+    fn enable_service<T, D, E>(
+        &mut self,
+        name: T,
+        marker: ServiceMarker<T, D, E>,
+    ) where
         T: ServiceName,
         D: ServiceData,
         E: ServiceError;
-    fn disable_service<T, D, E>(&mut self, name: T)
-    where
+    fn disable_service<T, D, E>(
+        &mut self,
+        name: T,
+        marker: ServiceMarker<T, D, E>,
+    ) where
         T: ServiceName,
         D: ServiceData,
         E: ServiceError;
 }
 impl<'w, 's> ServiceLifecycleCommands for Commands<'w, 's> {
-    fn init_service<T, D, E>(&mut self, name: T)
+    fn init_service<T, D, E>(&mut self, name: T, _: ServiceMarker<T, D, E>)
     where
         T: ServiceName,
         D: ServiceData,
@@ -34,7 +43,7 @@ impl<'w, 's> ServiceLifecycleCommands for Commands<'w, 's> {
     {
         self.queue(InitService::<T, D, E>::new(name));
     }
-    fn enable_service<T, D, E>(&mut self, name: T)
+    fn enable_service<T, D, E>(&mut self, name: T, _: ServiceMarker<T, D, E>)
     where
         T: ServiceName,
         D: ServiceData,
@@ -42,7 +51,7 @@ impl<'w, 's> ServiceLifecycleCommands for Commands<'w, 's> {
     {
         self.queue(EnableService::<T, D, E>::new(name));
     }
-    fn disable_service<T, D, E>(&mut self, name: T)
+    fn disable_service<T, D, E>(&mut self, name: T, _: ServiceMarker<T, D, E>)
     where
         T: ServiceName,
         D: ServiceData,
