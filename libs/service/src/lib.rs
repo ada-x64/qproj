@@ -30,6 +30,9 @@ impl<T: ServiceName, D: ServiceData, E: ServiceError> ServiceExt<T, D, E>
     for App
 {
     fn add_service(&mut self, spec: ServiceSpec<T, D, E>) -> &mut Self {
+        self.add_event::<ServiceStateChange<T, E>>();
+        self.add_event::<EnterServiceState<T, E>>();
+        self.add_event::<ExitServiceState<T, E>>();
         let world = self.world_mut();
         world
             .run_system_once_with(add_service_inner, spec)

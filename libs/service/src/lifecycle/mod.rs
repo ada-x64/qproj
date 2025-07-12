@@ -1,6 +1,8 @@
 use crate::{
     data::*,
-    lifecycle::commands::{DisableService, EnableService, InitService},
+    lifecycle::commands::{
+        DisableService, EnableService, FailService, InitService,
+    },
 };
 use bevy::prelude::*;
 
@@ -33,6 +35,15 @@ pub trait ServiceLifecycleCommands {
         T: ServiceName,
         D: ServiceData,
         E: ServiceError;
+    fn fail_service<T, D, E>(
+        &mut self,
+        name: T,
+        error: E,
+        marker: ServiceMarker<T, D, E>,
+    ) where
+        T: ServiceName,
+        D: ServiceData,
+        E: ServiceError;
 }
 impl<'w, 's> ServiceLifecycleCommands for Commands<'w, 's> {
     fn init_service<T, D, E>(&mut self, name: T, _: ServiceMarker<T, D, E>)
@@ -58,5 +69,17 @@ impl<'w, 's> ServiceLifecycleCommands for Commands<'w, 's> {
         E: ServiceError,
     {
         self.queue(DisableService::<T, D, E>::new(name));
+    }
+    fn fail_service<T, D, E>(
+        &mut self,
+        name: T,
+        error: E,
+        _: ServiceMarker<T, D, E>,
+    ) where
+        T: ServiceName,
+        D: ServiceData,
+        E: ServiceError,
+    {
+        self.queue(FailService::<T, D, E>::new(name, error));
     }
 }

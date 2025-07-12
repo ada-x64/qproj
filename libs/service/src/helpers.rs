@@ -36,6 +36,12 @@ macro_rules! alias {
                 pub type [<$prefix Service>] = Service<$t, $d, $e>;
                 /// Lifecycle hooks for the service. See [ServiceHooks].
                 pub type [<$prefix ServiceHooks>] = ServiceHooks<$e>;
+                /// Fires when service state changes. See [ServiceStateChange]
+                pub type [<$prefix ServiceStateChange>] = ServiceStateChange<$t, $e>;
+                /// Fires when service state changes. See [EnterServiceState].
+                pub type [<Enter $prefix ServiceState>] = EnterServiceState<$t, $e>;
+                /// Fires when service state changes. See [ExitServiceState].
+                pub type [<Exit $prefix ServiceState>] = ExitServiceState<$t, $e>;
                 /// A marker which uniquely points out the service. See [ServiceMarker].
                 pub const [<$prefix:snake:upper _SERVICE_MARKER>]: ServiceMarker<$t, $d, $e> = ServiceMarker::<$t, $d, $e>(PhantomData, PhantomData, PhantomData);
             }
