@@ -104,23 +104,3 @@ where
         .unwrap_or_else(|_| panic!("No service for entity id {id:?}"))
         .hooks
 }
-
-#[derive(Deref)]
-pub(crate) struct CommandInput<T, D, E>(#[deref] T, ServiceMarker<T, D, E>)
-where
-    T: ServiceName,
-    D: ServiceData,
-    E: ServiceError;
-impl<T, D, E> CommandInput<T, D, E>
-where
-    T: ServiceName,
-    D: ServiceData,
-    E: ServiceError,
-{
-    pub(crate) fn new(name: T) -> Self {
-        Self(name, ServiceMarker::default())
-    }
-    pub(crate) fn name(&self) -> &T {
-        &self.0
-    }
-}

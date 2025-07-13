@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 pub mod deps;
-pub mod service;
-pub use service::*;
 pub mod text;
 
 pub mod components;

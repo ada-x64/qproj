@@ -10,13 +10,16 @@ use lifecycle::*;
 
 pub mod prelude {
     pub use crate::{
-        ServiceExt, alias,
+        ServiceExt,
         data::*,
+        helpers::*,
         lifecycle::{
             EnterServiceState, ExitServiceState, ServiceHooks,
             ServiceLifecycleCommands, ServiceStateChange,
         },
+        service,
     };
+    pub use q_service_macros::*;
 }
 pub use paste;
 
@@ -56,6 +59,6 @@ fn add_service_inner<T: ServiceName, D: ServiceData, E: ServiceError>(
     let name = spec.name.clone();
     commands.spawn(Service::<T, D, E>::from_spec(spec));
     if is_startup {
-        commands.init_service(name, ServiceMarker::<T, D, E>::default());
+        commands.init_service(ServiceHandle::<T, D, E>::new(name));
     }
 }

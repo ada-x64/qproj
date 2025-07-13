@@ -24,7 +24,7 @@ inspector = []                 # q_inspector
 [dependencies]
 bevy = { workspace = true }
 paste = "1.0.15"
+q_service_macros = { path = "./macros/" }
 
 [dev-dependencies]
-q_test = { workspace = true }
-thiserror = { workspace = true }
+thiserror = "2.0.12"

@@ -31,6 +31,16 @@ impl<E: ServiceError> Default for ServiceHooks<E> {
         }
     }
 }
+impl<E: ServiceError> ServiceHooks<E> {
+    pub const fn const_default() -> Self {
+        Self {
+            on_init: default_init,
+            on_enable: default_enable,
+            on_disable: default_enable,
+            on_failure: default_fail,
+        }
+    }
+}
 pub fn default_init<E: ServiceError>(_: &mut World) -> Result<bool, E> {
     Ok(true)
 }

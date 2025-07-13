@@ -5,7 +5,7 @@ mod bundle;
 mod driver;
 pub use bundle::*;
 pub use driver::*;
-use q_service::{helpers::service_has_state, prelude::*};
+use q_service::prelude::*;
 use tiny_bail::prelude::*;
 
 use crate::{prelude::*, services::*};
@@ -34,20 +34,15 @@ pub struct PlayerCamPlugin;
 impl Plugin for PlayerCamPlugin {
     fn build(&self, app: &mut App) {
         app.add_service(
-            PlayerCamServiceSpec::new(ServiceNames::PlayerCam)
+            PLAYER_CAM_SERVICE_SPEC
                 .is_startup(true)
                 .on_enable(set_cam_active::<true>)
                 .on_disable(set_cam_active::<true>),
         );
         app.add_systems(
             Update,
-            (Dolly::<PlayerCam>::update_active, update_camera).run_if(
-                service_has_state(
-                    ServiceNames::Player,
-                    ServiceState::Enabled,
-                    PLAYER_SERVICE_MARKER,
-                ),
-            ),
+            (Dolly::<PlayerCam>::update_active, update_camera)
+                .run_if(service_enabled(PLAYER_SERVICE)),
         );
     }
 }

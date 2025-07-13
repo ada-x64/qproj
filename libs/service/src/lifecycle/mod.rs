@@ -10,76 +10,58 @@ mod data;
 pub use data::*;
 mod commands;
 
+macro_rules! f_def {
+    ($name:ident) => {
+        $crate::paste::paste! {
+            fn [<$name:snake:lower _service>]<T, D, E>(&mut self, handle: ServiceHandle<T, D, E>)
+                where
+                    T: ServiceName,
+                    D: ServiceData,
+                    E: ServiceError;
+        }
+    };
+}
+macro_rules! f_impl {
+    ($name:ident) => {
+        $crate::paste::paste! {
+            fn [<$name:snake:lower _service>]<T, D, E>(&mut self, handle: ServiceHandle<T, D, E>)
+                where
+                    T: ServiceName,
+                    D: ServiceData,
+                    E: ServiceError,
+            {
+                self.queue([<$name:camel Service>]::<T, D, E>::new(handle));
+            }
+        }
+    };
+}
+
 pub trait ServiceLifecycleCommands {
-    fn init_service<T, D, E>(
-        &mut self,
-        name: T,
-        marker: ServiceMarker<T, D, E>,
-    ) where
-        T: ServiceName,
-        D: ServiceData,
-        E: ServiceError;
-    fn enable_service<T, D, E>(
-        &mut self,
-        name: T,
-        marker: ServiceMarker<T, D, E>,
-    ) where
-        T: ServiceName,
-        D: ServiceData,
-        E: ServiceError;
-    fn disable_service<T, D, E>(
-        &mut self,
-        name: T,
-        marker: ServiceMarker<T, D, E>,
-    ) where
-        T: ServiceName,
-        D: ServiceData,
-        E: ServiceError;
+    f_def! {Init}
+    f_def! {Enable}
+    f_def! {Disable}
     fn fail_service<T, D, E>(
         &mut self,
-        name: T,
+        handle: ServiceHandle<T, D, E>,
         error: E,
-        marker: ServiceMarker<T, D, E>,
     ) where
         T: ServiceName,
         D: ServiceData,
         E: ServiceError;
 }
 impl<'w, 's> ServiceLifecycleCommands for Commands<'w, 's> {
-    fn init_service<T, D, E>(&mut self, name: T, _: ServiceMarker<T, D, E>)
-    where
-        T: ServiceName,
-        D: ServiceData,
-        E: ServiceError,
-    {
-        self.queue(InitService::<T, D, E>::new(name));
-    }
-    fn enable_service<T, D, E>(&mut self, name: T, _: ServiceMarker<T, D, E>)
-    where
-        T: ServiceName,
-        D: ServiceData,
-        E: ServiceError,
-    {
-        self.queue(EnableService::<T, D, E>::new(name));
-    }
-    fn disable_service<T, D, E>(&mut self, name: T, _: ServiceMarker<T, D, E>)
-    where
-        T: ServiceName,
-        D: ServiceData,
-        E: ServiceError,
-    {
-        self.queue(DisableService::<T, D, E>::new(name));
-    }
+    f_impl!(Init);
+    f_impl!(Enable);
+    f_impl!(Disable);
     fn fail_service<T, D, E>(
         &mut self,
-        name: T,
+        handle: ServiceHandle<T, D, E>,
         error: E,
-        _: ServiceMarker<T, D, E>,
     ) where
         T: ServiceName,
         D: ServiceData,
         E: ServiceError,
     {
-        self.queue(FailService::<T, D, E>::new(name, error));
+        self.queue(FailService::<T, D, E>::new(handle, error));
     }
 }

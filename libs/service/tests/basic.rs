@@ -1,18 +1,18 @@
 use bevy::{log::LogPlugin, prelude::*};
 use q_service::{helpers::service_has_state, prelude::*};
 
-#[derive(Debug, thiserror::Error, Clone, Copy, PartialEq, Eq)]
+#[derive(ServiceError, Debug, thiserror::Error, Clone, Copy, PartialEq)]
 enum TestErr {
     #[error("A")]
     A,
 }
 
-#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+#[derive(ServiceName, Debug, Clone, Hash, PartialEq, Eq)]
 enum TestServiceNames {
-    A,
+    Test,
 }
 
-alias!(Test, TestServiceNames, TestErr);
+service!(Test, TestServiceNames, (), TestErr);
 
 fn setup() -> App {
     let mut app = App::new();
@@ -29,15 +29,15 @@ fn setup() -> App {
 #[test]
 fn simple() {
     let mut app = setup();
-    app.add_service(TestServiceSpec::new(TestServiceNames::A));
+    app.add_service(TEST_SERVICE_SPEC);
     app.update();
     let world = app.world_mut();
     let mut services = world.query::<&TestService>();
     let s = services
         .iter(world)
-        .find(|s| s.name == TestServiceNames::A)
+        .find(|s| s.name == TestServiceNames::Test)
         .unwrap();
-    assert_eq!(s.name, TestServiceNames::A);
+    assert_eq!(s.name, TestServiceNames::Test);
     assert_eq!(s.hooks, TestServiceHooks::default());
     assert_eq!(s.state, ServiceState::Uninitialized)
 }
@@ -46,7 +46,7 @@ fn simple() {
 fn hook_failure() {
     let mut app = setup();
     app.add_service(
-        TestServiceSpec::new(TestServiceNames::A)
+        TEST_SERVICE_SPEC
             .is_startup(true)
             .on_init(|_| Err(TestErr::A)),
     );
@@ -54,7 +54,7 @@ fn hook_failure() {
     let mut services = world.query::<&TestService>();
     let s = services
         .iter(world)
-        .find(|s| s.name == TestServiceNames::A)
+        .find(|s| s.name == TestServiceNames::Test)
         .unwrap();
     assert_eq!(s.state, ServiceState::Failed(TestErr::A));
 }
@@ -62,17 +62,15 @@ fn hook_failure() {
 #[test]
 fn manual_init() {
     let mut app = setup();
-    app.add_service(TestServiceSpec::new(TestServiceNames::A));
+    app.add_service(TEST_SERVICE_SPEC);
     app.update();
-    app.world_mut()
-        .commands()
-        .init_service(TestServiceNames::A, TEST_SERVICE_MARKER);
+    app.world_mut().commands().init_service(TEST_SERVICE);
     app.update();
     let world = app.world_mut();
     let mut services = world.query::<&TestService>();
     let s = services
         .iter(world)
-        .find(|s| s.name == TestServiceNames::A)
+        .find(|s| s.name == TestServiceNames::Test)
         .unwrap();
     assert_eq!(s.state, ServiceState::Enabled);
 }
@@ -84,11 +82,9 @@ pub struct TestHooks {
     disable: bool,
     fail: bool,
 }
-#[test]
-fn hooks() {
-    let mut app = setup();
-    app.init_resource::<TestHooks>();
-    let spec = TestServiceSpec::new(TestServiceNames::A)
+
+fn run_all_hooks() -> TestServiceSpec {
+    TEST_SERVICE_SPEC
         .is_startup(true)
         .on_init(|world| {
             world.resource_mut::<TestHooks>().init = true;
@@ -96,9 +92,7 @@ fn hooks() {
         })
         .on_enable(|world| {
             world.resource_mut::<TestHooks>().enable = true;
-            world
-                .commands()
-                .disable_service(TestServiceNames::A, TEST_SERVICE_MARKER);
+            world.commands().disable_service(TEST_SERVICE);
             Ok(())
         })
         .on_disable(|world| {
@@ -107,8 +101,13 @@ fn hooks() {
         })
         .on_failure(|_err, world| {
             world.resource_mut::<TestHooks>().fail = true;
-        });
-    app.add_service(spec);
+        })
+}
+#[test]
+fn hooks() {
+    let mut app = setup();
+    app.init_resource::<TestHooks>();
+    app.add_service(run_all_hooks());
     app.update();
     assert_eq!(
         app.world_mut().resource::<TestHooks>(),
@@ -125,8 +124,9 @@ fn hooks() {
 fn events() {
     let mut app = setup();
     app.init_resource::<TestHooks>();
-    let spec = TestServiceSpec::new(TestServiceNames::A).is_startup(true);
-    app.add_service(spec).add_observer(
+    // NOTE: This fails with `is_startup(true)`. Probably because observers need
+    // to be instantiated before events can fire.
+    app.add_service(TEST_SERVICE_SPEC).add_observer(
         |t: Trigger<TestServiceStateChange>,
          mut r: ResMut<TestHooks>,
          mut commands: Commands| {
@@ -136,27 +136,18 @@ fn events() {
                 }
                 ServiceState::Enabled => {
                     r.enable = true;
-                    commands.disable_service(
-                        TestServiceNames::A,
-                        TEST_SERVICE_MARKER,
-                    );
+                    commands.disable_service(TEST_SERVICE);
                 }
                 ServiceState::Disabled => {
                     r.disable = true;
-                    commands.fail_service(
-                        TestServiceNames::A,
-                        TestErr::A,
-                        TEST_SERVICE_MARKER,
-                    );
+                    commands.fail_service(TEST_SERVICE, TestErr::A);
                 }
                 ServiceState::Failed(_) => r.fail = true,
                 _ => {}
             }
         },
     );
-    app.world_mut()
-        .commands()
-        .init_service(TestServiceNames::A, TEST_SERVICE_MARKER);
+    app.world_mut().commands().init_service(TEST_SERVICE);
     app.update();
     assert_eq!(
         app.world_mut().resource::<TestHooks>(),
@@ -169,27 +160,78 @@ fn events() {
     );
 }
 
-#[derive(Resource, Default)]
-struct Ran(bool);
+#[derive(Resource, Default, Debug, PartialEq)]
+struct Ran {
+    service_has_state: bool,
+    service_uninitialized: bool,
+    // service_initializing: bool,
+    service_enabled: bool,
+    service_disabled: bool,
+    service_failed: bool,
+    service_failed_with_error: bool,
+}
+
+macro_rules! check_run_condition {
+    ($app:ident, $condition:ident) => {
+        $app.add_systems(
+            Update,
+            (|mut ran: ResMut<Ran>| {
+                ran.$condition = true;
+            })
+            .run_if($condition(TEST_SERVICE)),
+        );
+    };
+}
 
 #[test]
 fn run_conditions() {
     let mut app = setup();
     app.init_resource::<Ran>();
-    app.add_service(TestServiceSpec::new(TestServiceNames::A).is_startup(true));
+    app.add_service(TEST_SERVICE_SPEC);
     app.add_systems(
         Update,
         (|mut ran: ResMut<Ran>| {
-            ran.0 = true;
+            ran.service_has_state = true;
         })
-        .run_if(service_has_state(
-            TestServiceNames::A,
-            ServiceState::Enabled,
-            TEST_SERVICE_MARKER,
-        )),
+        .run_if(service_has_state(TEST_SERVICE, ServiceState::Enabled)),
     );
+    app.add_systems(
+        Update,
+        (|mut ran: ResMut<Ran>| {
+            ran.service_failed_with_error = true;
+        })
+        .run_if(service_failed_with_error(TEST_SERVICE, TestErr::A)),
+    );
+    check_run_condition!(app, service_uninitialized);
+    // check_run_condition!(app, service_initializing);
+    check_run_condition!(app, service_enabled);
+    check_run_condition!(app, service_disabled);
+    check_run_condition!(app, service_failed);
+
     app.update();
-    assert!(app.world().resource::<Ran>().0);
+    app.world_mut().commands().init_service(TEST_SERVICE);
+    app.update();
+    app.world_mut().commands().enable_service(TEST_SERVICE);
+    app.update();
+    app.world_mut().commands().disable_service(TEST_SERVICE);
+    app.update();
+    app.world_mut()
+        .commands()
+        .fail_service(TEST_SERVICE, TestErr::A);
+    app.update();
+
+    let all_ok = Ran {
+        service_has_state: true,
+        service_uninitialized: true,
+        // TODO: This will only be called if initializing takes more than one
+        // frame! Need async init before we can test this.
+        // service_initializing: true,
+        service_enabled: true,
+        service_disabled: true,
+        service_failed: true,
+        service_failed_with_error: true,
+    };
+    assert_eq!(app.world().resource::<Ran>(), &all_ok);
 }
 
 // TODO: Dependency initialization
@@ -199,3 +241,4 @@ fn run_conditions() {
 // ------> should be configurable
 // TODO: Async initialization
 // ------> maybe do Initializing(f32) (gloss as percentage)
+// TODO: Minimize bevy dependencies (just ECS?)

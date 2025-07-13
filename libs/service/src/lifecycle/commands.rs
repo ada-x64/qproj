@@ -8,7 +8,7 @@ macro_rules! commands {
     ($(( $name:ident, $fn:ident ),)+) => {
         $(
         #[derive(Deref)]
-        pub(crate) struct $name<T, D, E>(CommandInput<T, D, E>)
+        pub(crate) struct $name<T, D, E>(ServiceHandle<T, D, E>)
         where
             T: ServiceName,
             D: ServiceData,
@@ -19,8 +19,8 @@ macro_rules! commands {
             D: ServiceData,
             E: ServiceError,
         {
-            pub fn new(name: T) -> Self {
-                Self(CommandInput::new(name))
+            pub fn new(handle: ServiceHandle<T,D,E>) -> Self {
+                Self(handle)
             }
         }
 
@@ -102,7 +102,7 @@ pub(crate) fn disable_service<T, D, E>(
     let _ = set_enabled::<T, D, E>(service, false, world);
 }
 
-pub(crate) struct FailService<T, D, E>(E, CommandInput<T, D, E>)
+pub(crate) struct FailService<T, D, E>(ServiceHandle<T, D, E>, E)
 where
     T: ServiceName,
     D: ServiceData,
@@ -113,11 +113,14 @@ where
     D: ServiceData,
     E: ServiceError,
 {
-    pub fn new(name: T, error: E) -> Self {
-        Self(error, CommandInput::new(name))
+    pub fn new(handle: ServiceHandle<T, D, E>, error: E) -> Self {
+        Self(handle, error)
     }
     pub fn name(&self) -> &T {
-        self.1.name()
+        self.0.name()
+    }
+    pub fn error(&self) -> &E {
+        &self.1
     }
 }
 pub(crate) fn fail_service<T, D, E>(
@@ -130,6 +133,6 @@ pub(crate) fn fail_service<T, D, E>(
     E: ServiceError,
 {
     debug!("Failing service {service:?}");
-    handle_error::<T, D, E>(service, world, s.0);
+    handle_error::<T, D, E>(service, world, s.error().clone());
 }
 impl_command!(FailService, fail_service);

@@ -5,32 +5,24 @@ use bevy::prelude::*;
 use crate::lifecycle::*;
 
 /// A type which can be used as the unique identifer of a service.
-/// Typically this will be a String or enum.
+/// This should be an enum, although we can't enforce that at the trait level.
+/// However, if you use the `service!` macro in this crate, it will be assumed.
 pub trait ServiceName:
     Send + Sync + Clone + PartialEq + Eq + Debug + Hash + 'static
 {
 }
-impl<T> ServiceName for T where
-    T: Send + Sync + Clone + PartialEq + Eq + Debug + Hash + 'static
-{
-}
+
 /// An arbitrary data type which can be used as extra state information for a
 /// service.
 pub trait ServiceData:
-    Clone + Debug + PartialEq + Eq + Hash + Send + Sync + Default + 'static
+    Clone + Debug + PartialEq + Default + Send + Sync + 'static
 {
 }
-impl<T> ServiceData for T where
-    T: Clone + Debug + Send + Sync + Default + PartialEq + Eq + Hash + 'static
-{
-}
+impl ServiceData for () {}
+
 /// The error type for a service.
 pub trait ServiceError:
     Error + Clone + PartialEq + Send + Sync + 'static
-{
-}
-impl<T> ServiceError for T where
-    T: Error + Clone + PartialEq + Send + Sync + 'static
 {
 }
 
@@ -53,16 +45,16 @@ impl<T: ServiceName, D: ServiceData, E: ServiceError> Service<T, D, E> {
     pub fn from_spec(spec: ServiceSpec<T, D, E>) -> Self {
         Self {
             name: spec.name,
-            data: spec.initial_data,
+            data: spec.initial_data.unwrap_or_default(),
             hooks: spec.hooks,
             state: ServiceState::default(),
         }
     }
 }
 
-/// ZST marker. Helps reduce type overhead.
-pub struct ServiceMarker<T, D, E>(
-    pub PhantomData<T>,
+/// A handle for the given service.
+pub struct ServiceHandle<T, D, E>(
+    pub T,
     pub PhantomData<D>,
     pub PhantomData<E>,
 )
@@ -70,14 +62,17 @@ where
     T: ServiceName,
     D: ServiceData,
     E: ServiceError;
-impl<T, D, E> Default for ServiceMarker<T, D, E>
+impl<T, D, E> ServiceHandle<T, D, E>
 where
     T: ServiceName,
     D: ServiceData,
     E: ServiceError,
 {
-    fn default() -> Self {
-        Self(PhantomData, PhantomData, PhantomData)
+    pub const fn new(name: T) -> Self {
+        Self(name, PhantomData, PhantomData)
+    }
+    pub const fn name(&self) -> &T {
+        &self.0
     }
 }
 
@@ -105,17 +100,17 @@ pub struct ServiceSpec<T: ServiceName, D: ServiceData, E: ServiceError> {
     pub is_startup: bool,
     /// Lifecycle hooks
     pub hooks: ServiceHooks<E>,
-    pub initial_data: D,
+    pub initial_data: Option<D>,
 }
 impl<T: ServiceName, D: ServiceData, E: ServiceError> ServiceSpec<T, D, E> {
     /// Creates a new simple service with no dependencies.
-    pub fn new(service: T) -> Self {
+    pub const fn new(name: T) -> Self {
         Self {
-            name: service,
+            name,
             deps: vec![],
             is_startup: false,
-            hooks: ServiceHooks::default(),
-            initial_data: D::default(),
+            hooks: ServiceHooks::const_default(),
+            initial_data: None, // this allows the fn to be const
         }
     }
     pub fn is_startup(self, is_startup: bool) -> Self {
@@ -126,7 +121,7 @@ impl<T: ServiceName, D: ServiceData, E: ServiceError> ServiceSpec<T, D, E> {
     }
     pub fn with_data(self, data: D) -> Self {
         Self {
-            initial_data: data,
+            initial_data: Some(data),
             ..self
         }
     }
