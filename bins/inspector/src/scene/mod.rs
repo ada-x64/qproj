@@ -24,6 +24,7 @@ impl Plugin for ScenePlugin {
             SceneSerializePlugin,
         ))
         .add_systems(Startup, |mut commands: Commands| {
+            debug!("Spawning scene root.");
             commands
                 .spawn((Name::new("Scene Root"), DynamicSceneRoot::default()));
         });

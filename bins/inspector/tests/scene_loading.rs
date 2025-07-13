@@ -12,7 +12,7 @@ use q_inspector::prelude::{
     serialize::{LoadSceneEvent, LoadStatus, SaveSceneEvent, SaveStatus},
 };
 
-use crate::Runner;
+use q_test::Runner;
 
 #[derive(Resource, Default)]
 struct SavedStructure(Option<DynamicScene>);

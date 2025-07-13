@@ -67,11 +67,12 @@ q_worldgen = { path = "libs/worldgen" }
 q_player = { path = "libs/player" }
 q_utils = { path = "libs/utils" }
 q_tasks = { path = "libs/tasks" }
+q_test = { path = "libs/test" }
+q_service = { path = "libs/service" }
 
 ## bins
 q_inspector = { path = "bins/inspector" }
 q_app = { path = "bins/app" }
-q_tests = { path = "bins/tests" }
 
 ## Profiles ###################################################################
 [profile.dev.package."*"]

@@ -5,42 +5,48 @@ use bevy::prelude::*;
 use bevy_dolly::prelude::*;
 
 mod cam;
+use crate::state::Services;
 pub use cam::*;
-use q_utils::service;
+use q_service::prelude::*;
 
-service!(InspectorCam);
-service!(InspectorCamScroll);
+#[derive(ServiceError, thiserror::Error, Debug, Clone, Copy, PartialEq)]
+pub enum InspectorCamErr {}
+
+#[derive(ServiceData, Debug, Clone, Copy, PartialEq, Default)]
+pub struct InspectorCamData {
+    can_scroll: bool,
+}
+
+service!(InspectorCam, Services, InspectorCamData, InspectorCamErr);
 
 pub struct InspectorCamPlugin;
 impl Plugin for InspectorCamPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((
-            InspectorCamServicePlugin,
-            InspectorCamScrollServicePlugin,
-        ))
-        .add_systems(
-            OnEnter(InspectorCamStates::Initializing),
-            (spawn_camera, trigger_completion).chain(),
+        app.add_service(
+            InspectorCamServiceSpec::new(Services::InspectorCam)
+                .on_init(|world| {
+                    use bevy::ecs::system::RunSystemOnce;
+                    world.run_system_once(spawn_camera);
+                    Ok(true)
+                })
+                .on_enable(|world| {
+                    world.run_system_cached(set_cam_active::<true>)
+                })
+                .on_disable(|world| {
+                    let id =
+                        world.register_system_cached(set_cam_active::<false>);
+                    world.run_system_cached(id);
+                    Ok(())
+                }),
         )
         .add_systems(
             Update,
             (Dolly::<InspectorCam>::update_active, update_camera)
-                .run_if(in_state(InspectorCamStates::Enabled)),
-        )
-        .add_systems(
-            OnEnter(InspectorCamStates::Disabled),
-            set_cam_active::<false>,
-        )
-        .add_systems(
-            OnEnter(InspectorCamStates::Enabled),
-            set_cam_active::<true>,
+                .run_if(service_enabled(INSPECTOR_CAM_SERVICE)),
         );
     }
 }
 
-fn trigger_completion(mut commands: Commands) {
-    commands.trigger(InspectorCamInitialized(Ok(true)));
-}
 pub(crate) fn spawn_camera(mut commands: Commands) {
     let transform =
         Transform::from_xyz(2., 2., 5.).looking_at(Vec3::ZERO, Vec3::Y);

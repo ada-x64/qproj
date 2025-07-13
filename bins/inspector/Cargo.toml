@@ -31,6 +31,7 @@ q_player = { workspace = true }
 q_tasks = { workspace = true }
 q_worldgen = { workspace = true }
 q_app = { workspace = true }
+q_service = { workspace = true }
 
 # others
 bevy = { workspace = true, features = ["bevy_dev_tools"] }
@@ -43,3 +44,7 @@ egui_dock = "0.16.0"
 egui-notify = "0.19.0"
 derivative = "2.2.0"
 egui-file-dialog = "0.10.0"
+thiserror= {workspace = true}
+
+[dev-dependencies]
+q_test = { workspace = true }

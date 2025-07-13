@@ -3,9 +3,7 @@
 
 use bevy::{input::mouse::MouseMotion, prelude::*};
 use bevy_dolly::prelude::*;
-use q_utils::{InspectorIgnore, ServiceStates};
-
-use crate::scene::inspector_cam::InspectorCamScrollStates;
+use q_utils::InspectorIgnore;
 
 #[derive(Component, Debug, Default)]
 pub struct InspectorCam;

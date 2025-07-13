@@ -3,13 +3,19 @@
 
 use bevy::prelude::*;
 use bevy_egui::EguiContextPass;
-use q_utils::service;
+use q_service::{
+    ServiceExt,
+    prelude::{ServiceError, ServiceName},
+    service,
+};
 
 use crate::{
     prelude::*,
     scene::{
-        gizmos::{EnableGizmos, GizmosInitialized, InitGizmos},
-        inspector_cam::{InitInspectorCam, InspectorCamStates},
+        gizmos::{GIZMOS_SERVICE, GizmosInitialized, InitGizmos},
+        inspector_cam::{
+            INSPECTOR_CAM_SERVICE, InspectorCamInitialized, InspectorCamStates,
+        },
     },
 };
 
@@ -56,22 +62,35 @@ impl InspectorStatePlugin {
     }
 }
 
-service!(GameView);
-service!(Inspector, init_inspector);
-// Wait for all subservices to initialize.
-fn init_inspector(_trigger: Trigger<InitInspector>, mut commands: Commands) {
-    commands.trigger(InitGameView);
-    commands.trigger(InitInspectorCam);
+#[derive(ServiceName, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub enum Services {
+    GameView,
+    Inspector,
+    InspectorCam,
+    Gizmos,
 }
+
+#[derive(ServiceError, thiserror::Error, Debug, PartialEq, Clone, Copy)]
+pub enum GameViewErr {}
+#[derive(ServiceError, thiserror::Error, Debug, PartialEq, Clone, Copy)]
+pub enum InspectorServiceErr {}
+
+// TODO: Specify service spec constant here.
+// Make syntax more flexible. Use key-value pairs.
+service!(GameView, Services, (), GameViewErr);
+service!(Inspector, Services, (), InspectorServiceErr);
+
 impl Plugin for InspectorStatePlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins((InspectorServicePlugin, GameViewServicePlugin))
-            .init_resource::<InspectorSettings>()
+        app.init_resource::<InspectorSettings>()
+            .add_service(GAME_VIEW_SERVICE_SPEC)
+            .add_service(INSPECTOR_SERVICE_SPEC.is_startup(true).with_deps(
+                vec![GAME_VIEW_SERVICE, INSPECTOR_CAM_SERVICE, GIZMOS_SERVICE],
+            ))
             .register_type::<InspectorSettings>()
-            .init_resource::<ServiceStatus>()
-            .register_type::<ServiceStatus>()
             .add_observer(on_gameview_initialized)
             .add_observer(on_gizmos_initialized)
+            .add_observer(on_inspector_cam_initialized)
             .add_systems(OnEnter(GameViewStates::Disabled), Self::pause_time)
             .add_systems(OnEnter(GameViewStates::Enabled), Self::unpause_time)
             .configure_sets(
@@ -103,11 +122,18 @@ fn on_gameview_initialized(
 fn on_gizmos_initialized(
     trigger: Trigger<GizmosInitialized>,
     mut services: ResMut<ServiceStatus>,
-    mut commands: Commands,
-    settings: Res<InspectorSettings>,
+    commands: Commands,
 ) {
     services.gizmos = Some(trigger.0.clone());
-    commands.trigger(EnableGizmos(settings.enable_gizmo_overlay));
+    check_if_done(services.as_ref(), commands);
+}
+
+fn on_inspector_cam_initialized(
+    trigger: Trigger<InspectorCamInitialized>,
+    mut services: ResMut<ServiceStatus>,
+    commands: Commands,
+) {
+    services.inspector_cam = Some(trigger.0.clone());
     check_if_done(services.as_ref(), commands);
 }
 
