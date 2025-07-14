@@ -4,26 +4,20 @@
 mod bundle;
 pub use bundle::*;
 
-use bevy::{ecs::system::RunSystemOnce, prelude::*};
+use bevy::prelude::*;
 use q_service::prelude::*;
 
-use crate::{
-    prelude::*,
-    services::{PlayerServiceSpec, ServiceLabel},
-};
+use crate::prelude::*;
 
+#[derive(ServiceError, Debug, Clone, thiserror::Error, PartialEq)]
+pub enum PlayerError {}
+service!(PlayerService, (), PlayerError);
 pub struct IntegrationPlugin;
+
 impl IntegrationPlugin {}
 impl Plugin for IntegrationPlugin {
     fn build(&self, app: &mut App) {
-        app.add_service(
-            PlayerServiceSpec::new(ServiceLabel::Player)
-                .is_startup(true)
-                .on_init(|world| {
-                    world.run_system_once(spawn).unwrap();
-                    Ok(true)
-                }),
-        );
+        app.add_service(PLAYER_SERVICE_SPEC.is_startup(true).on_init(spawn));
     }
 }
 
@@ -34,7 +28,7 @@ fn spawn(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-) {
+) -> Result<bool, PlayerError> {
     let pos = Vec3::ZERO;
     let capsule = meshes.add(Capsule3d::new(0.5, 1.));
     let material = materials.add(StandardMaterial::default());
@@ -44,4 +38,5 @@ fn spawn(
         material.clone(),
     ));
     commands.spawn(PlayerCamBundle::new());
+    Ok(true)
 }

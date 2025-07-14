@@ -6,11 +6,43 @@ mod driver;
 pub use bundle::*;
 pub use driver::*;
 use q_service::prelude::*;
-use tiny_bail::prelude::*;
 
-use crate::{prelude::*, services::*};
+use crate::prelude::*;
 use bevy::prelude::*;
 use bevy_dolly::prelude::*;
+
+#[derive(ServiceError, Debug, Clone, thiserror::Error, PartialEq)]
+pub enum CamError {
+    #[error("No player camera")]
+    NoCam,
+}
+
+service!(CamService, (), CamError);
+
+pub struct PlayerCamPlugin;
+impl Plugin for PlayerCamPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_service(
+            CAM_SERVICE_SPEC
+                .is_startup(true)
+                .on_enable(set_cam_active::<true>)
+                .on_disable(set_cam_active::<true>),
+        );
+        app.add_systems(
+            Update,
+            (Dolly::<PlayerCam>::update_active, update_camera)
+                .run_if(service_enabled(PLAYER_SERVICE)),
+        );
+    }
+}
+
+// enable/disable hook
+fn set_cam_active<const VAL: bool>(
+    mut cam: Single<&mut Camera, With<PlayerCam>>,
+) -> Result<(), CamError> {
+    cam.is_active = VAL;
+    Ok(())
+}
 
 pub fn update_camera(
     mut set: ParamSet<(
@@ -28,35 +60,4 @@ pub fn update_camera(
         .driver_mut::<PlayerCamDriver>()
         .set_target_position(new_tf.translation, new_tf.rotation, lookat_pos);
     **set.p2() = new_tf;
-}
-
-pub struct PlayerCamPlugin;
-impl Plugin for PlayerCamPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_service(
-            PLAYER_CAM_SERVICE_SPEC
-                .is_startup(true)
-                .on_enable(set_cam_active::<true>)
-                .on_disable(set_cam_active::<true>),
-        );
-        app.add_systems(
-            Update,
-            (Dolly::<PlayerCam>::update_active, update_camera)
-                .run_if(service_enabled(PLAYER_SERVICE)),
-        );
-    }
-}
-
-// enable/disable hook
-fn set_cam_active<const VAL: bool>(
-    world: &mut World,
-) -> Result<(), PlayerCamError> {
-    let mut cam = r!(
-        Err(PlayerCamError::NoCam),
-        world
-            .query_filtered::<&mut Camera, With<PlayerCam>>()
-            .single_mut(world)
-    );
-    cam.is_active = VAL;
-    Ok(())
 }

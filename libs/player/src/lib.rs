@@ -6,7 +6,6 @@ use bevy::prelude::*;
 pub mod cam;
 pub mod controls;
 pub mod player;
-mod services;
 
 pub mod prelude {
     pub use crate::cam::*;
