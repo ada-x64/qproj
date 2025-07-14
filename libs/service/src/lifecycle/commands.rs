@@ -1,67 +1,41 @@
 use crate::prelude::*;
 use bevy::prelude::*;
 
-macro_rules! f_def {
-    ($name:ident) => {
-        $crate::paste::paste! {
-            fn [<$name:snake:lower _service>]<T, D, E>(&mut self, handle: ServiceHandle<T, D, E>)
-                where
-                    T: ServiceLabel,
-                    D: ServiceData,
-                    E: ServiceError;
+macro_rules! command_trait {
+    ($( ($name:ident $(, $err:ident)*)$(,)?)*) => {
+        pub trait ServiceLifecycleCommands {
+            $crate::paste::paste! {
+                $(
+                    fn [<$name:snake:lower _service>]<T, D, E>(&mut self, handle: ServiceHandle<T, D, E> $(, error: $err)*)
+                        where
+                            T: ServiceLabel,
+                            D: ServiceData,
+                            E: ServiceError;
+                )*
+            }
         }
-    };
-}
-macro_rules! f_impl {
-    ($name:ident) => {
-        $crate::paste::paste! {
-            fn [<$name:snake:lower _service>]<T, D, E>(&mut self, handle: ServiceHandle<T, D, E>)
-                where
-                    T: ServiceLabel,
-                    D: ServiceData,
-                    E: ServiceError,
-            {
-                self.queue([<$name:camel Service>]::<T, D, E>::new(handle));
+        impl<'w, 's> ServiceLifecycleCommands for Commands<'w, 's> {
+            $crate::paste::paste! {
+                $(
+                    fn [<$name:snake:lower _service>]<T, D, E>(&mut self, handle: ServiceHandle<T, D, E> $(, err: $err)*)
+                        where
+                            T: ServiceLabel,
+                            D: ServiceData,
+                            E: ServiceError,
+                    {
+                        self.queue([<$name:camel Service>]::<T, D, E>::new(handle $(, err as $err)*));
+                    }
+                )*
             }
         }
     };
 }
-
-pub trait ServiceLifecycleCommands {
-    f_def! {Init}
-    f_def! {Enable}
-    f_def! {Disable}
-    fn fail_service<T, D, E>(
-        &mut self,
-        handle: ServiceHandle<T, D, E>,
-        error: E,
-    ) where
-        T: ServiceLabel,
-        D: ServiceData,
-        E: ServiceError;
-}
-impl<'w, 's> ServiceLifecycleCommands for Commands<'w, 's> {
-    f_impl!(Init);
-    f_impl!(Enable);
-    f_impl!(Disable);
-    fn fail_service<T, D, E>(
-        &mut self,
-        handle: ServiceHandle<T, D, E>,
-        error: E,
-    ) where
-        T: ServiceLabel,
-        D: ServiceData,
-        E: ServiceError,
-    {
-        self.queue(FailService::<T, D, E>::new(handle, error));
-    }
-}
+command_trait!((Init), (Enable), (Disable), (Fail, E));
 
 macro_rules! commands {
-    ($(( $name:ident, $fn:ident ),)+) => {
+    ($(( $name:ident, $fn:ident $(, $err:ident)* )$(,)?)+) => {
         $(
-        #[derive(Deref)]
-        pub(crate) struct $name<T, D, E>(ServiceHandle<T, D, E>)
+        pub(crate) struct $name<T, D, E>(ServiceHandle<T, D, E> $(, $err)*)
         where
             T: ServiceLabel,
             D: ServiceData,
@@ -72,18 +46,18 @@ macro_rules! commands {
             D: ServiceData,
             E: ServiceError,
         {
-            pub fn new(handle: ServiceHandle<T,D,E>) -> Self {
-                Self(handle)
+            pub fn new(handle: ServiceHandle<T,D,E> $(, err: $err)*) -> Self {
+                Self(handle $(, err as $err)*)
             }
         }
 
-        impl_command!($name, $fn);
+        impl_command!($name, $fn $(, $err)*);
         )+
     };
 }
 
 macro_rules! impl_command {
-    ($name:ident, $fn:ident) => {
+    ($name:ident, $fn:ident $(,$err:ident)*) => {
         impl<T, D, E> Command for $name<T, D, E>
         where
             T: ServiceLabel,
@@ -91,13 +65,12 @@ macro_rules! impl_command {
             E: ServiceError,
         {
             fn apply(self, world: &mut World) {
-                // TODO: This is causing an error during testing.
-                // Can't call a hook within a hook, because the
-                // resource is being taken away!
-                // Would be better to use an observer / events, probably.
+                if world.get_resource::<Service<T,D,E>>().is_none() {
+                    return warn!("Tried to get missing service. Did you try calling a hook within a hook? If so, prefer reacting to service state changes.");
+                }
                 world.resource_scope(
                     |world, mut service: Mut<Service<T, D, E>>| {
-                        let _ = service.$fn(world);
+                        let _ = service.$fn(world, $(self.1 as $err)*);
                     },
                 )
             }
@@ -109,31 +82,5 @@ commands!(
     (InitService, on_init),
     (EnableService, on_enable),
     (DisableService, on_disable),
+    (FailService, on_failure, E)
 );
-pub(crate) struct FailService<T, D, E>(ServiceHandle<T, D, E>, E)
-where
-    T: ServiceLabel,
-    D: ServiceData,
-    E: ServiceError;
-impl<T, D, E> FailService<T, D, E>
-where
-    T: ServiceLabel,
-    D: ServiceData,
-    E: ServiceError,
-{
-    pub fn new(handle: ServiceHandle<T, D, E>, error: E) -> Self {
-        Self(handle, error)
-    }
-}
-impl<T, D, E> Command for FailService<T, D, E>
-where
-    T: ServiceLabel,
-    D: ServiceData,
-    E: ServiceError,
-{
-    fn apply(self, world: &mut World) {
-        world.resource_scope(|world, mut service: Mut<Service<T, D, E>>| {
-            service.on_failure(world, self.1);
-        })
-    }
-}

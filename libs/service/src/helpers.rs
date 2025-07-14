@@ -14,14 +14,20 @@ macro_rules! service {
                 use super::*;
                 use $crate::prelude::*;
                 use std::marker::PhantomData;
+                /// Label for the state. Works as part of a unique identifier.
                 #[derive(ServiceLabel, PartialEq, Eq, Debug, Copy, Clone, Hash)]
                 pub struct [<$t Label>];
                 pub type [<$t Spec>]= ServiceSpec<[<$t Label>], $d, $e>;
                 pub type [<$t>] = Service<[<$t Label>], $d, $e>;
                 pub type [<$t Hooks>] = ServiceHooks<$e>;
-                pub type [<$t StateChange>] = ServiceStateChange<[<$t Label>], $e>;
-                pub type [<Enter $t State>] = EnterServiceState<[<$t Label>], $e>;
-                pub type [<Exit $t State>] = ExitServiceState<[<$t Label>], $e>;
+                /// Track service state changes. Inner value is a tuple, (previous_state, current_state).
+                pub type [<$t StateChange>] = ServiceStateChange<[<$t Label>], $d, $e>;
+                pub type [<Enter $t State>] = EnterServiceState<[<$t Label>], $d, $e>;
+                pub type [<Exit $t State>] = ExitServiceState<[<$t Label>], $d, $e>;
+                pub type [<$t Enabled>] = ServiceEnabled<[<$t Label>], $d, $e>;
+                pub type [<$t Disabled>] = ServiceDisabled<[<$t Label>], $d, $e>;
+                pub type [<$t Initialized>] = ServiceInitialized<[<$t Label>], $d, $e>;
+                pub type [<$t Failed>] = ServiceFailed<[<$t Label>], $d, $e>;
                 pub const [<$t:snake:upper >]: ServiceHandle<[<$t Label>], $d, $e> = ServiceHandle::<[<$t Label>], $d, $e>::const_default();
                 pub const [<$t:snake:upper _SPEC>]: ServiceSpec<[<$t Label>], $d, $e> = ServiceSpec::<[<$t Label>], $d, $e>::const_default();
             }

@@ -1,6 +1,29 @@
 use crate::prelude::*;
 use bevy::prelude::*;
 
+macro_rules! events {
+    ($app:ident, $($name:ident $(,)?)* ) => {
+        $(
+            $app.add_event::<$name<T, D, E>>();
+        )*
+    }
+}
+
+macro_rules! observers {
+    ($app:ident, $( ( $name:ident $(, $err:ty )* )$(,)?)*) => {
+        $(
+            $crate::paste::paste! {
+                $app.add_observer(
+                    |trigger: Trigger<$name<T, D, E>>,
+                     mut commands: Commands| {
+                         commands.[<$name:snake:lower>](trigger.event().0.clone(), $(trigger.event().1.clone() as $err)*);
+                    },
+                );
+            }
+        )*
+    };
+}
+
 pub trait ServiceExt<T: ServiceLabel, D: ServiceData, E: ServiceError> {
     fn add_service(&mut self, spec: ServiceSpec<T, D, E>) -> &mut Self;
 }
@@ -10,7 +33,26 @@ impl<T: ServiceLabel, D: ServiceData, E: ServiceError> ServiceExt<T, D, E>
     fn add_service(&mut self, spec: ServiceSpec<T, D, E>) -> &mut Self {
         debug!("Adding service {}", std::any::type_name::<T>());
 
-        events::<T, D, E>(self);
+        use crate::lifecycle::events::{
+            DisableService, EnableService, FailService, InitService,
+        };
+
+        events!(
+            self,
+            EnterServiceState,
+            ExitServiceState,
+            EnableService,
+            DisableService,
+            InitService,
+            FailService,
+        );
+        observers!(
+            self,
+            (EnableService),
+            (DisableService),
+            (InitService),
+            (FailService, E),
+        );
 
         let world = self.world_mut();
         if world.get_resource::<Service<T, D, E>>().is_some() {
@@ -33,47 +75,4 @@ impl<T: ServiceLabel, D: ServiceData, E: ServiceError> ServiceExt<T, D, E>
         }
         self
     }
-}
-
-fn events<T, D, E>(app: &mut App) -> &mut App
-where
-    T: ServiceLabel,
-    D: ServiceData,
-    E: ServiceError,
-{
-    use crate::lifecycle::events::{
-        DisableService, EnableService, FailService, InitService,
-    };
-    app.add_event::<ServiceStateChange<T, E>>()
-        .add_event::<EnterServiceState<T, E>>()
-        .add_event::<ExitServiceState<T, E>>()
-        .add_event::<EnableService<T, D, E>>()
-        .add_event::<DisableService<T, D, E>>()
-        .add_event::<InitService<T, D, E>>()
-        .add_event::<FailService<T, D, E>>()
-        .add_observer(
-            |trigger: Trigger<EnableService<T, D, E>>,
-             mut commands: Commands| {
-                commands.enable_service(trigger.event().0.clone());
-            },
-        )
-        .add_observer(
-            |trigger: Trigger<DisableService<T, D, E>>,
-             mut commands: Commands| {
-                commands.disable_service(trigger.event().0.clone());
-            },
-        )
-        .add_observer(
-            |trigger: Trigger<InitService<T, D, E>>, mut commands: Commands| {
-                commands.init_service(trigger.event().0.clone());
-            },
-        )
-        .add_observer(
-            |trigger: Trigger<FailService<T, D, E>>, mut commands: Commands| {
-                commands.fail_service(
-                    trigger.event().0.clone(),
-                    trigger.event().1.clone(),
-                );
-            },
-        )
 }

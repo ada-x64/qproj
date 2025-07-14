@@ -119,7 +119,7 @@ fn events() {
         |t: Trigger<TestServiceStateChange>,
          mut r: ResMut<TestHooks>,
          mut commands: Commands| {
-            match t.event().new_state {
+            match t.event().1 {
                 ServiceState::Initializing => {
                     r.init = true;
                 }

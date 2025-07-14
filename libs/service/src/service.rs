@@ -108,11 +108,11 @@ impl<T: ServiceLabel, D: ServiceData, E: ServiceError> Service<T, D, E> {
     pub fn set_state(&mut self, world: &mut World, state: ServiceState<E>) {
         let old_state = self.state.clone();
         self.state = state.clone();
-        world.trigger(ServiceStateChange::<T, E>::new(
+        world.trigger(ServiceStateChange::<T, D, E>::new((
             old_state.clone(),
             state.clone(),
-        ));
-        world.trigger(EnterServiceState::<T, E>::new(state));
-        world.trigger(ExitServiceState::<T, E>::new(old_state));
+        )));
+        world.trigger(EnterServiceState::<T, D, E>::new(state));
+        world.trigger(ExitServiceState::<T, D, E>::new(old_state));
     }
 }

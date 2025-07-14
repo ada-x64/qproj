@@ -1,97 +1,86 @@
-use std::marker::PhantomData;
-
 use crate::prelude::*;
 use bevy::prelude::*;
 
-#[derive(Event)]
-pub struct InitService<T, D, E>(pub ServiceHandle<T, D, E>)
-where
-    T: ServiceLabel,
-    D: ServiceData,
-    E: ServiceError;
-#[derive(Event)]
-pub struct DisableService<T, D, E>(pub ServiceHandle<T, D, E>)
-where
-    T: ServiceLabel,
-    D: ServiceData,
-    E: ServiceError;
-#[derive(Event)]
-pub struct EnableService<T, D, E>(pub ServiceHandle<T, D, E>)
-where
-    T: ServiceLabel,
-    D: ServiceData,
-    E: ServiceError;
-#[derive(Event)]
-pub struct FailService<T, D, E>(pub ServiceHandle<T, D, E>, pub E)
-where
-    T: ServiceLabel,
-    D: ServiceData,
-    E: ServiceError;
-
-#[derive(Event)]
-pub struct ServiceStateChange<T, E>
-where
-    T: ServiceLabel,
-    E: ServiceError,
-{
-    pub new_state: ServiceState<E>,
-    pub old_state: ServiceState<E>,
-    label: PhantomData<T>,
-}
-impl<T, E> ServiceStateChange<T, E>
-where
-    T: ServiceLabel,
-    E: ServiceError,
-{
-    pub fn new(old_state: ServiceState<E>, new_state: ServiceState<E>) -> Self {
-        Self {
-            old_state,
-            new_state,
-            label: PhantomData,
+macro_rules! trigger_hook_events {
+    ($(($name:ident$(, $err:ident)*)$(,)?)*) => {
+        $crate::paste::paste! {
+            $(
+                #[derive(Event)]
+                pub struct [<$name Service>]<T, D, E>(pub ServiceHandle<T, D, E>, $(pub $err)*)
+                where
+                    T: ServiceLabel,
+                    D: ServiceData,
+                    E: ServiceError;
+            )*
         }
     }
 }
+trigger_hook_events!((Enable), (Disable), (Init), (Fail, E));
 
-#[derive(Event)]
-pub struct EnterServiceState<T, E>
-where
-    T: ServiceLabel,
-    E: ServiceError,
-{
-    pub new_state: ServiceState<E>,
-    label: PhantomData<T>,
+macro_rules! state_change {
+    ( $( ($name:ident, $($ss:ty)+)$(,)?)* ) => {
+        $(
+            #[derive(Event, Deref)]
+            pub struct $name<T, D, E>(
+                #[deref]
+                $($ss)*,
+                ServiceHandle<T,D,E>
+            )
+            where
+                T: ServiceLabel,
+                D: ServiceData,
+                E: ServiceError;
+
+            impl<T, D, E> $name<T, D, E>
+            where
+                T: ServiceLabel,
+                D: ServiceData,
+                E: ServiceError,
+            {
+                pub fn new(val: $($ss)*) -> Self {
+                    Self(val, ServiceHandle::const_default())
+                }
+                pub fn new_with_handle(handle: ServiceHandle<T,D,E>, val: $($ss)*) -> Self {
+                    Self(val, handle)
+                }
+            }
+        )*
+    };
 }
-impl<T, E> EnterServiceState<T, E>
-where
-    T: ServiceLabel,
-    E: ServiceError,
-{
-    pub fn new(new_state: ServiceState<E>) -> Self {
-        Self {
-            new_state,
-            label: PhantomData,
+state_change!(
+    (ServiceStateChange, (ServiceState<E>, ServiceState<E>)),
+    (ExitServiceState, ServiceState<E>),
+    (EnterServiceState, ServiceState<E>),
+);
+
+macro_rules! enter_state_aliases {
+    ($(($name:ident$(, $err_ty:ident )*)$(,)?)*) => {
+        $crate::paste::paste! {
+            $(
+                #[allow(dead_code, reason = "macro gen")]
+                #[derive(Event)]
+                pub struct [<Service $name>]<T, D, E>
+                where
+                    T: ServiceLabel,
+                    D: ServiceData,
+                    E: ServiceError,
+                {
+                    _handle: ServiceHandle<T, D, E>,
+                    $(err: $err_ty)*
+                }
+                impl<T, D, E> [<Service $name>]<T, D, E>
+                where
+                    T: ServiceLabel,
+                    D: ServiceData,
+                    E: ServiceError,
+                {
+                    pub fn new(_handle: ServiceHandle<T, D, E>, $(err: $err_ty)*) -> Self {
+                        Self { _handle, $(err: err as $err_ty)* }
+                    }
+                }
+            )*
         }
-    }
+    };
 }
 
-#[derive(Event)]
-pub struct ExitServiceState<T, E>
-where
-    T: ServiceLabel,
-    E: ServiceError,
-{
-    pub old_state: ServiceState<E>,
-    label: PhantomData<T>,
-}
-impl<T, E> ExitServiceState<T, E>
-where
-    T: ServiceLabel,
-    E: ServiceError,
-{
-    pub fn new(old_state: ServiceState<E>) -> Self {
-        Self {
-            old_state,
-            label: PhantomData,
-        }
-    }
-}
+enter_state_aliases!((Enabled), (Disabled), (Initialized), (Failed, E));
