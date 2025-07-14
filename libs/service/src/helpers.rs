@@ -3,28 +3,29 @@ use bevy::prelude::*;
 
 /// Creates aliases for the commonly used service types.
 /// Parameters:
-/// $name: The name of the service. We'll append 'Service' for you.
-/// $t: The label type.
+/// $t: The service's name.
 /// $d: The data type.
 /// $e: The error type.
 #[macro_export]
 macro_rules! service {
-    ($name:ident, $t:ty, $d:ty, $e:ty) => {
+    ($t:ty, $d:ty, $e:ty) => {
         $crate::paste::paste! {
-            mod [<$name:lower:snake _alias_impl>] {
+            mod [<$t:lower:snake _alias_impl>] {
                 use super::*;
                 use $crate::prelude::*;
                 use std::marker::PhantomData;
-                pub type [<$name ServiceSpec>]= ServiceSpec<$t, $d, $e>;
-                pub type [<$name Service>] = Service<$t, $d, $e>;
-                pub type [<$name ServiceHooks>] = ServiceHooks<$e>;
-                pub type [<$name ServiceStateChange>] = ServiceStateChange<$t, $e>;
-                pub type [<Enter $name ServiceState>] = EnterServiceState<$t, $e>;
-                pub type [<Exit $name ServiceState>] = ExitServiceState<$t, $e>;
-                pub const [<$name:snake:upper _SERVICE>]: ServiceHandle<$t, $d, $e> = ServiceHandle::<$t, $d, $e>::const_default();
-                pub const [<$name:snake:upper _SERVICE_SPEC>]: ServiceSpec<$t, $d, $e> = ServiceSpec::<$t, $d, $e>::const_default();
+                #[derive(ServiceLabel, PartialEq, Eq, Debug, Copy, Clone, Hash)]
+                pub struct [<$t Label>];
+                pub type [<$t Spec>]= ServiceSpec<[<$t Label>], $d, $e>;
+                pub type [<$t>] = Service<[<$t Label>], $d, $e>;
+                pub type [<$t Hooks>] = ServiceHooks<$e>;
+                pub type [<$t StateChange>] = ServiceStateChange<[<$t Label>], $e>;
+                pub type [<Enter $t State>] = EnterServiceState<[<$t Label>], $e>;
+                pub type [<Exit $t State>] = ExitServiceState<[<$t Label>], $e>;
+                pub const [<$t:snake:upper >]: ServiceHandle<[<$t Label>], $d, $e> = ServiceHandle::<[<$t Label>], $d, $e>::const_default();
+                pub const [<$t:snake:upper _SPEC>]: ServiceSpec<[<$t Label>], $d, $e> = ServiceSpec::<[<$t Label>], $d, $e>::const_default();
             }
-            pub use [< $name:lower _alias_impl >]::*;
+            pub use [< $t:lower _alias_impl >]::*;
         }
     };
 }

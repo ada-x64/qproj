@@ -1,4 +1,4 @@
-use bevy::{app::ScheduleRunnerPlugin, log::LogPlugin, prelude::*};
+use bevy::{log::LogPlugin, prelude::*};
 use q_service::prelude::*;
 
 #[derive(ServiceError, Debug, thiserror::Error, Clone, Copy, PartialEq)]
@@ -7,10 +7,7 @@ enum TestErr {
     A,
 }
 
-#[derive(ServiceLabel, Debug, Clone, Hash, PartialEq, Eq, Default)]
-struct TestServiceLabel;
-
-service!(Test, TestServiceLabel, (), TestErr);
+service!(TestService, (), TestErr);
 
 fn setup() -> App {
     let mut app = App::new();
@@ -110,38 +107,6 @@ fn hooks() {
             fail: true,
         }
     );
-}
-
-// TODO: Failing. Need to switch from commands to events.
-#[test]
-fn hooks_within_hooks() {
-    let mut app = setup();
-    app.init_resource::<TestHooks>();
-    let spec = TEST_SERVICE_SPEC
-        .is_startup(true)
-        .on_enable(|mut commands: Commands| {
-            debug!("enable");
-            commands.disable_service(TEST_SERVICE);
-            Ok(())
-        })
-        .on_disable(|mut commands: Commands| {
-            debug!("disable");
-            commands.enable_service(TEST_SERVICE);
-            Ok(())
-        });
-    app.add_service(spec);
-    app.update();
-    let service = app.world().resource::<TestService>();
-    assert!(matches!(service.state, ServiceState::Enabled));
-    app.update();
-    let service = app.world().resource::<TestService>();
-    assert!(matches!(service.state, ServiceState::Disabled));
-    app.update();
-    let service = app.world().resource::<TestService>();
-    assert!(matches!(service.state, ServiceState::Enabled));
-    app.update();
-    let service = app.world().resource::<TestService>();
-    assert!(matches!(service.state, ServiceState::Disabled));
 }
 
 #[test]

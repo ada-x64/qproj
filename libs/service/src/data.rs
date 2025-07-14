@@ -27,7 +27,7 @@ pub trait ServiceError:
 }
 
 /// A handle for the given service.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct ServiceHandle<T, D, E>(
     pub PhantomData<T>,
     pub PhantomData<D>,

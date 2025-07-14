@@ -4,6 +4,31 @@ use crate::prelude::*;
 use bevy::prelude::*;
 
 #[derive(Event)]
+pub struct InitService<T, D, E>(pub ServiceHandle<T, D, E>)
+where
+    T: ServiceLabel,
+    D: ServiceData,
+    E: ServiceError;
+#[derive(Event)]
+pub struct DisableService<T, D, E>(pub ServiceHandle<T, D, E>)
+where
+    T: ServiceLabel,
+    D: ServiceData,
+    E: ServiceError;
+#[derive(Event)]
+pub struct EnableService<T, D, E>(pub ServiceHandle<T, D, E>)
+where
+    T: ServiceLabel,
+    D: ServiceData,
+    E: ServiceError;
+#[derive(Event)]
+pub struct FailService<T, D, E>(pub ServiceHandle<T, D, E>, pub E)
+where
+    T: ServiceLabel,
+    D: ServiceData,
+    E: ServiceError;
+
+#[derive(Event)]
 pub struct ServiceStateChange<T, E>
 where
     T: ServiceLabel,

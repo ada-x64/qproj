@@ -9,9 +9,9 @@ impl<T: ServiceLabel, D: ServiceData, E: ServiceError> ServiceExt<T, D, E>
 {
     fn add_service(&mut self, spec: ServiceSpec<T, D, E>) -> &mut Self {
         debug!("Adding service {}", std::any::type_name::<T>());
-        self.add_event::<ServiceStateChange<T, E>>();
-        self.add_event::<EnterServiceState<T, E>>();
-        self.add_event::<ExitServiceState<T, E>>();
+
+        events::<T, D, E>(self);
+
         let world = self.world_mut();
         if world.get_resource::<Service<T, D, E>>().is_some() {
             warn!(
@@ -33,4 +33,47 @@ impl<T: ServiceLabel, D: ServiceData, E: ServiceError> ServiceExt<T, D, E>
         }
         self
     }
+}
+
+fn events<T, D, E>(app: &mut App) -> &mut App
+where
+    T: ServiceLabel,
+    D: ServiceData,
+    E: ServiceError,
+{
+    use crate::lifecycle::events::{
+        DisableService, EnableService, FailService, InitService,
+    };
+    app.add_event::<ServiceStateChange<T, E>>()
+        .add_event::<EnterServiceState<T, E>>()
+        .add_event::<ExitServiceState<T, E>>()
+        .add_event::<EnableService<T, D, E>>()
+        .add_event::<DisableService<T, D, E>>()
+        .add_event::<InitService<T, D, E>>()
+        .add_event::<FailService<T, D, E>>()
+        .add_observer(
+            |trigger: Trigger<EnableService<T, D, E>>,
+             mut commands: Commands| {
+                commands.enable_service(trigger.event().0.clone());
+            },
+        )
+        .add_observer(
+            |trigger: Trigger<DisableService<T, D, E>>,
+             mut commands: Commands| {
+                commands.disable_service(trigger.event().0.clone());
+            },
+        )
+        .add_observer(
+            |trigger: Trigger<InitService<T, D, E>>, mut commands: Commands| {
+                commands.init_service(trigger.event().0.clone());
+            },
+        )
+        .add_observer(
+            |trigger: Trigger<FailService<T, D, E>>, mut commands: Commands| {
+                commands.fail_service(
+                    trigger.event().0.clone(),
+                    trigger.event().1.clone(),
+                );
+            },
+        )
 }
