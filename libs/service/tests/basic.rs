@@ -1,5 +1,5 @@
-use bevy::{log::LogPlugin, prelude::*};
-use q_service::{helpers::service_has_state, prelude::*};
+use bevy::{app::ScheduleRunnerPlugin, log::LogPlugin, prelude::*};
+use q_service::prelude::*;
 
 #[derive(ServiceError, Debug, thiserror::Error, Clone, Copy, PartialEq)]
 enum TestErr {
@@ -7,12 +7,10 @@ enum TestErr {
     A,
 }
 
-#[derive(ServiceName, Debug, Clone, Hash, PartialEq, Eq)]
-enum TestServiceNames {
-    Test,
-}
+#[derive(ServiceLabel, Debug, Clone, Hash, PartialEq, Eq, Default)]
+struct TestServiceLabel;
 
-service!(Test, TestServiceNames, (), TestErr);
+service!(Test, TestServiceLabel, (), TestErr);
 
 fn setup() -> App {
     let mut app = App::new();
@@ -22,7 +20,9 @@ fn setup() -> App {
             filter: "debug".into(),
             ..Default::default()
         },
-    ));
+    ))
+    .add_systems(Startup, || debug!("STARTUP"))
+    .add_systems(Update, || debug!("UPDATE"));
     app
 }
 
@@ -32,31 +32,21 @@ fn simple() {
     app.add_service(TEST_SERVICE_SPEC);
     app.update();
     let world = app.world_mut();
-    let mut services = world.query::<&TestService>();
-    let s = services
-        .iter(world)
-        .find(|s| s.name == TestServiceNames::Test)
-        .unwrap();
-    assert_eq!(s.name, TestServiceNames::Test);
-    assert_eq!(s.hooks, TestServiceHooks::default());
+    let s = world.resource_mut::<TestService>();
     assert_eq!(s.state, ServiceState::Uninitialized)
 }
 
 #[test]
 fn hook_failure() {
     let mut app = setup();
-    app.add_service(
-        TEST_SERVICE_SPEC
-            .is_startup(true)
-            .on_init(|_| Err(TestErr::A)),
-    );
+    app.add_service(TEST_SERVICE_SPEC.is_startup(true).on_init(|| {
+        info!("In hook");
+        Err(TestErr::A)
+    }));
+    app.update();
     let world = app.world_mut();
-    let mut services = world.query::<&TestService>();
-    let s = services
-        .iter(world)
-        .find(|s| s.name == TestServiceNames::Test)
-        .unwrap();
-    assert_eq!(s.state, ServiceState::Failed(TestErr::A));
+    let service = world.resource_mut::<TestService>();
+    assert_eq!(service.state, ServiceState::Failed(TestErr::A));
 }
 
 #[test]
@@ -67,12 +57,8 @@ fn manual_init() {
     app.world_mut().commands().init_service(TEST_SERVICE);
     app.update();
     let world = app.world_mut();
-    let mut services = world.query::<&TestService>();
-    let s = services
-        .iter(world)
-        .find(|s| s.name == TestServiceNames::Test)
-        .unwrap();
-    assert_eq!(s.state, ServiceState::Enabled);
+    let service = world.resource_mut::<TestService>();
+    assert_eq!(service.state, ServiceState::Enabled);
 }
 
 #[derive(Resource, Debug, Default, PartialEq)]
@@ -83,32 +69,38 @@ pub struct TestHooks {
     fail: bool,
 }
 
-fn run_all_hooks() -> TestServiceSpec {
-    TEST_SERVICE_SPEC
-        .is_startup(true)
-        .on_init(|world| {
-            world.resource_mut::<TestHooks>().init = true;
-            Ok(true)
-        })
-        .on_enable(|world| {
-            world.resource_mut::<TestHooks>().enable = true;
-            world.commands().disable_service(TEST_SERVICE);
-            Ok(())
-        })
-        .on_disable(|world| {
-            world.resource_mut::<TestHooks>().disable = true;
-            Err(TestErr::A)
-        })
-        .on_failure(|_err, world| {
-            world.resource_mut::<TestHooks>().fail = true;
-        })
-}
 #[test]
 fn hooks() {
     let mut app = setup();
     app.init_resource::<TestHooks>();
-    app.add_service(run_all_hooks());
+    let spec = TEST_SERVICE_SPEC
+        .is_startup(true)
+        .on_init(|mut hooks_ran: ResMut<TestHooks>| {
+            debug!("init");
+            hooks_ran.init = true;
+            Ok(true)
+        })
+        .on_enable(|mut hooks_ran: ResMut<TestHooks>| {
+            debug!("enable");
+            hooks_ran.enable = true;
+            Ok(())
+        })
+        .on_disable(|mut hooks_ran: ResMut<TestHooks>| {
+            debug!("disable");
+            hooks_ran.disable = true;
+            Err(TestErr::A)
+        })
+        .on_failure(|_err: In<TestErr>, mut hooks_ran: ResMut<TestHooks>| {
+            debug!("failure");
+            hooks_ran.fail = true;
+        });
+    println!("{spec:#?}");
+    app.add_service(spec);
     app.update();
+    let world = app.world_mut();
+    world.resource_scope::<TestService, ()>(|world, mut r| {
+        let _ = r.on_disable(world);
+    });
     assert_eq!(
         app.world_mut().resource::<TestHooks>(),
         &TestHooks {
@@ -118,6 +110,38 @@ fn hooks() {
             fail: true,
         }
     );
+}
+
+// TODO: Failing. Need to switch from commands to events.
+#[test]
+fn hooks_within_hooks() {
+    let mut app = setup();
+    app.init_resource::<TestHooks>();
+    let spec = TEST_SERVICE_SPEC
+        .is_startup(true)
+        .on_enable(|mut commands: Commands| {
+            debug!("enable");
+            commands.disable_service(TEST_SERVICE);
+            Ok(())
+        })
+        .on_disable(|mut commands: Commands| {
+            debug!("disable");
+            commands.enable_service(TEST_SERVICE);
+            Ok(())
+        });
+    app.add_service(spec);
+    app.update();
+    let service = app.world().resource::<TestService>();
+    assert!(matches!(service.state, ServiceState::Enabled));
+    app.update();
+    let service = app.world().resource::<TestService>();
+    assert!(matches!(service.state, ServiceState::Disabled));
+    app.update();
+    let service = app.world().resource::<TestService>();
+    assert!(matches!(service.state, ServiceState::Enabled));
+    app.update();
+    let service = app.world().resource::<TestService>();
+    assert!(matches!(service.state, ServiceState::Disabled));
 }
 
 #[test]

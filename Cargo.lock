@@ -4747,9 +4747,11 @@ name = "q_service"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "derivative",
  "paste",
  "q_service_macros",
  "thiserror 2.0.12",
+ "variadics_please",
 ]
 
 [[package]]

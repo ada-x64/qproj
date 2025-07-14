@@ -9,7 +9,7 @@ use q_service::prelude::*;
 
 use crate::{
     prelude::*,
-    services::{PlayerServiceSpec, ServiceNames},
+    services::{PlayerServiceSpec, ServiceLabel},
 };
 
 pub struct IntegrationPlugin;
@@ -17,7 +17,7 @@ impl IntegrationPlugin {}
 impl Plugin for IntegrationPlugin {
     fn build(&self, app: &mut App) {
         app.add_service(
-            PlayerServiceSpec::new(ServiceNames::Player)
+            PlayerServiceSpec::new(ServiceLabel::Player)
                 .is_startup(true)
                 .on_init(|world| {
                     world.run_system_once(spawn).unwrap();

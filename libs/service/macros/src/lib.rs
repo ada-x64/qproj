@@ -2,7 +2,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::{DeriveInput, parse_macro_input, parse_quote};
 
-#[proc_macro_derive(ServiceName)]
+#[proc_macro_derive(ServiceLabel)]
 pub fn derive_service_name(input: TokenStream) -> TokenStream {
     let mut ast = parse_macro_input!(input as DeriveInput);
     ast.generics
@@ -17,7 +17,7 @@ pub fn derive_service_name(input: TokenStream) -> TokenStream {
         &ast.generics.split_for_impl();
 
     TokenStream::from(quote! {
-        impl #impl_generics q_service::prelude::ServiceName for #struct_name #type_generics #where_clause {}
+        impl #impl_generics q_service::prelude::ServiceLabel for #struct_name #type_generics #where_clause {}
     })
 }
 

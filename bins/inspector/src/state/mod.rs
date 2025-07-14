@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use bevy_egui::EguiContextPass;
 use q_service::{
     ServiceExt,
-    prelude::{ServiceError, ServiceName},
+    prelude::{ServiceError, ServiceLabel},
     service,
 };
 
@@ -62,7 +62,7 @@ impl InspectorStatePlugin {
     }
 }
 
-#[derive(ServiceName, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(ServiceLabel, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Services {
     GameView,
     Inspector,

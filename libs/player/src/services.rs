@@ -1,7 +1,7 @@
 use q_service::prelude::*;
 
-#[derive(ServiceName, Debug, PartialEq, Eq, Hash, Clone)]
-pub enum ServiceNames {
+#[derive(ServiceLabel, Debug, PartialEq, Eq, Hash, Clone)]
+pub enum ServiceLabel {
     PlayerCam,
     Player,
 }
@@ -14,5 +14,5 @@ pub enum PlayerCamError {
     NoCam,
 }
 
-service!(Player, ServiceNames, (), PlayerError);
-service!(PlayerCam, ServiceNames, (), PlayerCamError);
+service!(Player, ServiceLabel, (), PlayerError);
+service!(PlayerCam, ServiceLabel, (), PlayerCamError);

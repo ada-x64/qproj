@@ -23,8 +23,10 @@ inspector = []                 # q_inspector
 
 [dependencies]
 bevy = { workspace = true }
+derivative = "2.2.0"
 paste = "1.0.15"
 q_service_macros = { path = "./macros/" }
+variadics_please = "1.1.0"
 
 [dev-dependencies]
 thiserror = "2.0.12"
