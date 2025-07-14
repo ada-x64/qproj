@@ -3,6 +3,7 @@
 
 mod app;
 mod data;
+mod graph;
 mod helpers;
 mod lifecycle;
 mod service;

@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{graph::DependencyGraph, prelude::*};
 use bevy::prelude::*;
 
 macro_rules! events {
@@ -55,6 +55,10 @@ impl<T: ServiceLabel, D: ServiceData, E: ServiceError> ServiceExt<T, D, E>
         );
 
         let world = self.world_mut();
+
+        if world.get_resource::<DependencyGraph>().is_none() {
+            world.init_resource::<DependencyGraph>();
+        }
         if world.get_resource::<Service<T, D, E>>().is_some() {
             warn!(
                 "Tried to add already existing service {:?}",
@@ -63,6 +67,15 @@ impl<T: ServiceLabel, D: ServiceData, E: ServiceError> ServiceExt<T, D, E>
             return self;
         }
         let is_startup = spec.is_startup;
+        if let Err(e) = world
+            .resource_mut::<DependencyGraph>()
+            .add_service_from_spec(
+                ServiceHandle::<T, D, E>::const_default(),
+                spec.deps.clone(),
+            )
+        {
+            panic!("{e}");
+        }
         let service = Service::from_spec(spec);
         world.insert_resource(service);
         if is_startup {

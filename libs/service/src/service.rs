@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use crate::prelude::*;
 use bevy::prelude::*;
 
@@ -12,7 +10,7 @@ pub struct Service<T: ServiceLabel, D: ServiceData, E: ServiceError> {
     pub hooks: ServiceHooks<E>,
     /// The current state of the service.
     pub state: ServiceState<E>,
-    label: PhantomData<T>,
+    handle: ServiceHandle<T, D, E>,
 }
 impl<T: ServiceLabel, D: ServiceData, E: ServiceError> Service<T, D, E> {
     pub fn from_spec(spec: ServiceSpec<T, D, E>) -> Self {
@@ -25,7 +23,7 @@ impl<T: ServiceLabel, D: ServiceData, E: ServiceError> Service<T, D, E> {
                 on_disable: spec.on_disable.unwrap_or_default(),
                 on_failure: spec.on_failure.unwrap_or_default(),
             },
-            label: PhantomData,
+            handle: ServiceHandle::const_default(),
         }
     }
 
@@ -101,7 +99,10 @@ impl<T: ServiceLabel, D: ServiceData, E: ServiceError> Service<T, D, E> {
         self.hooks
             .on_failure
             .run_without_applying_deferred(error.clone(), world);
-        self.set_state(world, ServiceState::Failed(error));
+        self.set_state(
+            world,
+            ServiceState::Failed(ServiceErrorKind::Own(error)),
+        );
         self.hooks.on_failure.apply_deferred(world);
     }
 

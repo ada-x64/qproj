@@ -223,6 +223,24 @@ fn run_conditions() {
     assert_eq!(app.world().resource::<Ran>(), &all_ok);
 }
 
+service!(TestService2, (), TestErr);
+#[test]
+#[should_panic]
+fn deps_fail_on_cycle() {
+    let mut app = setup();
+    app.add_service(
+        TEST_SERVICE_SPEC
+            .is_startup(true)
+            .with_deps(vec![TEST_SERVICE2]),
+    )
+    .add_service(
+        TEST_SERVICE2_SPEC
+            .is_startup(true)
+            .with_deps(vec![TEST_SERVICE]),
+    );
+    app.update();
+}
+
 // TODO: Dependency initialization
 // TODO: Implement DAG for deps
 // TODO: Dependency error propagation

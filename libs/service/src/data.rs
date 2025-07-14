@@ -1,4 +1,6 @@
-use std::{error::Error, fmt::Debug, hash::Hash, marker::PhantomData};
+use std::{
+    any::TypeId, error::Error, fmt::Debug, hash::Hash, marker::PhantomData,
+};
 
 /// A type which can be used as the unique identifer of a service.
 /// Note that this _must be unique,_ otherwise instantiating a service with this
@@ -26,6 +28,12 @@ pub trait ServiceError:
 {
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ServiceErrorKind<E> {
+    Own(E),
+    Dependency(TypeId),
+}
+
 /// A handle for the given service.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct ServiceHandle<T, D, E>(
@@ -48,6 +56,16 @@ where
     }
 }
 
+/// Automatically derived for service handles.
+pub trait IsServiceHandle {}
+impl<T, D, E> IsServiceHandle for ServiceHandle<T, D, E>
+where
+    T: ServiceLabel,
+    D: ServiceData,
+    E: ServiceError,
+{
+}
+
 /// Tracks the current state of the service.
 /// This does not use the built-in States trait.
 /// In order to hook into changes, use events or service hooks.
@@ -58,5 +76,5 @@ pub enum ServiceState<E: ServiceError> {
     Initializing,
     Enabled,
     Disabled,
-    Failed(E),
+    Failed(ServiceErrorKind<E>),
 }
