@@ -56,12 +56,12 @@ fn dependency_initialization() {
     // initialized?
 
     app.update();
-    let state = app.world().resource::<TestService>().state;
-    assert_eq!(state, ServiceState::Enabled);
-    let state = app.world().resource::<TestService2>().state;
-    assert_eq!(state, ServiceState::Enabled);
-    let state = app.world().resource::<TestService3>().state;
-    assert_eq!(state, ServiceState::Enabled);
+    let state = &app.world().resource::<TestService>().state;
+    assert_eq!(state, &ServiceState::Enabled);
+    let state = &app.world().resource::<TestService2>().state;
+    assert_eq!(state, &ServiceState::Enabled);
+    let state = &app.world().resource::<TestService3>().state;
+    assert_eq!(state, &ServiceState::Enabled);
 }
 
 #[test]
@@ -75,23 +75,46 @@ fn failure_propogation() {
     app.add_service(TEST_SERVICE2_SPEC.with_deps(vec![TEST_SERVICE3]));
     app.add_service(TEST_SERVICE3_SPEC.on_init(|| Err(TestErr::A)));
     app.update();
-    let state = app.world().resource::<TestService>().state;
-    assert_eq!(
-        state,
-        ServiceState::Failed(ServiceErrorKind::Dependency(
-            std::any::TypeId::of::<TestService2>()
-        ))
-    );
-    let state = app.world().resource::<TestService2>().state;
-    assert_eq!(
-        state,
-        ServiceState::Failed(ServiceErrorKind::Dependency(
-            std::any::TypeId::of::<TestService3>()
-        ))
-    );
-    let state = app.world().resource::<TestService3>().state;
-    assert_eq!(
-        state,
-        ServiceState::Failed(ServiceErrorKind::Own(TestErr::A))
-    );
+    let err_str = TestErr::A.to_string();
+    app.world_mut()
+        .resource_scope(|_world, s: Mut<TestService>| {
+            let state = &s.state;
+            debug!("Checking state {state:#?}");
+            match state {
+                ServiceState::Failed(ServiceErrorKind::Dependency(a, b, e)) => {
+                    assert_eq!(a, &TEST_SERVICE.to_string());
+                    assert_eq!(b, &TEST_SERVICE2.to_string());
+                    assert!(e.contains(&err_str));
+                }
+                _ => {
+                    panic!()
+                }
+            }
+        });
+    app.world_mut()
+        .resource_scope(|_world, s: Mut<TestService2>| {
+            let state = &s.state;
+            match state {
+                ServiceState::Failed(ServiceErrorKind::Dependency(a, b, e)) => {
+                    assert_eq!(a, &TEST_SERVICE2.to_string());
+                    assert_eq!(b, &TEST_SERVICE3.to_string());
+                    assert!(e.contains(&err_str));
+                }
+                _ => {
+                    panic!()
+                }
+            }
+        });
+    app.world_mut()
+        .resource_scope(|_world, s: Mut<TestService3>| {
+            let state = &s.state;
+            match state {
+                ServiceState::Failed(ServiceErrorKind::Own(e)) => {
+                    assert!(matches!(e, TestErr::A));
+                }
+                _ => {
+                    panic!()
+                }
+            }
+        });
 }

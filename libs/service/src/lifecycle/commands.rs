@@ -2,7 +2,7 @@ use crate::prelude::*;
 use bevy::prelude::*;
 
 macro_rules! command_trait {
-    ($( ($name:ident $(, $err:ident)*)$(,)?)*) => {
+    ($( ($name:ident $(, $err:ty )*)$(,)?)*) => {
         pub trait ServiceLifecycleCommands {
             $crate::paste::paste! {
                 $(
@@ -30,10 +30,10 @@ macro_rules! command_trait {
         }
     };
 }
-command_trait!((Init), (Enable), (Disable), (Fail, E));
+command_trait!((Init), (Enable), (Disable), (Fail, ServiceErrorKind<E>));
 
 macro_rules! commands {
-    ($(( $name:ident, $fn:ident $(, $err:ident)* )$(,)?)+) => {
+    ($(( $name:ident, $fn:ident $(, $err:ty)* )$(,)?)+) => {
         $(
         pub(crate) struct $name<T, D, E>(ServiceHandle<T, D, E> $(, $err)*)
         where
@@ -57,7 +57,7 @@ macro_rules! commands {
 }
 
 macro_rules! impl_command {
-    ($name:ident, $fn:ident $(,$err:ident)*) => {
+    ($name:ident, $fn:ident $(, $err:ty)*) => {
         impl<T, D, E> Command for $name<T, D, E>
         where
             T: ServiceLabel,
@@ -82,5 +82,5 @@ commands!(
     (InitService, on_init),
     (EnableService, on_enable),
     (DisableService, on_disable),
-    (FailService, on_failure, E)
+    (FailService, on_failure, ServiceErrorKind<E>)
 );

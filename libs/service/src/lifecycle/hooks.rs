@@ -36,7 +36,7 @@ hooks!(
     (Init, (), Result<bool, E>, || Ok(true)),
     (Enable, (), Result<(), E>, || Ok(())),
     (Disable, (), Result<(), E>, || Ok(())),
-    (Failure, In<E>, (), |e: In<E>| {error!("Service error: {e:?}");}),
+    (Failure, In<ServiceErrorKind<E>>, (), |e: In<ServiceErrorKind<E>>| {error!("Service error: {e:?}");}),
 );
 
 #[derive(Debug)]

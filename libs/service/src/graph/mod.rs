@@ -3,7 +3,9 @@ pub(crate) mod tarjan;
 use std::any::{TypeId, type_name_of_val};
 
 use bevy::{
-    ecs::{resource::Resource, schedule::graph::Direction},
+    ecs::{
+        component::ComponentId, resource::Resource, schedule::graph::Direction,
+    },
     platform::{
         collections::{HashMap, HashSet},
         hash::FixedHasher,
@@ -15,16 +17,18 @@ use thiserror::Error;
 
 use crate::data::{ServiceData, ServiceError, ServiceHandle, ServiceLabel};
 
-/// Alias for TypeId. Using this because we cannot type-erase
-/// ServiceHandles.
+/// TypeId of the ServiceHandles. Using this because ServiceHandle is not
+/// dyn-compatible.
 type NodeId = TypeId;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 /// Meta information about the service.
-pub struct ServiceInfo {
+pub struct ServiceDepInfo {
     pub type_id: TypeId,
     pub display_name: String,
     pub is_initialized: bool,
+    pub is_service: bool,
+    // pub resource_id: ComponentId,
 }
 
 /// Compact storage of a [`NodeId`] and a [`Direction`].
@@ -43,7 +47,7 @@ pub struct DependencyGraph {
     /// Could store the services themselves here, but they're not
     /// type-erasable, so they're stored as resources instead.
     /// Could look into how that works and just store them here anyways.
-    pub services: HashMap<NodeId, ServiceInfo>,
+    pub services: HashMap<NodeId, ServiceDepInfo>,
     nodes: IndexMap<NodeId, Vec<NodeIdAndDir>, FixedHasher>,
     edges: HashSet<NodeIdPair, FixedHasher>,
     /// A cached topological ordering of the graph.
@@ -51,10 +55,12 @@ pub struct DependencyGraph {
 }
 
 impl DependencyGraph {
-    pub fn add_service_from_spec<T, D, E>(
+    /// Adds a service to the dependency graph. Will fail if cycles are
+    /// detected.
+    pub fn register_service<T, D, E>(
         &mut self,
         _handle: ServiceHandle<T, D, E>,
-        deps: Vec<ServiceInfo>,
+        deps: Vec<ServiceDepInfo>,
     ) -> Result<(), DagError>
     where
         T: ServiceLabel,

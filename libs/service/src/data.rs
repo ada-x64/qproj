@@ -1,5 +1,10 @@
+use crate::{graph::ServiceDepInfo, prelude::*};
 use std::{
-    any::TypeId, error::Error, fmt::Debug, hash::Hash, marker::PhantomData,
+    any::{TypeId, type_name},
+    error::Error,
+    fmt::{Debug, Display},
+    hash::Hash,
+    marker::PhantomData,
 };
 
 /// A type which can be used as the unique identifer of a service.
@@ -28,11 +33,17 @@ pub trait ServiceError:
 {
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum ServiceErrorKind<E> {
+#[derive(thiserror::Error, Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ServiceErrorKind<E>
+where
+    E: ServiceError,
+{
+    #[error("{0}")]
     Own(E),
-    Dependency(TypeId),
+    #[error("Dependency {0} of {1} failed with error {2}")]
+    Dependency(String, String, String),
 }
+impl<E: ServiceError> ServiceError for ServiceErrorKind<E> {}
 
 /// A handle for the given service.
 #[derive(Debug, Default, Clone, Copy)]
@@ -53,6 +64,28 @@ where
 {
     pub const fn const_default() -> Self {
         Self(PhantomData, PhantomData, PhantomData)
+    }
+    pub fn from_service(_: &Service<T, D, E>) -> Self {
+        Self::const_default()
+    }
+    pub fn from_spec(_: &ServiceSpec<T, D, E>) -> Self {
+        Self::const_default()
+    }
+}
+impl<T, D, E> Display for ServiceHandle<T, D, E>
+where
+    T: ServiceLabel,
+    D: ServiceData,
+    E: ServiceError,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // of form "some::path::to::service_impl::MyServiceLabel"
+        let mut base = type_name::<T>();
+        let last_colon = base.rfind(':');
+        if let Some(idx) = last_colon {
+            base = base.split_at(idx + 1).1;
+        }
+        f.write_str(base.split_at(base.len() - 5).0)
     }
 }
 

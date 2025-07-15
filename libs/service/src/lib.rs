@@ -4,17 +4,16 @@
 mod app;
 mod data;
 mod graph;
-mod helpers;
 mod lifecycle;
 mod service;
+mod service_macro;
 mod spec;
 
 pub mod prelude {
     pub use crate::{
         app::*,
         data::*,
-        helpers::*,
-        lifecycle::{commands::*, events::*, hooks::*},
+        lifecycle::{commands::*, events::*, hooks::*, run_conditions::*},
         service,
         service::*,
         spec::*,

@@ -1,6 +1,4 @@
-use std::any::TypeId;
-
-use crate::{graph::ServiceInfo, prelude::*};
+use crate::prelude::*;
 use bevy::prelude::*;
 
 /// Use this to specify a new service.
@@ -8,8 +6,7 @@ use bevy::prelude::*;
 pub struct ServiceSpec<T: ServiceLabel, D: ServiceData, E: ServiceError> {
     pub(crate) handle: ServiceHandle<T, D, E>,
     /// The service's type-erased dependencies.
-    /// SAFETY: These TypeIds should be for ServiceHandles only.
-    pub(crate) deps: Vec<ServiceInfo>,
+    pub(crate) deps: Vec<Box<dyn IsServiceDep>>,
     /// Does this service begin immediately?
     /// Note that this will run as soon as the first commands are run.
     /// This may be before Startup!
@@ -62,14 +59,10 @@ impl<T: ServiceLabel, D: ServiceData, E: ServiceError> ServiceSpec<T, D, E> {
         Self { is_startup, ..self }
     }
     /// Add dependencies.
-    pub fn with_deps(self, deps: Vec<impl IsServiceHandle + 'static>) -> Self {
+    pub fn with_deps(self, deps: Vec<impl IsServiceDep + 'static>) -> Self {
         let deps = deps
             .into_iter()
-            .map(|handle| ServiceInfo {
-                type_id: std::any::Any::type_id(&handle),
-                display_name: std::any::type_name_of_val(&handle).to_string(),
-                is_initialized: false,
-            })
+            .map(|d| Box::new(d) as Box<dyn IsServiceDep>)
             .collect();
         Self { deps, ..self }
     }

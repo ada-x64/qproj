@@ -43,7 +43,10 @@ fn hook_failure() {
     app.update();
     let world = app.world_mut();
     let service = world.resource_mut::<TestService>();
-    assert_eq!(service.state, ServiceState::Failed(TestErr::A));
+    assert_eq!(
+        service.state,
+        ServiceState::Failed(ServiceErrorKind::Own(TestErr::A))
+    );
 }
 
 #[test]
@@ -87,10 +90,13 @@ fn hooks() {
             hooks_ran.disable = true;
             Err(TestErr::A)
         })
-        .on_failure(|_err: In<TestErr>, mut hooks_ran: ResMut<TestHooks>| {
-            debug!("failure");
-            hooks_ran.fail = true;
-        });
+        .on_failure(
+            |_err: In<ServiceErrorKind<TestErr>>,
+             mut hooks_ran: ResMut<TestHooks>| {
+                debug!("failure");
+                hooks_ran.fail = true;
+            },
+        );
     println!("{spec:#?}");
     app.add_service(spec);
     app.update();
@@ -129,7 +135,10 @@ fn events() {
                 }
                 ServiceState::Disabled => {
                     r.disable = true;
-                    commands.fail_service(TEST_SERVICE, TestErr::A);
+                    commands.fail_service(
+                        TEST_SERVICE,
+                        ServiceErrorKind::Own(TestErr::A),
+                    );
                 }
                 ServiceState::Failed(_) => r.fail = true,
                 _ => {}
@@ -189,7 +198,10 @@ fn run_conditions() {
         (|mut ran: ResMut<Ran>| {
             ran.service_failed_with_error = true;
         })
-        .run_if(service_failed_with_error(TEST_SERVICE, TestErr::A)),
+        .run_if(service_failed_with_error(
+            TEST_SERVICE,
+            ServiceErrorKind::Own(TestErr::A),
+        )),
     );
     check_run_condition!(app, service_uninitialized);
     // check_run_condition!(app, service_initializing);
@@ -206,7 +218,7 @@ fn run_conditions() {
     app.update();
     app.world_mut()
         .commands()
-        .fail_service(TEST_SERVICE, TestErr::A);
+        .fail_service(TEST_SERVICE, ServiceErrorKind::Own(TestErr::A));
     app.update();
 
     let all_ok = Ran {
@@ -221,24 +233,6 @@ fn run_conditions() {
         service_failed_with_error: true,
     };
     assert_eq!(app.world().resource::<Ran>(), &all_ok);
-}
-
-service!(TestService2, (), TestErr);
-#[test]
-#[should_panic]
-fn deps_fail_on_cycle() {
-    let mut app = setup();
-    app.add_service(
-        TEST_SERVICE_SPEC
-            .is_startup(true)
-            .with_deps(vec![TEST_SERVICE2]),
-    )
-    .add_service(
-        TEST_SERVICE2_SPEC
-            .is_startup(true)
-            .with_deps(vec![TEST_SERVICE]),
-    );
-    app.update();
 }
 
 // TODO: Dependency initialization

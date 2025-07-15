@@ -25,6 +25,14 @@ macro_rules! observers {
 }
 
 pub trait ServiceExt<T: ServiceLabel, D: ServiceData, E: ServiceError> {
+    /// Add a service to the application.
+    ///
+    /// This function takes in a [ServiceSpec], which should be specified using
+    /// the [service!] macro from this crate.
+    ///
+    /// ## Panics
+    /// This function panics if cycles are detected in the ServiceSpec's
+    /// dependencies.
     fn add_service(&mut self, spec: ServiceSpec<T, D, E>) -> &mut Self;
 }
 impl<T: ServiceLabel, D: ServiceData, E: ServiceError> ServiceExt<T, D, E>
@@ -33,6 +41,16 @@ impl<T: ServiceLabel, D: ServiceData, E: ServiceError> ServiceExt<T, D, E>
     fn add_service(&mut self, spec: ServiceSpec<T, D, E>) -> &mut Self {
         debug!("Adding service {}", std::any::type_name::<T>());
 
+        // no dupes
+        if self.world().get_resource::<Service<T, D, E>>().is_some() {
+            warn!(
+                "Tried to add already existing service {:?}",
+                std::any::type_name::<T>()
+            );
+            return self;
+        }
+
+        // Register events
         use crate::lifecycle::events::{
             DisableService, EnableService, FailService, InitService,
         };
@@ -51,36 +69,19 @@ impl<T: ServiceLabel, D: ServiceData, E: ServiceError> ServiceExt<T, D, E>
             (EnableService),
             (DisableService),
             (InitService),
-            (FailService, E),
+            (FailService, ServiceErrorKind<E>),
         );
 
         let world = self.world_mut();
-
-        if world.get_resource::<DependencyGraph>().is_none() {
-            world.init_resource::<DependencyGraph>();
-        }
-        if world.get_resource::<Service<T, D, E>>().is_some() {
-            warn!(
-                "Tried to add already existing service {:?}",
-                std::any::type_name::<T>()
-            );
-            return self;
-        }
         let is_startup = spec.is_startup;
-        if let Err(e) = world
-            .resource_mut::<DependencyGraph>()
-            .add_service_from_spec(
-                ServiceHandle::<T, D, E>::const_default(),
-                spec.deps.clone(),
-            )
-        {
-            panic!("{e}");
-        }
-        let service = Service::from_spec(spec);
-        world.insert_resource(service);
+
+        // Add resource
+        world.insert_resource(Service::from_spec(spec));
+
+        // Initialize on startup
         if is_startup {
             world.schedule_scope(Startup, |_world, sched| {
-                debug!("initializing {} at startup", std::any::type_name::<T>());
+                debug!("{} will initialize at startup.", std::any::type_name::<T>());
                 sched.add_systems(move |mut commands: Commands| {
                     commands.init_service(ServiceHandle::<T, D, E>::const_default());
                 });

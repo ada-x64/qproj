@@ -2,11 +2,11 @@ use crate::prelude::*;
 use bevy::prelude::*;
 
 macro_rules! trigger_hook_events {
-    ($(($name:ident$(, $err:ident)*)$(,)?)*) => {
+    ($(($name:ident$(, $err:ty)*)$(,)?)*) => {
         $crate::paste::paste! {
             $(
                 #[derive(Event)]
-                pub struct [<$name Service>]<T, D, E>(pub ServiceHandle<T, D, E>, $(pub $err)*)
+                pub struct [<$name Service>]<T, D, E>(pub ServiceHandle<T, D, E> $(, pub $err)*)
                 where
                     T: ServiceLabel,
                     D: ServiceData,
@@ -15,7 +15,7 @@ macro_rules! trigger_hook_events {
         }
     }
 }
-trigger_hook_events!((Enable), (Disable), (Init), (Fail, E));
+trigger_hook_events!((Enable), (Disable), (Init), (Fail, ServiceErrorKind<E>));
 
 macro_rules! state_change {
     ( $( ($name:ident, $($ss:ty)+)$(,)?)* ) => {
@@ -54,7 +54,7 @@ state_change!(
 );
 
 macro_rules! enter_state_aliases {
-    ($(($name:ident$(, $err_ty:ident )*)$(,)?)*) => {
+    ($(($name:ident$(, $err_ty:ty )*)$(,)?)*) => {
         $crate::paste::paste! {
             $(
                 #[allow(dead_code, reason = "macro gen")]
@@ -83,4 +83,9 @@ macro_rules! enter_state_aliases {
     };
 }
 
-enter_state_aliases!((Enabled), (Disabled), (Initialized), (Failed, E));
+enter_state_aliases!(
+    (Enabled),
+    (Disabled),
+    (Initialized),
+    (Failed, ServiceErrorKind<E>)
+);
