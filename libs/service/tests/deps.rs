@@ -1,4 +1,5 @@
-use bevy::{log::LogPlugin, prelude::*};
+use bevy::log::LogPlugin;
+use bevy::prelude::*;
 use q_service::prelude::*;
 
 #[derive(ServiceError, Debug, thiserror::Error, Clone, Copy, PartialEq)]
@@ -29,14 +30,14 @@ fn setup() -> App {
 fn deps_fail_on_cycle() {
     let mut app = setup();
     app.add_service(
-        TEST_SERVICE_SPEC
+        TestService::spec()
             .is_startup(true)
-            .with_deps(vec![TEST_SERVICE2]),
+            .with_deps(vec![TestService2::handle()]),
     )
     .add_service(
-        TEST_SERVICE2_SPEC
+        TestService2::spec()
             .is_startup(true)
-            .with_deps(vec![TEST_SERVICE]),
+            .with_deps(vec![TestService::handle()]),
     );
     app.update();
 }
@@ -45,12 +46,14 @@ fn deps_fail_on_cycle() {
 fn dependency_initialization() {
     let mut app = setup();
     app.add_service(
-        TEST_SERVICE_SPEC
+        TestService::spec()
             .is_startup(true)
-            .with_deps(vec![TEST_SERVICE2]),
+            .with_deps(vec![TestService2::handle()]),
     );
-    app.add_service(TEST_SERVICE2_SPEC.with_deps(vec![TEST_SERVICE3]));
-    app.add_service(TEST_SERVICE3_SPEC);
+    app.add_service(
+        TestService2::spec().with_deps(vec![TestService3::handle()]),
+    );
+    app.add_service(TestService3::spec());
 
     // TODO: Should un-added services get automatically picked up and
     // initialized?
@@ -68,12 +71,14 @@ fn dependency_initialization() {
 fn failure_propogation() {
     let mut app = setup();
     app.add_service(
-        TEST_SERVICE_SPEC
+        TestService::spec()
             .is_startup(true)
-            .with_deps(vec![TEST_SERVICE2]),
+            .with_deps(vec![TestService2::handle()]),
     );
-    app.add_service(TEST_SERVICE2_SPEC.with_deps(vec![TEST_SERVICE3]));
-    app.add_service(TEST_SERVICE3_SPEC.on_init(|| Err(TestErr::A)));
+    app.add_service(
+        TestService2::spec().with_deps(vec![TestService3::handle()]),
+    );
+    app.add_service(TestService3::spec().on_init(|| Err(TestErr::A)));
     app.update();
     let err_str = TestErr::A.to_string();
     app.world_mut()
@@ -82,8 +87,8 @@ fn failure_propogation() {
             debug!("Checking state {state:#?}");
             match state {
                 ServiceState::Failed(ServiceErrorKind::Dependency(a, b, e)) => {
-                    assert_eq!(a, &TEST_SERVICE.to_string());
-                    assert_eq!(b, &TEST_SERVICE2.to_string());
+                    assert_eq!(a, &TestService::handle().to_string());
+                    assert_eq!(b, &TestService2::handle().to_string());
                     assert!(e.contains(&err_str));
                 }
                 _ => {
@@ -96,8 +101,8 @@ fn failure_propogation() {
             let state = &s.state;
             match state {
                 ServiceState::Failed(ServiceErrorKind::Dependency(a, b, e)) => {
-                    assert_eq!(a, &TEST_SERVICE2.to_string());
-                    assert_eq!(b, &TEST_SERVICE3.to_string());
+                    assert_eq!(a, &TestService2::handle().to_string());
+                    assert_eq!(b, &TestService3::handle().to_string());
                     assert!(e.contains(&err_str));
                 }
                 _ => {

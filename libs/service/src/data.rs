@@ -1,6 +1,6 @@
-use crate::{graph::ServiceDepInfo, prelude::*};
+use crate::prelude::*;
 use std::{
-    any::{TypeId, type_name},
+    any::type_name,
     error::Error,
     fmt::{Debug, Display},
     hash::Hash,
@@ -21,6 +21,8 @@ pub trait ServiceLabel:
 
 /// An arbitrary data type which can be used as extra state information for a
 /// service.
+///
+/// If using feature derive, you can derive this.
 pub trait ServiceData:
     Clone + Debug + PartialEq + Default + Send + Sync + 'static
 {
@@ -28,24 +30,35 @@ pub trait ServiceData:
 impl ServiceData for () {}
 
 /// The error type for a service.
+///
+/// If using feature derive, you can derive this.
 pub trait ServiceError:
     Error + Clone + PartialEq + Send + Sync + 'static
 {
 }
 
+/// A wrapper around the ServiceError trait. Used to specify where and how the
+/// service failed.
+#[allow(missing_docs)]
 #[derive(thiserror::Error, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ServiceErrorKind<E>
 where
     E: ServiceError,
 {
     #[error("{0}")]
-    Own(E),
+    Own(#[from] E),
     #[error("Dependency {0} of {1} failed with error {2}")]
     Dependency(String, String, String),
+    #[error("Service {0} is already initialized.")]
+    AlreadyInitialized(String),
+    #[error("Service {0} is uninitialized.")]
+    Uninitialized(String),
 }
 impl<E: ServiceError> ServiceError for ServiceErrorKind<E> {}
 
-/// A handle for the given service.
+/// A handle for the given service. Used to refer to the service when it is not
+/// directly available.
+/// Usually accessed through [Service::handle].
 #[derive(Debug, Default, Clone, Copy)]
 pub struct ServiceHandle<T, D, E>(
     pub PhantomData<T>,
@@ -62,12 +75,15 @@ where
     D: ServiceData,
     E: ServiceError,
 {
+    #[allow(missing_docs)]
     pub const fn const_default() -> Self {
         Self(PhantomData, PhantomData, PhantomData)
     }
+    #[allow(missing_docs)]
     pub fn from_service(_: &Service<T, D, E>) -> Self {
         Self::const_default()
     }
+    #[allow(missing_docs)]
     pub fn from_spec(_: &ServiceSpec<T, D, E>) -> Self {
         Self::const_default()
     }
@@ -89,19 +105,11 @@ where
     }
 }
 
-/// Automatically derived for service handles.
-pub trait IsServiceHandle {}
-impl<T, D, E> IsServiceHandle for ServiceHandle<T, D, E>
-where
-    T: ServiceLabel,
-    D: ServiceData,
-    E: ServiceError,
-{
-}
-
 /// Tracks the current state of the service.
 /// This does not use the built-in States trait.
-/// In order to hook into changes, use events or service hooks.
+/// In order to react to changes, use [events](crate::lifecycle::events) or
+/// [service hooks](crate::lifecycle::hooks).
+#[allow(missing_docs)]
 #[derive(Debug, Clone, Eq, PartialEq, Hash, Default)]
 pub enum ServiceState<E: ServiceError> {
     #[default]

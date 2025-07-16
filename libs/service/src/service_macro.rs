@@ -1,11 +1,13 @@
 /// Creates aliases for the commonly used service types.
 /// ## Parameters:
-/// $t: The service's name. This is expected to be a plain type label passed in.
-/// The macro will create the necessary structs for you.
+/// Example: The service's name. This is expected to be a plain type label
+/// passed in. The macro will create the necessary structs for you.
 ///
-/// $d: The data type. It must implement [ServiceData].
+/// $d: The data type. It must implement
+/// [ServiceData](crate::prelude::ServiceData).
 ///
-/// $e: The error type. It must implement [ServiceError].
+/// $e: The error type. It must implement
+/// [ServiceError](crate::prelude::ServiceError).
 ///
 /// ## Example usage
 /// ```rust, ignore
@@ -20,7 +22,25 @@
 /// service!(Example, MyData, MyError);
 ///
 /// let app = App::new();
-/// app.add_service(EXAMPLE_SERVICE_SPEC);
+/// app.add_service(ExampleService::spec());
+/// ```
+///
+/// ## Example output
+/// ```rust, skip
+/// /// Label for the state. Works as part of a unique identifier.
+/// #[derive(ServiceLabel, PartialEq, Eq, Debug, Copy, Clone, Hash)]
+/// pub struct ExampleLabel;
+/// pub type ExampleSpec = ServiceSpec<ExampleLabel, ExampleData, ExampleError>;
+/// pub type Example = Service<ExampleLabel, ExampleData, ExampleError>;
+/// pub type ExampleHooks = ServiceHooks<ExampleError>;
+/// /// Track service state changes. Inner value is a tuple, (previous_state, current_state).
+/// pub type ExampleStateChange = ServiceStateChange<ExampleLabel, ExampleData, ExampleError>;
+/// pub type Enter ExampleState = EnterServiceState<ExampleLabel, ExampleData, ExampleError>;
+/// pub type Exit ExampleState = ExitServiceState<ExampleLabel, ExampleData, ExampleError>;
+/// pub type ExampleEnabled = ServiceEnabled<ExampleLabel, ExampleData, ExampleError>;
+/// pub type ExampleDisabled = ServiceDisabled<ExampleLabel, ExampleData, ExampleError>;
+/// pub type ExampleInitialized = ServiceInitialized<ExampleLabel, ExampleData, ExampleError>;
+/// pub type ExampleFailed = ServiceFailed<ExampleLabel, ExampleData, ExampleError>;
 /// ```
 #[macro_export]
 macro_rules! service {
@@ -34,7 +54,7 @@ macro_rules! service {
                 #[derive(ServiceLabel, PartialEq, Eq, Debug, Copy, Clone, Hash)]
                 pub struct [<$t Label>];
                 pub type [<$t Spec>]= ServiceSpec<[<$t Label>], $d, $e>;
-                pub type [<$t>] = Service<[<$t Label>], $d, $e>;
+                pub type [<Example>] = Service<[<$t Label>], $d, $e>;
                 pub type [<$t Hooks>] = ServiceHooks<$e>;
                 /// Track service state changes. Inner value is a tuple, (previous_state, current_state).
                 pub type [<$t StateChange>] = ServiceStateChange<[<$t Label>], $d, $e>;
@@ -44,8 +64,6 @@ macro_rules! service {
                 pub type [<$t Disabled>] = ServiceDisabled<[<$t Label>], $d, $e>;
                 pub type [<$t Initialized>] = ServiceInitialized<[<$t Label>], $d, $e>;
                 pub type [<$t Failed>] = ServiceFailed<[<$t Label>], $d, $e>;
-                pub const [<$t:snake:upper >]: ServiceHandle<[<$t Label>], $d, $e> = ServiceHandle::<[<$t Label>], $d, $e>::const_default();
-                pub const [<$t:snake:upper _SPEC>]: ServiceSpec<[<$t Label>], $d, $e> = ServiceSpec::<[<$t Label>], $d, $e>::const_default();
             }
             pub use [< $t:lower _alias_impl >]::*;
         }

@@ -1,6 +1,6 @@
 // Copied from bevy_ecs@0.16.1
 
-use crate::graph::DependencyGraph;
+use crate::deps::graph::DependencyGraph;
 
 use super::NodeId;
 use core::num::NonZeroUsize;

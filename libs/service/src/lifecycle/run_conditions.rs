@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
 
 /// Run condition which checks if the given service has the given state.
 pub fn service_has_state<T, D, E>(

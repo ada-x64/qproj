@@ -2,34 +2,23 @@ pub(crate) mod tarjan;
 
 use std::any::{TypeId, type_name_of_val};
 
-use bevy::{
-    ecs::{
-        component::ComponentId, resource::Resource, schedule::graph::Direction,
-    },
-    platform::{
-        collections::{HashMap, HashSet},
-        hash::FixedHasher,
-    },
+use bevy_ecs::resource::Resource;
+use bevy_platform::{
+    collections::{HashMap, HashSet},
+    hash::FixedHasher,
 };
 use indexmap::IndexMap;
 use smallvec::SmallVec;
 use thiserror::Error;
 
-use crate::data::{ServiceData, ServiceError, ServiceHandle, ServiceLabel};
+use crate::{
+    data::{ServiceData, ServiceError, ServiceHandle, ServiceLabel},
+    deps::ServiceDepInfo,
+};
 
 /// TypeId of the ServiceHandles. Using this because ServiceHandle is not
 /// dyn-compatible.
 type NodeId = TypeId;
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-/// Meta information about the service.
-pub struct ServiceDepInfo {
-    pub type_id: TypeId,
-    pub display_name: String,
-    pub is_initialized: bool,
-    pub is_service: bool,
-    // pub resource_id: ComponentId,
-}
 
 /// Compact storage of a [`NodeId`] and a [`Direction`].
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -39,6 +28,26 @@ pub struct NodeIdAndDir(NodeId, Direction);
 #[derive(Clone, Copy, Hash, PartialEq, Eq, Debug)]
 pub struct NodeIdPair(NodeId, NodeId);
 
+/// Edge direction.
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd, Ord, Eq, Hash)]
+#[repr(u8)]
+pub enum Direction {
+    /// An `Outgoing` edge is an outward edge *from* the current node.
+    Outgoing = 0,
+    /// An `Incoming` edge is an inbound edge *to* the current node.
+    Incoming = 1,
+}
+
+impl Direction {
+    /// Return the opposite `Direction`.
+    #[inline]
+    pub fn opposite(self) -> Self {
+        match self {
+            Self::Outgoing => Self::Incoming,
+            Self::Incoming => Self::Outgoing,
+        }
+    }
+}
 /// A directed acyclic graph structure used to track service dependencies.
 /// Based on [bevy_ecs::Graph]
 #[derive(Default, Resource)]
@@ -177,7 +186,7 @@ impl DependencyGraph {
     /// Remove edge from `a` to `b` from the graph.
     ///
     /// Return `false` if the edge didn't exist.
-    pub fn remove_edge(&mut self, a: NodeId, b: NodeId) -> bool {
+    pub fn _remove_edge(&mut self, a: NodeId, b: NodeId) -> bool {
         let exist1 = self.remove_single_edge(a, b, Direction::Outgoing);
         let exist2 = if a != b {
             self.remove_single_edge(b, a, Direction::Incoming)
@@ -191,7 +200,7 @@ impl DependencyGraph {
 
     /// Return `true` if the edge connecting `a` with `b` is contained in the
     /// graph.
-    pub fn contains_edge(&self, a: NodeId, b: NodeId) -> bool {
+    pub fn _contains_edge(&self, a: NodeId, b: NodeId) -> bool {
         self.edges.contains(&Self::edge_key(a, b))
     }
 
@@ -223,7 +232,7 @@ impl DependencyGraph {
     /// `a`, in the specified direction.
     /// If the graph's edges are undirected, this is equivalent to
     /// *.neighbors(a)*.
-    pub fn neighbors_directed(
+    pub fn _neighbors_directed(
         &self,
         a: NodeId,
         dir: Direction,
@@ -240,7 +249,7 @@ impl DependencyGraph {
 
     /// Return an iterator of target nodes with an edge starting from `a`,
     /// paired with their respective edge weights.
-    pub fn edges(
+    pub fn _edges(
         &self,
         a: NodeId,
     ) -> impl DoubleEndedIterator<Item = (NodeId, NodeId)> + '_ {
@@ -254,12 +263,12 @@ impl DependencyGraph {
 
     /// Return an iterator of target nodes with an edge starting from `a`,
     /// paired with their respective edge weights.
-    pub fn edges_directed(
+    pub fn _edges_directed(
         &self,
         a: NodeId,
         dir: Direction,
     ) -> impl DoubleEndedIterator<Item = (NodeId, NodeId)> + '_ {
-        self.neighbors_directed(a, dir).map(move |b| {
+        self._neighbors_directed(a, dir).map(move |b| {
             let (a, b) = if dir == Direction::Incoming {
                 (b, a)
             } else {

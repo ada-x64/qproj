@@ -1,13 +1,12 @@
-use std::any::{TypeId, type_name_of_val};
+//! The main service module. Defines the Service resource.
 
-use crate::{
-    graph::{DependencyGraph, ServiceDepInfo},
-    prelude::*,
-};
-use bevy::prelude::*;
+use crate::{deps::IsServiceDep, prelude::*};
+use bevy_ecs::prelude::*;
+use bevy_platform::prelude::*;
+use tracing::*;
 
 #[derive(Debug, Resource)]
-/// Represents a service.
+/// Resource which represents a service.
 pub struct Service<T: ServiceLabel, D: ServiceData, E: ServiceError> {
     /// Arbitrary data store.
     pub data: D,
@@ -15,9 +14,10 @@ pub struct Service<T: ServiceLabel, D: ServiceData, E: ServiceError> {
     pub hooks: ServiceHooks<E>,
     /// The current state of the service.
     pub state: ServiceState<E>,
-    _handle: ServiceHandle<T, D, E>,
-    deps: Vec<Box<dyn IsServiceDep>>,
-    initialized: bool,
+    /// Has this service been initialized?
+    pub initialized: bool,
+    pub(crate) deps: Vec<Box<dyn IsServiceDep>>,
+    handle: ServiceHandle<T, D, E>,
 }
 
 impl<T, D, E> Service<T, D, E>
@@ -26,7 +26,18 @@ where
     D: ServiceData,
     E: ServiceError,
 {
-    pub fn from_spec(spec: ServiceSpec<T, D, E>) -> Self {
+    /// Gets the default [ServiceSpec] for this service. Use the Spec to
+    /// specify this service's behavior.
+    pub fn default_spec() -> ServiceSpec<T, D, E> {
+        ServiceSpec::default()
+    }
+
+    /// Gets the [ServiceHandle] for this service.
+    pub fn handle() -> ServiceHandle<T, D, E> {
+        ServiceHandle::const_default()
+    }
+
+    pub(crate) fn from_spec(spec: ServiceSpec<T, D, E>) -> Self {
         Self {
             data: spec.initial_data.unwrap_or_default(),
             state: ServiceState::default(),
@@ -36,7 +47,7 @@ where
                 on_disable: spec.on_disable.unwrap_or_default(),
                 on_failure: spec.on_failure.unwrap_or_default(),
             },
-            _handle: ServiceHandle::const_default(),
+            handle: ServiceHandle::const_default(),
             deps: spec.deps,
             initialized: false,
         }
@@ -44,10 +55,17 @@ where
 
     /// Initializes the service. Depending on the result of the hook, it will
     /// then either enable or disable the service. Handles errors.
-    pub fn on_init(
+    pub(crate) fn on_init(
         &mut self,
         world: &mut World,
     ) -> Result<(), ServiceErrorKind<E>> {
+        debug!("Initializing {}", self.handle);
+        if self.initialized {
+            let error =
+                ServiceErrorKind::AlreadyInitialized(self.handle.to_string());
+            self.on_failure(world, error.clone(), true);
+            return Err(error);
+        }
         // TODO: on_init should allow asyncronous behavior.
         self.set_state(world, ServiceState::Initializing);
 
@@ -61,7 +79,7 @@ where
                         info.display_name,
                         e.to_string(),
                     );
-                    self.on_failure(world, error.clone());
+                    self.on_failure(world, error.clone(), false);
                     return Err(error);
                 }
             }
@@ -72,6 +90,7 @@ where
         let res = self.hooks.on_init.run_without_applying_deferred((), world);
         match res {
             Ok(val) => {
+                self.initialized = true;
                 if val {
                     let res = self.on_enable(world);
                     self.hooks.on_init.apply_deferred(world);
@@ -84,17 +103,21 @@ where
             }
             Err(error) => {
                 let error = ServiceErrorKind::Own(error);
-                self.on_failure(world, error.clone());
+                self.on_failure(world, error.clone(), false);
                 self.hooks.on_init.apply_deferred(world);
                 Err(error)
             }
         }
     }
-    /// Enables the service and handles errors.
-    pub fn on_enable(
+    /// Enables the service. If it is not already initialized, this will do so.
+    pub(crate) fn on_enable(
         &mut self,
         world: &mut World,
     ) -> Result<(), ServiceErrorKind<E>> {
+        debug!("Enabling {}", self.handle);
+        if !self.initialized {
+            return self.on_init(world);
+        }
         self.hooks.on_enable.initialize(world);
         let res = self
             .hooks
@@ -108,17 +131,24 @@ where
             }
             Err(error) => {
                 let error = ServiceErrorKind::Own(error);
-                self.on_failure(world, error.clone());
+                self.on_failure(world, error.clone(), false);
                 self.hooks.on_enable.apply_deferred(world);
                 Err(error)
             }
         }
     }
-    /// Disables the service and handles errors.
-    pub fn on_disable(
+    /// Disables the service if possible.
+    pub(crate) fn on_disable(
         &mut self,
         world: &mut World,
     ) -> Result<(), ServiceErrorKind<E>> {
+        debug!("Disabling {}", self.handle);
+        if !self.initialized {
+            let error =
+                ServiceErrorKind::Uninitialized(self.handle.to_string());
+            self.on_failure(world, error.clone(), true);
+            return Err(error);
+        }
         self.hooks.on_disable.initialize(world);
         let res = self
             .hooks
@@ -132,27 +162,39 @@ where
             }
             Err(error) => {
                 let error = ServiceErrorKind::Own(error);
-                self.on_failure(world, error.clone());
+                self.on_failure(world, error.clone(), false);
                 self.hooks.on_disable.apply_deferred(world);
                 Err(error)
             }
         }
     }
-    /// Handles errors.
-    pub fn on_failure(
+    /// Handles errors. If `is_warning`, the service's state will not change.
+    pub(crate) fn on_failure(
         &mut self,
         world: &mut World,
         error: ServiceErrorKind<E>,
+        is_warning: bool,
     ) {
+        debug!("Failing {}", self.handle);
         self.hooks.on_failure.initialize(world);
         self.hooks
             .on_failure
             .run_without_applying_deferred(error.clone(), world);
-        self.set_state(world, ServiceState::Failed(error));
+        if !is_warning {
+            error!("{error}");
+            self.set_state(world, ServiceState::Failed(error));
+        } else {
+            warn!("{error}");
+        }
         self.hooks.on_failure.apply_deferred(world);
     }
 
-    pub fn set_state(&mut self, world: &mut World, state: ServiceState<E>) {
+    pub(crate) fn set_state(
+        &mut self,
+        world: &mut World,
+        state: ServiceState<E>,
+    ) {
+        debug!("Setting {} state: {state:?}", self.handle);
         let old_state = self.state.clone();
         self.state = state.clone();
         world.trigger(ServiceStateChange::<T, D, E>::new((
@@ -161,76 +203,5 @@ where
         )));
         world.trigger(EnterServiceState::<T, D, E>::new(state));
         world.trigger(ExitServiceState::<T, D, E>::new(old_state));
-    }
-}
-
-#[derive(thiserror::Error, Debug)]
-pub enum DepInitErr {
-    #[error("Service {0} failed to initialize with error {1}")]
-    Service(String, String),
-}
-
-pub trait IsServiceDep: std::fmt::Debug + Send + Sync {
-    /// Although this takes an exclusive borrow, please do not mutate world
-    /// here. This is necessary for resource scoping.
-    fn info(&self, world: &mut World) -> ServiceDepInfo;
-    /// Initialize the dependency and update the dependency graph.
-    fn initialize(&mut self, world: &mut World) -> Result<(), DepInitErr>;
-}
-impl<T, D, E> IsServiceDep for Service<T, D, E>
-where
-    T: ServiceLabel,
-    D: ServiceData,
-    E: ServiceError,
-{
-    fn info(&self, _world: &mut World) -> ServiceDepInfo {
-        ServiceDepInfo {
-            type_id: TypeId::of::<Self>(),
-            display_name: ServiceHandle::from_service(self).to_string(),
-            is_initialized: self.initialized,
-            is_service: true,
-        }
-    }
-    fn initialize(&mut self, world: &mut World) -> Result<(), DepInitErr> {
-        let info = self.info(world);
-        debug!("Initializing dependency: {info:#?}");
-        let res = self.on_init(world).map_err(|e| {
-            DepInitErr::Service(info.display_name.clone(), e.to_string())
-        });
-
-        // Update graph
-        if world.get_resource::<DependencyGraph>().is_none() {
-            world.init_resource::<DependencyGraph>();
-        }
-        world.resource_scope(|world, mut graph: Mut<DependencyGraph>| {
-            graph.register_service(
-                ServiceHandle::<T, D, E>::const_default(),
-                self.deps.iter().map(|d| d.info(world)).collect(),
-            ).expect("Failed to add dependencies in service spec!\n.. Spec = {spec:#?}")
-        });
-
-        world
-            .resource_mut::<DependencyGraph>()
-            .services
-            .entry(info.type_id)
-            .insert(info);
-        res
-    }
-}
-impl<T, D, E> IsServiceDep for ServiceHandle<T, D, E>
-where
-    T: ServiceLabel,
-    D: ServiceData,
-    E: ServiceError,
-{
-    fn info(&self, world: &mut World) -> ServiceDepInfo {
-        world.resource_scope(|world, service: Mut<Service<T, D, E>>| {
-            service.info(world)
-        })
-    }
-    fn initialize(&mut self, world: &mut World) -> Result<(), DepInitErr> {
-        world.resource_scope(|world, mut service: Mut<Service<T, D, E>>| {
-            service.initialize(world)
-        })
     }
 }

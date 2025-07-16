@@ -26,7 +26,7 @@ fn setup() -> App {
 #[test]
 fn simple() {
     let mut app = setup();
-    app.add_service(TEST_SERVICE_SPEC);
+    app.add_service(TestService::spec());
     app.update();
     let world = app.world_mut();
     let s = world.resource_mut::<TestService>();
@@ -36,7 +36,7 @@ fn simple() {
 #[test]
 fn hook_failure() {
     let mut app = setup();
-    app.add_service(TEST_SERVICE_SPEC.is_startup(true).on_init(|| {
+    app.add_service(TestService::spec().is_startup(true).on_init(|| {
         info!("In hook");
         Err(TestErr::A)
     }));
@@ -52,9 +52,11 @@ fn hook_failure() {
 #[test]
 fn manual_init() {
     let mut app = setup();
-    app.add_service(TEST_SERVICE_SPEC);
+    app.add_service(TestService::spec());
     app.update();
-    app.world_mut().commands().init_service(TEST_SERVICE);
+    app.world_mut()
+        .commands()
+        .init_service(TestService::handle());
     app.update();
     let world = app.world_mut();
     let service = world.resource_mut::<TestService>();
@@ -73,7 +75,7 @@ pub struct TestHooks {
 fn hooks() {
     let mut app = setup();
     app.init_resource::<TestHooks>();
-    let spec = TEST_SERVICE_SPEC
+    let spec = TestService::spec()
         .is_startup(true)
         .on_init(|mut hooks_ran: ResMut<TestHooks>| {
             debug!("init");
@@ -100,10 +102,9 @@ fn hooks() {
     println!("{spec:#?}");
     app.add_service(spec);
     app.update();
-    let world = app.world_mut();
-    world.resource_scope::<TestService, ()>(|world, mut r| {
-        let _ = r.on_disable(world);
-    });
+    app.world_mut()
+        .commands()
+        .disable_service(TestService::handle());
     assert_eq!(
         app.world_mut().resource::<TestHooks>(),
         &TestHooks {
@@ -121,22 +122,22 @@ fn events() {
     app.init_resource::<TestHooks>();
     // NOTE: This fails with `is_startup(true)`. Probably because observers need
     // to be instantiated before events can fire.
-    app.add_service(TEST_SERVICE_SPEC).add_observer(
+    app.add_service(TestService::spec()).add_observer(
         |t: Trigger<TestServiceStateChange>,
          mut r: ResMut<TestHooks>,
          mut commands: Commands| {
-            match t.event().1 {
+            match t.event().0.1 {
                 ServiceState::Initializing => {
                     r.init = true;
                 }
                 ServiceState::Enabled => {
                     r.enable = true;
-                    commands.disable_service(TEST_SERVICE);
+                    commands.disable_service(TestService::handle());
                 }
                 ServiceState::Disabled => {
                     r.disable = true;
                     commands.fail_service(
-                        TEST_SERVICE,
+                        TestService::handle(),
                         ServiceErrorKind::Own(TestErr::A),
                     );
                 }
@@ -145,7 +146,9 @@ fn events() {
             }
         },
     );
-    app.world_mut().commands().init_service(TEST_SERVICE);
+    app.world_mut()
+        .commands()
+        .init_service(TestService::handle());
     app.update();
     assert_eq!(
         app.world_mut().resource::<TestHooks>(),
@@ -176,7 +179,7 @@ macro_rules! check_run_condition {
             (|mut ran: ResMut<Ran>| {
                 ran.$condition = true;
             })
-            .run_if($condition(TEST_SERVICE)),
+            .run_if($condition(TestService::handle())),
         );
     };
 }
@@ -185,13 +188,16 @@ macro_rules! check_run_condition {
 fn run_conditions() {
     let mut app = setup();
     app.init_resource::<Ran>();
-    app.add_service(TEST_SERVICE_SPEC);
+    app.add_service(TestService::spec());
     app.add_systems(
         Update,
         (|mut ran: ResMut<Ran>| {
             ran.service_has_state = true;
         })
-        .run_if(service_has_state(TEST_SERVICE, ServiceState::Enabled)),
+        .run_if(service_has_state(
+            TestService::handle(),
+            ServiceState::Enabled,
+        )),
     );
     app.add_systems(
         Update,
@@ -199,7 +205,7 @@ fn run_conditions() {
             ran.service_failed_with_error = true;
         })
         .run_if(service_failed_with_error(
-            TEST_SERVICE,
+            TestService::handle(),
             ServiceErrorKind::Own(TestErr::A),
         )),
     );
@@ -210,15 +216,21 @@ fn run_conditions() {
     check_run_condition!(app, service_failed);
 
     app.update();
-    app.world_mut().commands().init_service(TEST_SERVICE);
-    app.update();
-    app.world_mut().commands().enable_service(TEST_SERVICE);
-    app.update();
-    app.world_mut().commands().disable_service(TEST_SERVICE);
+    app.world_mut()
+        .commands()
+        .init_service(TestService::handle());
     app.update();
     app.world_mut()
         .commands()
-        .fail_service(TEST_SERVICE, ServiceErrorKind::Own(TestErr::A));
+        .enable_service(TestService::handle());
+    app.update();
+    app.world_mut()
+        .commands()
+        .disable_service(TestService::handle());
+    app.update();
+    app.world_mut()
+        .commands()
+        .fail_service(TestService::handle(), ServiceErrorKind::Own(TestErr::A));
     app.update();
 
     let all_ok = Ran {
@@ -235,11 +247,37 @@ fn run_conditions() {
     assert_eq!(app.world().resource::<Ran>(), &all_ok);
 }
 
-// TODO: Dependency initialization
-// TODO: Implement DAG for deps
-// TODO: Dependency error propagation
-// TODO: Auto-initialize when enabled
-// ------> should be configurable
+#[derive(Resource, Default, Debug, PartialEq)]
+struct Errors(Vec<ServiceErrorKind<TestErr>>);
+
+#[test]
+fn uninitialized() {
+    let mut app = setup();
+    app.add_service(TestService::spec().on_failure(
+        |e: In<_>, mut errs: ResMut<Errors>| {
+            errs.0.push(e.0);
+        },
+    ))
+    .init_resource::<Errors>()
+    .add_systems(Startup, |mut commands: Commands| {
+        commands.disable_service(TestService::handle()); // this should fail.
+        commands.enable_service(TestService::handle()); // this should initialize.
+        commands.init_service(TestService::handle()); // this should fail.
+    });
+    app.update();
+    app.update();
+    let errors = app.world().resource::<Errors>();
+    let display_name = TestService::handle().to_string();
+    assert_eq!(
+        errors.0,
+        vec![
+            ServiceErrorKind::Uninitialized(display_name.clone()),
+            ServiceErrorKind::AlreadyInitialized(display_name.clone()),
+        ]
+    );
+    let state = &app.world().resource::<TestService>().state;
+    assert!(matches!(state, ServiceState::Enabled));
+}
+
 // TODO: Async initialization
 // ------> maybe do Initializing(f32) (gloss as percentage)
-// TODO: Minimize bevy dependencies (just ECS?)

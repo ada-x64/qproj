@@ -1,5 +1,7 @@
-use crate::{graph::DependencyGraph, prelude::*};
-use bevy::prelude::*;
+use crate::prelude::*;
+use bevy_app::prelude::*;
+use bevy_ecs::prelude::*;
+use tracing::*;
 
 macro_rules! events {
     ($app:ident, $($name:ident $(,)?)* ) => {
@@ -24,12 +26,18 @@ macro_rules! observers {
     };
 }
 
+#[allow(missing_docs)]
 pub trait ServiceExt<T: ServiceLabel, D: ServiceData, E: ServiceError> {
     /// Add a service to the application.
     ///
     /// This function takes in a [ServiceSpec], which should be specified using
     /// the [service!] macro from this crate.
     ///
+    /// ## Example usage
+    /// ```rust, skip
+    /// service!(Example, (), ExampleErr);
+    /// app.add_service(ExampleService::spec());
+    /// ```
     /// ## Panics
     /// This function panics if cycles are detected in the ServiceSpec's
     /// dependencies.

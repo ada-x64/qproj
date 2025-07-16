@@ -1,11 +1,14 @@
 use crate::prelude::*;
-use bevy::prelude::*;
+use bevy_ecs::prelude::*;
+use tracing::*;
 
 macro_rules! command_trait {
     ($( ($name:ident $(, $err:ty )*)$(,)?)*) => {
+        /// Extends [Commands] with service-related functionality.
         pub trait ServiceLifecycleCommands {
             $crate::paste::paste! {
                 $(
+                    #[allow(missing_docs, reason="macro")]
                     fn [<$name:snake:lower _service>]<T, D, E>(&mut self, handle: ServiceHandle<T, D, E> $(, error: $err)*)
                         where
                             T: ServiceLabel,
@@ -70,7 +73,7 @@ macro_rules! impl_command {
                 }
                 world.resource_scope(
                     |world, mut service: Mut<Service<T, D, E>>| {
-                        let _ = service.$fn(world, $(self.1 as $err)*);
+                        let _ = service.$fn(world, $(self.1 as $err, false)*);
                     },
                 )
             }
