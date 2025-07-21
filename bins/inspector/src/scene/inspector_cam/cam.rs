@@ -5,6 +5,8 @@ use bevy::{input::mouse::MouseMotion, prelude::*};
 use bevy_dolly::prelude::*;
 use q_utils::InspectorIgnore;
 
+use crate::scene::inspector_cam::CamService;
+
 #[derive(Component, Debug, Default)]
 pub struct InspectorCam;
 
@@ -32,7 +34,7 @@ pub(crate) fn update_camera(
     mouse_btn: Res<ButtonInput<MouseButton>>,
     mut rig: Single<&mut Rig, With<InspectorCam>>,
     mut mouse_motion_events: EventReader<MouseMotion>,
-    can_scroll: Res<State<InspectorCamScrollStates>>,
+    s_cam: Res<CamService>,
 ) {
     let time_delta_seconds: f32 = time.delta_secs();
     let boost_mult = 5.0f32;
@@ -67,7 +69,7 @@ pub(crate) fn update_camera(
     };
 
     let mut delta = Vec2::ZERO;
-    if can_scroll.get().is_enabled() && mouse_btn.pressed(MouseButton::Right) {
+    if s_cam.data().can_scroll && mouse_btn.pressed(MouseButton::Right) {
         for event in mouse_motion_events.read() {
             delta += event.delta;
         }

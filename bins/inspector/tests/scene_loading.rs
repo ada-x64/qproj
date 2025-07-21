@@ -8,7 +8,7 @@ use std::{
 
 use bevy::{prelude::*, scene::SceneInstance};
 use q_inspector::prelude::{
-    InitInspector, InspectorInitialized,
+    InspectorServiceInitialized,
     serialize::{LoadSceneEvent, LoadStatus, SaveSceneEvent, SaveStatus},
 };
 
@@ -29,12 +29,9 @@ fn load_scene() -> AppExit {
         app.cleanup();
         app
             .init_resource::<SavedStructure>()
-            .add_systems(Startup, |mut commands: Commands| {
-                commands.trigger(InitInspector);
-            })
             .add_observer(
                 |
-                _trigger: Trigger<InspectorInitialized>,
+                _trigger: Trigger<InspectorServiceInitialized>,
                 mut commands: Commands,
                 mut query: Single<(Entity, &DynamicSceneRoot, &mut Children)>,
                 scene_instances: Query<&SceneInstance>,

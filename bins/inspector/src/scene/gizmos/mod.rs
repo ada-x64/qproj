@@ -6,12 +6,11 @@ mod player_cam;
 
 use crate::{
     scene::gizmos::axes::{RenderToTextureGroup, render_axes},
-    state::{InspectorSettings, Services},
+    state::InspectorSettings,
     ui::layout::dock::tabs::scene_editor,
 };
-use bevy::{
-    ecs::system::RunSystemOnce, prelude::*, render::view::RenderLayers,
-};
+use bevy::{prelude::*, render::view::RenderLayers};
+use q_player::cam::CamService;
 use q_service::prelude::*;
 
 #[derive(
@@ -22,19 +21,15 @@ pub struct GizmoSystems;
 #[derive(ServiceError, thiserror::Error, Debug, PartialEq, Clone, Copy)]
 pub enum GizmosErr {}
 
-// service!(Gizmos, initialize, (InspectorCam));
-service!(Gizmos, Services, (), GizmosErr);
+service!(GizmosService, (), GizmosErr);
 
 pub struct GizmosPlugin;
 impl Plugin for GizmosPlugin {
     fn build(&self, app: &mut App) {
         app.add_service(
-            GIZMOS_SERVICE_SPEC
-                .with_deps(vec![Services::InspectorCam])
-                .on_init(|world| {
-                    world.run_system_once(initialize).unwrap();
-                    Ok(true)
-                }),
+            GizmosService::default_spec()
+                .with_deps(vec![CamService::handle().into()])
+                .on_init(initialize),
         )
         .init_gizmo_group::<RenderToTextureGroup>()
         .add_systems(
@@ -47,7 +42,7 @@ impl Plugin for GizmosPlugin {
         )
         .configure_sets(
             Update,
-            GizmoSystems.run_if(service_enabled(GIZMOS_SERVICE)),
+            GizmoSystems.run_if(service_enabled(GizmosService::handle())),
         );
     }
 }
@@ -56,7 +51,7 @@ fn initialize(
     mut commands: Commands,
     mut gcstore: ResMut<GizmoConfigStore>,
     settings: Res<InspectorSettings>,
-) -> Result<bool, String> {
+) -> Result<bool, GizmosErr> {
     gcstore.insert(
         GizmoConfig {
             render_layers: RenderLayers::layer(1),

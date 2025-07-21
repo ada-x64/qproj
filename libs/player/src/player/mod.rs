@@ -17,7 +17,11 @@ pub struct IntegrationPlugin;
 impl IntegrationPlugin {}
 impl Plugin for IntegrationPlugin {
     fn build(&self, app: &mut App) {
-        app.add_service(PLAYER_SERVICE_SPEC.is_startup(true).on_init(spawn));
+        app.add_service(
+            PlayerService::default_spec()
+                .is_startup(true)
+                .on_init(spawn),
+        );
     }
 }
 

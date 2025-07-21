@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
 use bevy::{asset::UnapprovedPathMode, prelude::*};
-use q_inspector::{InspectorPlugin, prelude::InitInspector};
+use q_inspector::InspectorPlugin;
 
 #[bevy_main]
 fn main() -> AppExit {
@@ -16,9 +16,6 @@ fn main() -> AppExit {
             ..Default::default()
         }),
         InspectorPlugin,
-    ))
-    .add_systems(Startup, |mut commands: Commands| {
-        commands.trigger(InitInspector)
-    });
+    ));
     app.run()
 }

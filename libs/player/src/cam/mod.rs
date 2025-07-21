@@ -23,7 +23,7 @@ pub struct PlayerCamPlugin;
 impl Plugin for PlayerCamPlugin {
     fn build(&self, app: &mut App) {
         app.add_service(
-            CAM_SERVICE_SPEC
+            CamService::default_spec()
                 .is_startup(true)
                 .on_enable(set_cam_active::<true>)
                 .on_disable(set_cam_active::<true>),
@@ -31,7 +31,7 @@ impl Plugin for PlayerCamPlugin {
         app.add_systems(
             Update,
             (Dolly::<PlayerCam>::update_active, update_camera)
-                .run_if(service_enabled(PLAYER_SERVICE)),
+                .run_if(service_enabled(PlayerService::handle())),
         );
     }
 }

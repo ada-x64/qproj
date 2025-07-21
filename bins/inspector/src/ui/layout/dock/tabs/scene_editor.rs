@@ -6,20 +6,16 @@ use bevy_egui::{
     EguiContextSettings,
     egui::{self},
 };
+use q_service::prelude::ServiceLifecycleCommands;
 
 use crate::{
     prelude::*,
-    scene::inspector_cam::{InspectorCam, InspectorCamScrollStates},
-    state::GameViewStates,
+    scene::inspector_cam::{CamData, CamService, InspectorCam},
     ui::layout::dock::TabViewer,
 };
 
 pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
-    let can_scroll = viewer
-        .world
-        .get_resource::<State<InspectorCamScrollStates>>()
-        .unwrap()
-        .is_enabled();
+    let s_cam = viewer.world.get_resource_mut::<CamService>().unwrap();
     let click_and_drag = ui.interact(
         ui.clip_rect(),
         "gameview_interact".into(),
@@ -27,18 +23,16 @@ pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
     );
 
     // Move on click and drag
-    if click_and_drag.hovered() && !can_scroll {
+    if click_and_drag.hovered() && !s_cam.data().can_scroll {
         viewer
             .world
-            .get_resource_mut::<NextState<InspectorCamScrollStates>>()
-            .unwrap()
-            .set(true.into());
-    } else if !click_and_drag.hovered() && can_scroll {
-        viewer
-            .world
-            .get_resource_mut::<NextState<InspectorCamScrollStates>>()
-            .unwrap()
-            .set(false.into());
+            .commands()
+            .update_service(CamService::handle(), CamData { can_scroll: true });
+    } else if !click_and_drag.hovered() && s_cam.data().can_scroll {
+        viewer.world.commands().update_service(
+            CamService::handle(),
+            CamData { can_scroll: false },
+        );
     }
 
     // TODO: Should we do this in Egui by manually calling a system here?
@@ -46,21 +40,25 @@ pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
     //     let delta = click_and_drag.drag_delta();
     // }
 
+    let running = viewer
+        .world
+        .get_resource::<InspectorService>()
+        .unwrap()
+        .data()
+        .game_running;
+    let btn_text = if running { "\u{23f9}" } else { "\u{25B6}" };
+    ui.horizontal(|ui| {
+        if ui.add(egui::Button::new(btn_text)).clicked() {
+            viewer.world.commands().update_service(
+                InspectorService::handle(),
+                InspectorServiceData {
+                    game_running: !running,
+                },
+            )
+        }
+    });
+
     viewer.ui_state.lock().tab_data.viewport_rect = ui.clip_rect();
-    viewer.world.resource_scope::<State<GameViewStates>, _>(
-        |world, physics| {
-            let btn_text = if physics.is_enabled() {
-                "\u{23f9}"
-            } else {
-                "\u{25B6}"
-            };
-            ui.horizontal(|ui| {
-                if ui.add(egui::Button::new(btn_text)).clicked() {
-                    world.trigger(EnableGameView(!physics.is_enabled()))
-                }
-            });
-        },
-    );
 }
 
 // make camera only render to view not obstructed by UI

@@ -68,7 +68,9 @@ q_player = { path = "libs/player" }
 q_utils = { path = "libs/utils" }
 q_tasks = { path = "libs/tasks" }
 q_test = { path = "libs/test" }
-q_service = { path = "libs/service" }
+
+## crates
+q_service = { path = "crates/q_service", features = ["derive"] }
 
 ## bins
 q_inspector = { path = "bins/inspector" }

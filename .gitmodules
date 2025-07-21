@@ -1,0 +1,4 @@
+[submodule "crates/q_service"]
+	path = crates/q_service
+	url = https://github.com/ada-x64/q_service
+	branch = 0.1.1
