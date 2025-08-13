@@ -6,16 +6,15 @@ use bevy_egui::{
     EguiContextSettings,
     egui::{self},
 };
-use q_service::prelude::ServiceLifecycleCommands;
 
 use crate::{
     prelude::*,
-    scene::inspector_cam::{CamData, CamService, InspectorCam},
+    scene::inspector_cam::{CamService, InspectorCam},
     ui::layout::dock::TabViewer,
 };
 
 pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
-    let s_cam = viewer.world.get_resource_mut::<CamService>().unwrap();
+    let mut s_cam = viewer.world.get_resource_mut::<CamService>().unwrap();
     let click_and_drag = ui.interact(
         ui.clip_rect(),
         "gameview_interact".into(),
@@ -23,16 +22,10 @@ pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
     );
 
     // Move on click and drag
-    if click_and_drag.hovered() && !s_cam.data().can_scroll {
-        viewer
-            .world
-            .commands()
-            .update_service(CamService::handle(), CamData { can_scroll: true });
-    } else if !click_and_drag.hovered() && s_cam.data().can_scroll {
-        viewer.world.commands().update_service(
-            CamService::handle(),
-            CamData { can_scroll: false },
-        );
+    if click_and_drag.hovered() && !s_cam.can_scroll {
+        s_cam.can_scroll = true;
+    } else if !click_and_drag.hovered() && s_cam.can_scroll {
+        s_cam.can_scroll = false;
     }
 
     // TODO: Should we do this in Egui by manually calling a system here?
@@ -40,21 +33,20 @@ pub fn render_tab(viewer: &mut TabViewer, ui: &mut egui::Ui) {
     //     let delta = click_and_drag.drag_delta();
     // }
 
-    let running = viewer
+    let mut s_inspector = viewer
         .world
-        .get_resource::<InspectorService>()
-        .unwrap()
-        .data()
-        .game_running;
-    let btn_text = if running { "\u{23f9}" } else { "\u{25B6}" };
+        .get_resource_mut::<InspectorService>()
+        .expect("Inspector resource should be up before UI runs");
+
+    let btn_text = if s_inspector.game_running {
+        "\u{23f9}"
+    } else {
+        "\u{25B6}"
+    };
     ui.horizontal(|ui| {
         if ui.add(egui::Button::new(btn_text)).clicked() {
-            viewer.world.commands().update_service(
-                InspectorService::handle(),
-                InspectorServiceData {
-                    game_running: !running,
-                },
-            )
+            // TODO: This should spin down a service instead.
+            s_inspector.game_running = !s_inspector.game_running;
         }
     });
 

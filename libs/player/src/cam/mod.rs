@@ -11,37 +11,40 @@ use crate::prelude::*;
 use bevy::prelude::*;
 use bevy_dolly::prelude::*;
 
-#[derive(ServiceError, Debug, Clone, thiserror::Error, PartialEq)]
+#[derive(Debug, Clone, thiserror::Error, PartialEq)]
 pub enum CamError {
     #[error("No player camera")]
     NoCam,
 }
 
-service!(CamService, (), CamError);
-
-pub struct PlayerCamPlugin;
-impl Plugin for PlayerCamPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_service(
-            CamService::default_spec()
-                .is_startup(true)
-                .on_enable(set_cam_active::<true>)
-                .on_disable(set_cam_active::<true>),
-        );
-        app.add_systems(
+#[derive(Default, Debug, Resource)]
+pub struct CamService;
+impl Service for CamService {
+    fn build(scope: &mut ServiceScope<Self>) {
+        scope
+            .is_startup(true)
+            .on_up(|mut cam: Single<&mut Camera, With<PlayerCam>>| {
+                cam.is_active = true;
+                Ok(())
+            })
+            .on_down(
+                |_: In<DownReason>, mut cam: Single<&mut Camera, With<PlayerCam>>| {
+                    cam.is_active = false;
+                },
+            );
+        scope.add_systems(
             Update,
             (Dolly::<PlayerCam>::update_active, update_camera)
-                .run_if(service_enabled(PlayerService::handle())),
+                .run_if(service_up::<PlayerService>()),
         );
     }
 }
 
-// enable/disable hook
-fn set_cam_active<const VAL: bool>(
-    mut cam: Single<&mut Camera, With<PlayerCam>>,
-) -> Result<(), CamError> {
-    cam.is_active = VAL;
-    Ok(())
+pub struct PlayerCamPlugin;
+impl Plugin for PlayerCamPlugin {
+    fn build(&self, app: &mut App) {
+        app.register_service::<CamService>();
+    }
 }
 
 pub fn update_camera(

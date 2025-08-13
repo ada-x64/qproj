@@ -69,7 +69,7 @@ pub(crate) fn update_camera(
     };
 
     let mut delta = Vec2::ZERO;
-    if s_cam.data().can_scroll && mouse_btn.pressed(MouseButton::Right) {
+    if s_cam.can_scroll && mouse_btn.pressed(MouseButton::Right) {
         for event in mouse_motion_events.read() {
             delta += event.delta;
         }

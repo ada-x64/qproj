@@ -9,19 +9,20 @@ use q_service::prelude::*;
 
 use crate::prelude::*;
 
-#[derive(ServiceError, Debug, Clone, thiserror::Error, PartialEq)]
-pub enum PlayerError {}
-service!(PlayerService, (), PlayerError);
+#[derive(Resource, Debug, Default)]
+pub struct PlayerService;
+
+impl Service for PlayerService {
+    fn build(scope: &mut ServiceScope<Self>) {
+        scope.init_with(spawn).is_startup(true);
+    }
+}
 pub struct IntegrationPlugin;
 
 impl IntegrationPlugin {}
 impl Plugin for IntegrationPlugin {
     fn build(&self, app: &mut App) {
-        app.add_service(
-            PlayerService::default_spec()
-                .is_startup(true)
-                .on_init(spawn),
-        );
+        app.register_service::<PlayerService>();
     }
 }
 
@@ -32,7 +33,7 @@ fn spawn(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-) -> Result<bool, PlayerError> {
+) -> InitResult {
     let pos = Vec3::ZERO;
     let capsule = meshes.add(Capsule3d::new(0.5, 1.));
     let material = materials.add(StandardMaterial::default());
@@ -42,5 +43,5 @@ fn spawn(
         material.clone(),
     ));
     commands.spawn(PlayerCamBundle::new());
-    Ok(true)
+    Ok(None)
 }

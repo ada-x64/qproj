@@ -4783,7 +4783,7 @@ dependencies = [
 
 [[package]]
 name = "q_service"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bevy",
  "bevy_app",
@@ -4791,22 +4791,15 @@ dependencies = [
  "bevy_derive",
  "bevy_ecs",
  "bevy_platform",
+ "bevy_state",
+ "bevy_tasks",
  "derivative",
  "indexmap",
  "paste",
- "q_service_macros",
  "slotmap",
  "smallvec",
  "thiserror 2.0.12",
  "tracing",
-]
-
-[[package]]
-name = "q_service_macros"
-version = "0.1.0"
-dependencies = [
- "quote",
- "syn 2.0.100",
 ]
 
 [[package]]

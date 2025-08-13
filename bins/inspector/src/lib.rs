@@ -50,6 +50,8 @@ impl Plugin for InspectorPlugin {
                 InspectorStatePlugin,
                 UiPlugin,
             ))
+            .add_systems(Startup, || debug!("STARTUP"))
+            .add_systems(Update, || debug_once!("UPDATE"))
         };
     }
 }

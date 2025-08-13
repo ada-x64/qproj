@@ -5,7 +5,7 @@
 ## Workspace ##################################################################
 [workspace]
 members = ["libs/*", "bins/*"]
-resolver = "3"
+resolver = "2"
 
 [workspace.lints]
 rust.unexpected_cfgs = { level = "warn", check-cfg = ["cfg(bevy_lint)"] }
@@ -70,7 +70,7 @@ q_tasks = { path = "libs/tasks" }
 q_test = { path = "libs/test" }
 
 ## crates
-q_service = { path = "crates/q_service", features = ["derive"] }
+q_service = { path = "crates/q_service" }
 
 ## bins
 q_inspector = { path = "bins/inspector" }
