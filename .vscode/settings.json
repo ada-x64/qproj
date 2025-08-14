@@ -1,13 +1,8 @@
 {
-  "rust-analyzer.cargo.features": [
-    "debug", "inspector"
-  ],
+  "rust-analyzer.cargo.features": ["debug", "inspector"],
   // "rust-analyzer.cargo.target": "x86_64-pc-windows-msvc",
   "rust-analyzer.check.command": "clippy",
-  "rust-analyzer.check.extraArgs": [
-    "--no-deps",
-    "--locked",
-  ],
+  "rust-analyzer.check.extraArgs": ["--no-deps", "--locked"],
   // https://jake-shadle.github.io/xwin/#4-override-cc-defaults
   "rust-analyzer.cargo.extraEnv": {
     // "CC_x86_64_pc_windows_msvc": "${workspaceFolder}/.bin/clang-cl",

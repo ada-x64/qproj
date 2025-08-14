@@ -1,10 +1,14 @@
 {
   "languages": {
     "Python": {
-      "language_servers": ["pyright"]
+      "language_servers": ["ruff"]
+    },
+    "TOML": {
+      "language_servers": ["!Taplo"]
     }
   },
   "lsp": {
+    "taplo": {},
     "rust-analyzer": {
       "initialization_options": {
         "check": {

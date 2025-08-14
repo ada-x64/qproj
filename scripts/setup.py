@@ -112,7 +112,7 @@ def mk_symlink(cmd: str, alias: str):
     alias_path = os.path.abspath(os.path.join(binpath, alias))
     try:
         os.symlink(bin, alias_path)
-    except:
+    except Exception:
         pass
     return alias_path
 
@@ -195,7 +195,5 @@ Debian-based distro, run the following:
 
     update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100;
     update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100;
-""".format(
-        IMPORTANT=IMPORTANT
-    )
+""".format(IMPORTANT=IMPORTANT)
 )

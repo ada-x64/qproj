@@ -1,0 +1,104 @@
+#  𝒒𝒑𝒓𝒐𝒋 -- copyright (c) the contributors
+#  SPDX-License-Identifier: MIT OR Apache-2.0
+
+[tools]
+python = "3.12"
+uv = "latest"
+
+"cargo:cargo-deny" = "latest"
+"cargo:cargo-nextest" = "latest"
+"cargo:https://github.com/TheBevyFlock/bevy_cli.git" = {version="latest", crate="bevy_cli"}
+mold = "latest"
+ruff = "latest"
+
+[tools.rust]
+version = "nightly-2025-06-25"
+components = "rustc-codegen-cranelift,rustc-dev,llvm-tools-preview"
+targets = "x86_64-pc-windows-msvc,x86_64-unknown-linux-gnu"
+
+[env]
+UV_PROJECT_ENVIRONMENT = "{{config_root}}/.venv"
+
+### TASKS ###
+
+## INTERNAL ##
+
+[tasks.setup]
+description = "Sets up the development environment"
+run = ["uv sync"]
+
+[tasks._chk_deps]
+description = "Check dependencies with cargo-deny"
+run = "cargo deny --workspace -L error check advisories bans sources --hide-inclusion-graph"
+
+[tasks._chk_python]
+description = "Check Python formatting and types"
+run = """
+    uv run --active ruff check ./scripts
+"""
+
+[tasks._chk_rust]
+description = "Check Rust formatting and linting"
+run = """
+    cargo fmt -- --check
+    cargo clippy --locked --workspace --quiet -- --no-deps
+    bevy lint --locked --workspace -- --no-deps
+"""
+
+[tasks._chk_headers]
+description = "Check file headers"
+run = "uv run --active ./scripts/headers.py"
+
+## PUBLIC ##
+
+[tasks.fmt]
+description = "Format everything"
+run = """
+    cargo fmt
+    uv run --active ruff format ./scripts
+    uv run --active ./scripts/headers.py --fix
+"""
+
+[tasks.check]
+description = "Check formatting; lint python, rust, and bevy"
+depends = ["_chk_rust", "_chk_python", "_chk_headers", "_chk_deps"]
+
+[tasks.fix]
+description = "Run check with various --fix flags enabled"
+run = """
+    cargo fmt
+    cargo clippy --quiet --locked --workspace --fix -- --no-deps
+    bevy lint --locked --workspace --fix -- --no-deps
+    uv run --active ruff check --fix ./scripts
+    uv run --active ./scripts/headers.py --fix
+"""
+
+[tasks.ci]
+description = "Test CI locally with nektos/act"
+run = "uv run --active ./scripts/ci.py"
+
+[tasks.test]
+description = "Run tests for a specific package or all packages"
+run = """
+if [ "$1" = "all" ]; then
+  cargo nextest run --workspace
+else
+  cargo nextest run -p "$1" "${@:2}"
+fi
+"""
+
+[tasks.run]
+description = "Run the specified workspace binary"
+run = "cargo run -F dev --bin {{arg(name='binary')}} -- {{arg(name='rustc-opts', var=true)}}"
+
+[tasks.build]
+description = "Build the specified workspace binary"
+run = "cargo build -F dev --bin {{arg(name='binary')}} {{arg(name='rustc-opts', var=true, default='--')}}"
+
+[tasks.play]
+description = "Play the game"
+run = "cargo run -F dev --bin q_app"
+
+[tasks.inspect]
+description = "Run the inspector"
+run = "cargo run -F dev --bin q_inspector"

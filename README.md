@@ -10,6 +10,11 @@
 
 ---
 
+[![License](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)](https://github.com/bevyengine/bevy#license)
+[![CI](https://github.com/ada-x64/q_service/actions/workflows/ci.yaml/badge.svg)](https://github.com/ada-x64/q_service/actions)
+[![codecov](https://codecov.io/github/ada-x64/q_service/graph/badge.svg?token=2gqZobeujo)](https://codecov.io/github/ada-x64/q_service)
+[![enbyware](https://pride-badges.pony.workers.dev/static/v1?label=enbyware&labelColor=%23555&stripeWidth=8&stripeColors=FCF434%2CFFFFFF%2C9C59D1%2C2C2C2C "they/she")](https://en.pronouns.page/are/they&she)
+
 **This project is under active development. Tests may not pass, performance may
 be slow, it might crash, and generally, it's probably a big mess!**
 
@@ -34,12 +39,11 @@ git clone --recursive-submodules https://github.com/ada-x64/qproj
 ### System deps
 
 - UNIX-like environment (I use Ubuntu WSL and Manjaro Linux)
-- [just](https://github.com/casey/just)
+- [mise](https://mise.jdx.dev)
 - python3
 - bash
 
-Run `just setup` to install all the build dependencies.
-Afterwards, run `just` to see a list of all the available commands.
+Call `mise run` to see a list of all the available commands.
 
 ### Structure
 

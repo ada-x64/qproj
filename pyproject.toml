@@ -1,6 +1,15 @@
 #  𝒒𝒑𝒓𝒐𝒋 -- copyright (c) the contributors
 #  SPDX-License-Identifier: MIT OR Apache-2.0
 
+[project]
+name = "qproj"
+version = "0.1.0"
+description = "qproj development environment"
+requires-python = ">=3.12"
+dependencies = ["black>=25.1.0", "pyright>=1.1.401"]
+
+[tool.uv]
+dev-dependencies = []
 
 [tool.black]
 line-length = 80

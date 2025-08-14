@@ -10,5 +10,4 @@ build
 __pycache__
 .trace
 .ropeproject
-# generated on `just setup`
-.env
+.ruff_cache

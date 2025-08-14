@@ -22,7 +22,7 @@ try:
         .decode("ascii")
         .replace("\r\n", "")
     )
-except:
+except Exception:
     if not os.environ.get("HOSTPATH"):
         print("WARN: wsl not detected and HOSTPATH not set.")
 
@@ -97,9 +97,7 @@ parser.add_argument(
     action="store_true",
     help="By default, cargo wsl will run with `-Fdebug -Fdev -Finspector`. Pass this flag if you want to disable that behavior.",
 )
-parser.add_argument(
-    "-v", "--verbose", action="count", help="Run verbosely.", default=0
-)
+parser.add_argument("-v", "--verbose", action="count", help="Run verbosely.", default=0)
 
 ssh_connection = os.environ.get("SSH_CONNECTION")
 if ssh_connection:
@@ -125,9 +123,7 @@ def print_and_run(cmd: str | list[str], **shargs: object):  # type: ignore
 
 env_vars: dict[str, str] = {}
 for key in env_vars_desc:
-    env_vars[key] = (
-        os.environ.get(key) or env_vars_desc[key].get("default") or ""
-    )
+    env_vars[key] = os.environ.get(key) or env_vars_desc[key].get("default") or ""
 
 pkg_name = "bevy_game"
 bin_name = "bevy_game.exe"
@@ -138,11 +134,7 @@ with open("Cargo.toml", "rb") as f:
     bin_name = pkg_name + ".exe"
     pdb_name = pkg_name + ".pdb"
 
-profile = (
-    "release"
-    if "-r" in args.forward or "--release" in args.forward
-    else "debug"
-)
+profile = "release" if "-r" in args.forward or "--release" in args.forward else "debug"
 target_dir = os.path.abspath(  # type: ignore
     os.path.join("target", env_vars["CARGO_BUILD_TARGET"], profile)  # type: ignore
 )
@@ -188,19 +180,13 @@ if not args.no_build:
                 .strip()
             )
             rustlibs = (
-                subprocess.check_output(["wslpath", "-aw", rustlibs])
-                .decode()
-                .strip()
+                subprocess.check_output(["wslpath", "-aw", rustlibs]).decode().strip()
             )
             deps = os.path.abspath(os.path.join(target_dir, "deps"))
-            deps = (
-                subprocess.check_output(["wslpath", "-aw", deps])
-                .decode()
-                .strip()
-            )
+            deps = subprocess.check_output(["wslpath", "-aw", deps]).decode().strip()
             winpath = f"$env:PATH;{rustlibs};{deps};"
 
-        except:
+        except Exception:
             print("WARN: Could not generate path to dynamic libraries!")
 
     runas = "-Verb RunAs" if args.trace else "-NoNewWindow"
@@ -268,7 +254,7 @@ def do_hash(build_files: list[str]):
             filtered = filter(lambda tuple: tuple[0] != tuple[1], zipped)
             mismatched = list(map(lambda tuple: tuple[0].split()[0], filtered))
     else:
-        mismatched = list(map(lambda l: l.split()[0], hashfile.splitlines()))
+        mismatched = list(map(lambda line: line.split()[0], hashfile.splitlines()))
 
     # overwrite it
     with open(hashfile_path, "w") as f:
@@ -319,17 +305,17 @@ if not args.no_sync:
             port = ssh_connection[1]
             host = f"{user}@{ip}:{port}"
 
-        sync_script = f"sftp sftp://{host}/{env_vars["HOSTPATH"]} <<EOF\n{sync_script}\nEOF"
+        sync_script = (
+            f"sftp sftp://{host}/{env_vars['HOSTPATH']} <<EOF\n{sync_script}\nEOF"
+        )
         print_and_run(["bash", "-c", sync_script])
     else:
         print_and_run(["bash", "-c", sync_script])
 
     if env_vars["SYNC_PING_ADDRESS"]:
-        remote_files = map(
-            lambda f: f.replace(target_dir + "/", ""), files_to_sync
-        )
+        remote_files = map(lambda f: f.replace(target_dir + "/", ""), files_to_sync)
         print_and_run(
-            f'echo qproj sent {" ".join(remote_files)} | websocat {env_vars["SYNC_PING_ADDRESS"]}',
+            f"echo qproj sent {' '.join(remote_files)} | websocat {env_vars['SYNC_PING_ADDRESS']}",
             shell=True,
         )
 else:
