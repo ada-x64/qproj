@@ -10,6 +10,9 @@
 
 ---
 
+**This project is under active development. Tests may not pass, performance may
+be slow, it might crash, and generally, it's probably a big mess!**
+
 This is a game project written on top of [Bevy.](https://bevyengine.org)
 Read more [on my blog.](https://cubething.dev/qproj/general-introduction)
 
