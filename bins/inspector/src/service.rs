@@ -3,10 +3,12 @@
 
 use bevy::prelude::*;
 use bevy_egui::EguiContextPass;
-use q_player::cam::CamService;
 use q_service::prelude::*;
 
-use crate::{prelude::*, scene::gizmos::GizmosService};
+use crate::{
+    prelude::*,
+    scene::{gizmos::GizmosService, inspector_cam::CamService},
+};
 
 // Resources //////////////////////////////////////////////////////////////////
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Resource, Reflect)]

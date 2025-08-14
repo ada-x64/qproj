@@ -36,6 +36,7 @@ git clone --recursive-submodules https://github.com/ada-x64/qproj
 - bash
 
 Run `just setup` to install all the build dependencies.
+Afterwards, run `just` to see a list of all the available commands.
 
 ### Structure
 
