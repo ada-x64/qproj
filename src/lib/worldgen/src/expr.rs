@@ -5,19 +5,11 @@ use bevy::{
     asset::{AssetLoader, AsyncReadExt},
     prelude::*,
 };
-use noise::NoiseFn;
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
 use thiserror::Error;
 
 #[derive(Asset, TypePath, Deref, Clone, Serialize, Deserialize)]
 pub struct Expr(pub noise_gui::Expr);
-
-#[derive(Deref, DerefMut, Clone)]
-pub struct NoiseBox(pub Arc<Mutex<dyn TerrainNoise>>);
-
-pub trait TerrainNoise: NoiseFn<f64, 3> + Send + Sync {}
-impl<T> TerrainNoise for T where T: NoiseFn<f64, 3> + Send + Sync {}
 
 #[derive(Error, Debug)]
 pub enum ExprError {

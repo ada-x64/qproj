@@ -7,11 +7,11 @@ use std::{
 };
 
 use bevy::{prelude::*, scene::SceneInstance};
-use q_inspector::prelude::{
-    InspectorServiceInitialized,
-    serialize::{LoadSceneEvent, LoadStatus, SaveSceneEvent, SaveStatus},
+use q_inspector::{
+    prelude::*,
+    scene::serialize::{LoadSceneEvent, LoadStatus, SaveSceneEvent, SaveStatus},
 };
-
+use q_service::prelude::*;
 use q_test::Runner;
 
 #[derive(Resource, Default)]
@@ -29,7 +29,7 @@ fn load_scene() -> AppExit {
         app.cleanup();
         app.init_resource::<SavedStructure>()
             .add_observer(
-                |_trigger: Trigger<InspectorServiceInitialized>,
+                |_trigger: Trigger<ServiceUp<InspectorService>>,
                  mut commands: Commands,
                  mut query: Single<(Entity, &DynamicSceneRoot, &mut Children)>,
                  scene_instances: Query<&SceneInstance>,

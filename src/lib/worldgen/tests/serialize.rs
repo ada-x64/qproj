@@ -15,7 +15,7 @@ fn serialize() -> AppExit {
         app.add_observer(|_: Trigger<TerrainIntialized>, world: &mut World| {
             {
                 let scene = DynamicSceneBuilder::from_world(world).allow_all();
-                let type_registry = world.resource::<AppTypeRegistry>();
+                let type_registry = world.get_resource::<AppTypeRegistry>().unwrap();
                 let type_registry = type_registry.read();
                 let res = scene.build().serialize(&type_registry).unwrap();
                 info!("{res}")

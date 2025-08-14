@@ -4,7 +4,7 @@
       "language_servers": ["ruff"]
     },
     "TOML": {
-      "language_servers": ["!Taplo"]
+      // "language_servers": ["!Taplo"]
     }
   },
   "lsp": {

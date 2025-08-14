@@ -7,7 +7,7 @@ uv = "latest"
 
 "cargo:cargo-deny" = "latest"
 "cargo:cargo-nextest" = "latest"
-"cargo:https://github.com/TheBevyFlock/bevy_cli.git" = {version="latest", crate="bevy_cli"}
+"cargo:https://github.com/TheBevyFlock/bevy_cli.git" = { version = "latest", crate = "bevy_cli" }
 mold = "latest"
 ruff = "latest"
 
@@ -41,8 +41,8 @@ run = """
 description = "Check Rust formatting and linting"
 run = """
     cargo fmt -- --check
-    cargo clippy --locked --workspace --quiet -- --no-deps
-    bevy lint --locked --workspace -- --no-deps
+    bevy lint --locked --workspace --all-targets --bin q_inspector
+    bevy lint --locked --workspace --all-targets --bin q_app
 """
 
 [tasks._chk_headers]
@@ -67,8 +67,8 @@ depends = ["_chk_rust", "_chk_python", "_chk_headers", "_chk_deps"]
 description = "Run check with various --fix flags enabled"
 run = """
     cargo fmt
-    cargo clippy --quiet --locked --workspace --fix -- --no-deps
-    bevy lint --locked --workspace --fix -- --no-deps
+    bevy lint --locked --workspace --all-targets --fix --bin q_inspector
+    bevy lint --locked --workspace --all-targets --fix --bin q_app
     uv run --active ruff check --fix ./scripts
     uv run --active ./scripts/headers.py --fix
 """

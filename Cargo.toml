@@ -7,6 +7,9 @@
 members = ["src/bin/*", "src/lib/*"]
 resolver = "2"
 
+[workspace.metadata.bevy_lint]
+panicking_methods = { level = "warn" }
+
 [workspace.lints]
 rust.unexpected_cfgs = { level = "warn", check-cfg = ["cfg(bevy_lint)"] }
 clippy.too_many_arguments = "allow"

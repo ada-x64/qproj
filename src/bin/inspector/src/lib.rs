@@ -1,9 +1,9 @@
 // 𝒒𝒑𝒓𝒐𝒋 -- copyright (c) the contributors
 // SPDX-License-Identifier: MIT OR Apache-2.0
 
-mod scene;
-mod service;
-mod ui;
+pub mod scene;
+pub mod service;
+pub mod ui;
 
 pub mod prelude {
     pub use crate::scene::*;

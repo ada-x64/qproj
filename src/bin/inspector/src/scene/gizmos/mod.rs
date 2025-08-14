@@ -34,7 +34,7 @@ impl Plugin for GizmosPlugin {
             .init_gizmo_group::<RenderToTextureGroup>();
         {
             let world = app.world_mut();
-            let mut gcstore = world.resource_mut::<GizmoConfigStore>();
+            let mut gcstore = world.get_resource_mut::<GizmoConfigStore>().unwrap();
             gcstore.insert(
                 GizmoConfig {
                     render_layers: RenderLayers::layer(1),

@@ -80,7 +80,11 @@ fn extract<'w>(
 ) -> DynamicSceneBuilder<'w> {
     r!(builder, world.get_entity(entity)); //check if the entity exists
     builder = builder.extract_entity(entity);
-    if let Some(children) = world.entity(entity).get::<Children>() {
+    if let Some(children) = world
+        .get_entity(entity)
+        .ok()
+        .and_then(|e| e.get::<Children>())
+    {
         for child in children {
             builder = extract(builder, world, *child);
         }
@@ -134,7 +138,8 @@ fn save_scene(trigger: Trigger<SaveSceneEvent>, world: &mut World) {
                 Ok(_) => Toast::Success.from_world(world, format!("Saved file to {path:#?}")),
             };
             world
-                .resource_mut::<NextState<SaveStatus>>()
+                .get_resource_mut::<NextState<SaveStatus>>()
+                .unwrap()
                 .set(SaveStatus::Complete);
         })
     })(world);
@@ -178,7 +183,7 @@ fn load_scene(trigger: Trigger<LoadSceneEvent>, world: &mut World) {
     let label = path.label();
     debug!("path: {path:#?}\nfull_ext: {full_ext:#?}\nlabel: {label:#?}");
     let scene_handle = asset_server.load(path);
-    let mut next_state = world.resource_mut::<NextState<LoadStatus>>();
+    let mut next_state = world.get_resource_mut::<NextState<LoadStatus>>().unwrap();
     next_state.set(LoadStatus::AwaitingLoad(scene_handle));
 }
 
@@ -207,7 +212,7 @@ fn await_loaded_scene(
 struct ApplySceneEvent;
 fn apply_scene(_trigger: Trigger<ApplySceneEvent>, world: &mut World) {
     // reset world into default scene...
-    let scene = world.resource::<CurrentScene>().0.clone();
+    let scene = world.get_resource::<CurrentScene>().unwrap().0.clone();
     if scene.is_none() {
         Toast::Error.from_world(world, "Tried to apply empty scene!");
         return;
