@@ -16,10 +16,7 @@ impl Plugin for ModalsPlugin {
     }
 }
 
-fn render(
-    mut ui_state: ResMut<UiState>,
-    mut ctx: Single<&mut EguiContext, With<PrimaryWindow>>,
-) {
+fn render(mut ui_state: ResMut<UiState>, mut ctx: Single<&mut EguiContext, With<PrimaryWindow>>) {
     ui_state.toasts.show(ctx.get_mut());
     ui_state.file_dialog.update(ctx.get_mut());
 }

@@ -8,9 +8,7 @@ use tiny_bail::prelude::*;
 
 use crate::ui::{
     UiState, UiSystems,
-    layout::dock::{
-        DockState, TabViewer, tabs::scene_editor::set_camera_viewport,
-    },
+    layout::dock::{DockState, TabViewer, tabs::scene_editor::set_camera_viewport},
 };
 
 pub struct DockPlugin;
@@ -27,8 +25,7 @@ impl Plugin for DockPlugin {
 fn render(world: &mut World) {
     world.resource_scope(|world, mut ui_state: Mut<UiState>| {
         world.resource_scope(|world, mut dock_state: Mut<DockState>| {
-            let mut ctx =
-                world.query_filtered::<&mut EguiContext, With<PrimaryWindow>>();
+            let mut ctx = world.query_filtered::<&mut EguiContext, With<PrimaryWindow>>();
             let ctx = r!(ctx.single_mut(world));
             let mut ctx = ctx.clone();
             let ctx = ctx.get_mut();

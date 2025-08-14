@@ -7,11 +7,7 @@ use bevy_egui::egui;
 
 use crate::ui::layout::dock::{InspectorSelection, TabViewer};
 
-pub fn render_tab(
-    tab_viewer: &mut TabViewer,
-    ui: &mut egui::Ui,
-    type_registry: &TypeRegistry,
-) {
+pub fn render_tab(tab_viewer: &mut TabViewer, ui: &mut egui::Ui, type_registry: &TypeRegistry) {
     let mut assets: Vec<_> = type_registry
         .iter()
         .filter_map(|registration| {
@@ -33,9 +29,7 @@ pub fn render_tab(
             let state = &mut state.tab_data;
             for handle in handles {
                 let selected = match state.selection {
-                    InspectorSelection::Asset(_, _, selected_id) => {
-                        selected_id == handle
-                    }
+                    InspectorSelection::Asset(_, _, selected_id) => selected_id == handle,
                     _ => false,
                 };
 
@@ -43,11 +37,8 @@ pub fn render_tab(
                     .selectable_label(selected, format!("{handle:?}"))
                     .clicked()
                 {
-                    state.selection = InspectorSelection::Asset(
-                        asset_type_id,
-                        asset_name.to_string(),
-                        handle,
-                    );
+                    state.selection =
+                        InspectorSelection::Asset(asset_type_id, asset_name.to_string(), handle);
                 }
             }
         });

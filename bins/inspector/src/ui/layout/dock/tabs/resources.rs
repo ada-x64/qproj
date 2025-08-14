@@ -32,10 +32,7 @@ pub fn render_tab<T: TypeData>(
         };
 
         if ui.selectable_label(selected, resource_name).clicked() {
-            state.selection = InspectorSelection::Resource(
-                type_id,
-                resource_name.to_string(),
-            );
+            state.selection = InspectorSelection::Resource(type_id, resource_name.to_string());
         }
     }
 }

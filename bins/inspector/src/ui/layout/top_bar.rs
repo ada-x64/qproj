@@ -50,9 +50,7 @@ pub fn render(
                             "Scene File",
                             ACCEPTED_SCENE_EXTENSIONS.to_vec(),
                         )
-                        .initial_directory(
-                            PathBuf::from_str("./assets/scenes").unwrap(),
-                        );
+                        .initial_directory(PathBuf::from_str("./assets/scenes").unwrap());
                     ui_state.file_dialog.pick_file();
                     ui_state.file_dialog_state = UiFileState::LoadingScene;
                     ui.close_menu();
@@ -62,9 +60,7 @@ pub fn render(
                         .add_save_extension("Scene File", "scn")
                         .default_pos(default_pos)
                         .allow_file_overwrite(true)
-                        .initial_directory(
-                            PathBuf::from_str("./assets/scenes").unwrap(),
-                        );
+                        .initial_directory(PathBuf::from_str("./assets/scenes").unwrap());
                     ui_state.file_dialog.save_file();
                     ui_state.file_dialog_state = UiFileState::SavingScene;
                     ui.close_menu();
@@ -79,8 +75,7 @@ pub fn render(
                         )
                         .default_pos(default_pos)
                         .initial_directory(
-                            PathBuf::from_str("./assets/inspector/layouts")
-                                .unwrap(),
+                            PathBuf::from_str("./assets/inspector/layouts").unwrap(),
                         );
                     ui_state.file_dialog.pick_file();
                     ui_state.file_dialog_state = UiFileState::LoadingScene;
@@ -92,8 +87,7 @@ pub fn render(
                         .default_pos(default_pos)
                         .allow_file_overwrite(true)
                         .initial_directory(
-                            PathBuf::from_str("./assets/inspector/layouts")
-                                .unwrap(),
+                            PathBuf::from_str("./assets/inspector/layouts").unwrap(),
                         );
                     ui_state.file_dialog.save_file();
                     ui_state.file_dialog_state = UiFileState::SavingScene;

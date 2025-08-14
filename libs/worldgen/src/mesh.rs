@@ -154,9 +154,7 @@ pub fn gen_normals(positions: &[Vec3], indices: &[u32]) -> Vec<Vec3> {
 /// Size is width or length
 pub fn gen_positions(size: usize) -> Vec<Vec3> {
     (0..size * size)
-        .map(|idx| {
-            Vec3::new((idx % size) as f32, rand::random(), (idx / size) as f32)
-        })
+        .map(|idx| Vec3::new((idx % size) as f32, rand::random(), (idx / size) as f32))
         .collect_vec()
 }
 #[test]

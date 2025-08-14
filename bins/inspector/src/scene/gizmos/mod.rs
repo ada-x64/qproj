@@ -11,9 +11,7 @@ use crate::{
     },
     ui::layout::dock::tabs::scene_editor::set_camera_viewport,
 };
-use bevy::{
-    ecs::system::RunSystemOnce, prelude::*, render::view::RenderLayers,
-};
+use bevy::{ecs::system::RunSystemOnce, prelude::*, render::view::RenderLayers};
 use q_player::cam::CamService;
 use q_service::prelude::*;
 

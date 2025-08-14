@@ -6,10 +6,7 @@ use bevy::prelude::*;
 use q_player::prelude::*;
 use tiny_bail::prelude::*;
 
-pub fn draw_cam_gizmo(
-    mut gizmos: Gizmos,
-    q: Query<&Transform, With<PlayerCam>>,
-) {
+pub fn draw_cam_gizmo(mut gizmos: Gizmos, q: Query<&Transform, With<PlayerCam>>) {
     let cam = rq!(q.single());
     let start_point = cam.translation - cam.forward().as_vec3();
     let end_point = cam.translation;

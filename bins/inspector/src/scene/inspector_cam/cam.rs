@@ -77,13 +77,8 @@ pub(crate) fn update_camera(
         delta.y *= sensitivity.y;
     }
 
-    rig.driver_mut::<Fpv>().update_pos_rot(
-        move_vec,
-        delta,
-        true,
-        boost,
-        time_delta_seconds,
-    );
+    rig.driver_mut::<Fpv>()
+        .update_pos_rot(move_vec, delta, true, boost, time_delta_seconds);
 }
 // /// Grabs/ungrabs mouse cursor
 // fn toggle_grab_cursor(window: &mut Window) -> bool {

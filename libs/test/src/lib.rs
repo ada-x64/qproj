@@ -13,8 +13,8 @@ use bevy::{
     render::{
         RenderPlugin,
         renderer::{
-            RenderAdapter, RenderAdapterInfo, RenderDevice, RenderInstance,
-            RenderQueue, WgpuWrapper,
+            RenderAdapter, RenderAdapterInfo, RenderDevice, RenderInstance, RenderQueue,
+            WgpuWrapper,
         },
         settings::{RenderCreation, RenderResources},
     },
@@ -133,8 +133,7 @@ impl Runner {
             let timeout = self.timeout;
             app.add_systems(
                 Update,
-                move |time: Res<Time<Real>>,
-                      mut events: EventWriter<AppExit>| {
+                move |time: Res<Time<Real>>, mut events: EventWriter<AppExit>| {
                     let elapsed = time.elapsed_secs();
                     if elapsed > timeout {
                         error!("Timeout after {elapsed}s");

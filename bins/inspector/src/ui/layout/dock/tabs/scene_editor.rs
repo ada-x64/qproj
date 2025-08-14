@@ -60,17 +60,14 @@ pub fn set_camera_viewport(
     mut cam: Single<&mut Camera, With<InspectorCam>>,
     window: Single<&mut Window, With<PrimaryWindow>>,
 ) -> Result<(), BevyError> {
-    let scale_factor =
-        window.scale_factor() * egui_settings.single()?.scale_factor;
+    let scale_factor = window.scale_factor() * egui_settings.single()?.scale_factor;
 
     let state = &ui_state.tab_data;
     let viewport_pos = state.viewport_rect.left_top().to_vec2() * scale_factor;
     let viewport_size = state.viewport_rect.size() * scale_factor;
 
-    let physical_position =
-        UVec2::new(viewport_pos.x as u32, viewport_pos.y as u32);
-    let physical_size =
-        UVec2::new(viewport_size.x as u32, viewport_size.y as u32);
+    let physical_position = UVec2::new(viewport_pos.x as u32, viewport_pos.y as u32);
+    let physical_size = UVec2::new(viewport_size.x as u32, viewport_size.y as u32);
 
     // The desired viewport rectangle at its offset in "physical pixel space"
     let rect = physical_position + physical_size;

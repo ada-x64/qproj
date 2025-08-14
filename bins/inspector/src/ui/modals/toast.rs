@@ -17,8 +17,7 @@ impl Toast {
     /// This is the most direct application. Prefer it when possible!
     pub fn from_ui_state(self, ui_state: &mut UiState, msg: impl ToString) {
         let mut msg = msg.to_string();
-        let duration =
-            Duration::from_secs_f32((msg.len() as f32 / 10.).max(1.));
+        let duration = Duration::from_secs_f32((msg.len() as f32 / 10.).max(1.));
 
         match self {
             Self::Success => {

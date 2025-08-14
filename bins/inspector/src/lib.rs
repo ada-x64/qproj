@@ -13,8 +13,7 @@ pub mod prelude {
 
 use bevy::{
     gizmos::GizmoPlugin, input::InputPlugin, pbr::wireframe::WireframePlugin,
-    picking::PickingPlugin, prelude::*, sprite::SpritePlugin,
-    state::app::StatesPlugin,
+    picking::PickingPlugin, prelude::*, sprite::SpritePlugin, state::app::StatesPlugin,
 };
 use bevy_egui::EguiPlugin;
 use bevy_inspector_egui::DefaultInspectorConfigPlugin;
@@ -45,13 +44,9 @@ impl Plugin for InspectorPlugin {
                 InputPlugin,
                 GizmoPlugin,
             );
-            app.add_plugins((
-                crate::scene::ScenePlugin,
-                InspectorStatePlugin,
-                UiPlugin,
-            ))
-            .add_systems(Startup, || debug!("STARTUP"))
-            .add_systems(Update, || debug_once!("UPDATE"))
+            app.add_plugins((crate::scene::ScenePlugin, InspectorStatePlugin, UiPlugin))
+                .add_systems(Startup, || debug!("STARTUP"))
+                .add_systems(Update, || debug_once!("UPDATE"))
         };
     }
 }

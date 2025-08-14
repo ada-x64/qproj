@@ -88,10 +88,7 @@ impl FromWorld for ChunkGenerator {
 }
 
 impl ChunkGenerator {
-    pub fn get_data(
-        &self,
-        exprs: &Res<Assets<Expr>>,
-    ) -> Result<ChunkGenerationData, &'static str> {
+    pub fn get_data(&self, exprs: &Res<Assets<Expr>>) -> Result<ChunkGenerationData, &'static str> {
         let expr = exprs.get(&self.expr).ok_or("Noise expr not initiated")?;
         Ok(ChunkGenerationData {
             max_elevation: self.opts.max_elevation,

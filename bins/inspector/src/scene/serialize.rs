@@ -59,11 +59,9 @@ impl Plugin for SceneSerializePlugin {
             .init_state::<SaveStatus>()
             .add_systems(
                 PreUpdate,
-                await_loaded_scene.run_if(
-                    |load_status: Res<State<LoadStatus>>| {
-                        matches!(**load_status, LoadStatus::AwaitingLoad(_))
-                    },
-                ),
+                await_loaded_scene.run_if(|load_status: Res<State<LoadStatus>>| {
+                    matches!(**load_status, LoadStatus::AwaitingLoad(_))
+                }),
             )
             .add_event::<SaveSceneEvent>()
             .add_event::<LoadSceneEvent>()
@@ -101,8 +99,7 @@ fn save_scene(trigger: Trigger<SaveSceneEvent>, world: &mut World) {
         .set(SaveStatus::AwaitingSave(path.clone()));
     path.set_extension(PREFERRED_SCENE_EXTENSION);
     let scene = {
-        let mut scene =
-            world.query_filtered::<Entity, With<DynamicSceneRoot>>();
+        let mut scene = world.query_filtered::<Entity, With<DynamicSceneRoot>>();
         let scene = scene.single(world);
         if let Err(e) = scene {
             Toast::Error.from_world(world, e.to_string());
@@ -111,10 +108,9 @@ fn save_scene(trigger: Trigger<SaveSceneEvent>, world: &mut World) {
         scene.unwrap()
     };
     let builder = {
-        let builder = DynamicSceneBuilder::from_world(world)
-            .with_resource_filter(SceneFilter::Denylist(HashSet::from_iter([
-                TypeId::of::<Time>(),
-            ])));
+        let builder = DynamicSceneBuilder::from_world(world).with_resource_filter(
+            SceneFilter::Denylist(HashSet::from_iter([TypeId::of::<Time>()])),
+        );
         extract(builder, world, scene)
     };
     let serialized_scene = {
@@ -135,8 +131,7 @@ fn save_scene(trigger: Trigger<SaveSceneEvent>, world: &mut World) {
             let res = std::fs::write(&path, serialized_scene.as_bytes());
             match res {
                 Err(e) => Toast::Error.from_world(world, e.to_string()),
-                Ok(_) => Toast::Success
-                    .from_world(world, format!("Saved file to {path:#?}")),
+                Ok(_) => Toast::Success.from_world(world, format!("Saved file to {path:#?}")),
             };
             world
                 .resource_mut::<NextState<SaveStatus>>()
@@ -243,20 +238,15 @@ fn apply_scene(_trigger: Trigger<ApplySceneEvent>, world: &mut World) {
                 let assets = r!(world.get_resource::<Assets<DynamicScene>>());
                 let scene = assets.get(scene.id()); // is failing to recognize the extension
                 if scene.is_none() {
-                    Toast::Error.from_world(
-                        world,
-                        "Could not load scene! See logs for details.",
-                    );
+                    Toast::Error.from_world(world, "Could not load scene! See logs for details.");
                     return;
                 }
                 scene.unwrap()
             };
 
             // clone scene
-            let type_registry =
-                world.get_resource::<AppTypeRegistry>().unwrap();
-            let scene =
-                Scene::from_dynamic_scene(scene, type_registry).unwrap();
+            let type_registry = world.get_resource::<AppTypeRegistry>().unwrap();
+            let scene = Scene::from_dynamic_scene(scene, type_registry).unwrap();
             *ds = DynamicScene::from_scene(&scene);
         },
     );

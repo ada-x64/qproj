@@ -14,8 +14,8 @@ use expr::{Expr, ExprLoader};
 use generator::{ChunkGenerationData, ChunkGenerator};
 use itertools::Itertools;
 use util::{
-    Callback, CallbackTriggered, ComputeChunk, Initialized, SpawnAround,
-    SpawnAroundTracker, Terrain, TerrainIntialized, euclidean_dist, iter_xy,
+    Callback, CallbackTriggered, ComputeChunk, Initialized, SpawnAround, SpawnAroundTracker,
+    Terrain, TerrainIntialized, euclidean_dist, iter_xy,
 };
 pub mod chunk;
 mod expr;
@@ -54,10 +54,7 @@ impl WorldgenPlugin {
         }
     }
 
-    fn run_cbs(
-        mut commands: Commands,
-        q: Query<(Entity, &Callback), With<CallbackTriggered>>,
-    ) {
+    fn run_cbs(mut commands: Commands, q: Query<(Entity, &Callback), With<CallbackTriggered>>) {
         q.iter().for_each(|(entt, cb)| {
             commands.run_system(cb.0);
             commands.entity(entt).remove::<CallbackTriggered>();
@@ -83,8 +80,8 @@ impl WorldgenPlugin {
                 error!("Could not get chunk generator's default material!");
                 return;
             }
-            let collider = Collider::trimesh_from_mesh(&mesh)
-                .expect("Could not create chunk collider");
+            let collider =
+                Collider::trimesh_from_mesh(&mesh).expect("Could not create chunk collider");
             let default_material = default_material.unwrap();
             let mesh_handle = world
                 .get_resource_mut::<Assets<Mesh>>()
@@ -132,18 +129,15 @@ impl WorldgenPlugin {
         exprs: Res<Assets<Expr>>,
         chunks: Query<(Entity, &Chunk)>,
     ) {
-        let mut to_populate =
-            iter_xy(generator.opts.active_radius, trigger.pos)
-                .sorted_by(|p1, p2| {
-                    let d1 = euclidean_dist(*p1, trigger.pos);
-                    let d2 = euclidean_dist(*p2, trigger.pos);
-                    std::cmp::PartialOrd::partial_cmp(&d1, &d2).unwrap()
-                })
-                .collect_vec();
+        let mut to_populate = iter_xy(generator.opts.active_radius, trigger.pos)
+            .sorted_by(|p1, p2| {
+                let d1 = euclidean_dist(*p1, trigger.pos);
+                let d2 = euclidean_dist(*p2, trigger.pos);
+                std::cmp::PartialOrd::partial_cmp(&d1, &d2).unwrap()
+            })
+            .collect_vec();
         let to_modify = chunks.iter().filter_map(|(entt, chunk)| {
-            if let Some((idx, _pos)) =
-                to_populate.iter().find_position(|pos| **pos == chunk.pos)
-            {
+            if let Some((idx, _pos)) = to_populate.iter().find_position(|pos| **pos == chunk.pos) {
                 to_populate.swap_remove(idx);
                 let dist = euclidean_dist(chunk.pos, trigger.pos);
                 if dist > generator.opts.lod_cutoff as f32 {
@@ -229,14 +223,8 @@ impl Plugin for WorldgenPlugin {
             .add_systems(
                 Update,
                 (
-                    (
-                        Self::evaluate_triggers,
-                        Self::run_cbs,
-                        Self::handle_tasks,
-                    )
-                        .chain(),
-                    (Self::trigger_spawn_around)
-                        .run_if(Self::spawn_around_run_condition),
+                    (Self::evaluate_triggers, Self::run_cbs, Self::handle_tasks).chain(),
+                    (Self::trigger_spawn_around).run_if(Self::spawn_around_run_condition),
                 ),
             );
     }

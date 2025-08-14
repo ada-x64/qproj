@@ -54,12 +54,8 @@ impl Plugin for TaskPlugin {
 fn test() {
     let mut app = App::new();
     let i = 0;
-    app.add_plugins((MinimalPlugins, TaskPlugin)).add_systems(
-        Update,
-        move |world: &mut World| {
-            task!(bevy::tasks::IoTaskPool, async move |_q| { println!("{i}") })(
-                world,
-            )
-        },
-    );
+    app.add_plugins((MinimalPlugins, TaskPlugin))
+        .add_systems(Update, move |world: &mut World| {
+            task!(bevy::tasks::IoTaskPool, async move |_q| { println!("{i}") })(world)
+        });
 }

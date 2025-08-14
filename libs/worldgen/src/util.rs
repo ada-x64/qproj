@@ -18,10 +18,7 @@ pub fn iter_xy(radius: i32, center: IVec2) -> impl Iterator<Item = IVec2> {
 
 /// Returns an iterator of (x,y) coordinates that fit within a circle of the
 /// given radius centered around the passed position.
-pub fn iter_radius_xy(
-    radius: i32,
-    center: IVec2,
-) -> impl Iterator<Item = IVec2> {
+pub fn iter_radius_xy(radius: i32, center: IVec2) -> impl Iterator<Item = IVec2> {
     let r = radius;
     let d = 2 * r;
     let (cx, cy) = (center.x, center.y);

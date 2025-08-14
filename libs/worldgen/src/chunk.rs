@@ -144,9 +144,7 @@ impl Chunk {
 fn f() {
     Chunk::new(
         ChunkGenerationData {
-            expr: crate::expr::Expr(noise_gui::Expr::Value(
-                noise_gui::Variable::Anonymous(13),
-            )),
+            expr: crate::expr::Expr(noise_gui::Expr::Value(noise_gui::Variable::Anonymous(13))),
             size: 32,
             scale: 0.001,
             max_elevation: 100.,
