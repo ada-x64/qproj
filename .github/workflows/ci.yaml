@@ -1,7 +1,7 @@
 name: Cargo Build & Test
 
 on:
-  pull_request:
+  push:
 
 env:
   CARGO_TERM_COLOR: always
@@ -19,5 +19,20 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ matrix.target }}-ci-${{ hashFiles('**/Cargo.toml') }}
+
+      - name: Install dependencies
+        run: sudo apt-get update; sudo apt-get install -y --no-install-recommends libasound2-dev libudev-dev
+
       - uses: jdx/mise-action@v2
-      - run: mise check
+      - run: mise check-inspector
+      - run: mise check-app

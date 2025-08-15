@@ -3,21 +3,24 @@
 # -------------------------------- 𝒒𝒑𝒓𝒐𝒋 --
 
 [tools]
-"cargo:sccache" = "latest"
 "mold" = "latest"
-
-[env]
-"RUSTC_WRAPPER" = "sccache"
-
-[tools."cargo:https://github.com/TheBevyFlock/bevy_cli.git"]
-version = "latest"
-crate = "bevy_cli"
+act = "latest"
 
 [tools.rust]
 # keep in sync with bevy_cli
 version = "nightly-2025-06-26"
-components = "rustc-codegen-cranelift-preview,rustc-dev,llvm-tools-preview"
+components = "rustc-codegen-cranelift-preview,rustc-dev,llvm-tools-preview,clippy"
 targets = "x86_64-pc-windows-msvc,x86_64-unknown-linux-gnu"
+
+[tasks.install_bevy_lint]
+hide = true
+run = """
+rustup run nightly-2025-06-26 cargo install \
+    --git https://github.com/TheBevyFlock/bevy_cli.git \
+    --tag lint-v0.4.0 \
+    --locked \
+    bevy_lint || true
+"""
 
 ## CHECKS #####################################################################
 
@@ -41,15 +44,22 @@ depends = ["fix:headers --fail-on-fix"]
 [tasks.bevy_lint]
 hide = true
 wait_for = ["check", "fix"]
+depends = ["install_bevy_lint"]
 run = """
     # bevy_lint
-    export CARGO=$(rustup which --toolchain nightly-2025-06-26 cargo) bevy_lint
 
+    # TEMP: Disable sccache in ci
+    if [ -n $CI ];then
+        RUSTC_WRAPPER=""
+    else
+        RUSTC_WRAPPER="sccache"
+        CARGO=$(rustup which --toolchain nightly-2025-06-26 cargo) bevy_lint
+    fi
     if [ '{{flag(name="fix")}}' = 'true' ]; then
         FIX=" --fix";
     fi
 
-    bevy lint --locked --all-features \
+    bevy_lint --locked --all-features \
         $FIX \
         {{arg(name="package", var=true)}};
 """
@@ -59,6 +69,13 @@ hide = true
 wait_for = ["check", "fix"]
 run = """
     # clippy
+
+    # TEMP: Disable sccache in ci
+    if [ -n $CI ];then
+        RUSTC_WRAPPER="";
+    else
+        RUSTC_WRAPPER="sccache"
+    fi
     if [ '{{flag(name="fix")}}' = 'true' ]; then
         FIX=" --fix";
     fi
@@ -91,7 +108,8 @@ sources = ["src/bin/lib/utils/**"]
 [tasks.check]
 description = "Lint the workspace."
 confirm = "This may take a while. Prefer using the individual checks. Proceed anyways?"
-depends_post = ["check:*", "check:pkg:*"]
+depends_post = ["check:**"]
+
 
 ## FIXES ######################################################################
 
@@ -129,14 +147,14 @@ depends = ["check:pkg:* --fix"]
 [tasks.fix]
 description = "Fix all fixable issues."
 confirm = "This may take a while. Prefer using the individual checks. Proceed anyways?"
-depends = ["fix:*"]
+depends_post = ["fix:rust", "fix:headers"]
 
 ## BUILD AND DEPLOY ###########################################################
 
 [tasks.ci]
 tools = { "act" = "latest" }
 description = "Test CI locally with nektos/act"
-run = "act -P ubuntu-24.04=ghcr.io/catthehacker/ubuntu:act-24.04"
+run = "act -P ubuntu-24.04=ghcr.io/catthehacker/ubuntu:act-24.04 {{arg(name='rest', default='--', var=true)}}"
 
 [tasks.test]
 tools = { "cargo:cargo-nextest" = "latest" }
@@ -151,16 +169,20 @@ fi
 
 [tasks.run]
 description = "Run the specified workspace binary"
-run = "cargo run -F dev --bin {{arg(name='binary')}} -- {{arg(name='rustc-opts', var=true)}}"
+env = { "RUSTC_WRAPPER" = "sccache" }
+tools = { "sccache" = "latest" }
+run = "cargo run -F dev --bin {{arg(name='binary')}} {{arg(name='rustc-opts', var=true, default='--')}}"
 
 [tasks.build]
 description = "Build the specified workspace binary"
+env = { "RUSTC_WRAPPER" = "sccache" }
+tools = { "sccache" = "latest" }
 run = "cargo build -F dev --bin {{arg(name='binary')}} {{arg(name='rustc-opts', var=true, default='--')}}"
 
 [tasks.play]
 description = "Play the game"
-run = "cargo run -F dev --bin q_app"
+depends = ["run q_app"]
 
 [tasks.inspect]
 description = "Run the inspector"
-run = "cargo run -F dev --bin q_inspector"
+depends = ["run q_inspector"]
