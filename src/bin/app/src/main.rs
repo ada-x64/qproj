@@ -1,8 +1,9 @@
-// 𝒒𝒑𝒓𝒐𝒋 -- copyright (c) the contributors
+// ------------------------------------------
 // SPDX-License-Identifier: MIT OR Apache-2.0
+// -------------------------------- 𝒒𝒑𝒓𝒐𝒋 --
 
 use bevy::prelude::*;
-use q_app::GameAppPlugin;
+use q_app::plugin::GameAppPlugin;
 
 #[bevy_main]
 fn main() -> AppExit {

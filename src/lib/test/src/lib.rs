@@ -1,5 +1,6 @@
-// 𝒒𝒑𝒓𝒐𝒋 -- copyright (c) the contributors
+// ------------------------------------------
 // SPDX-License-Identifier: MIT OR Apache-2.0
+// -------------------------------- 𝒒𝒑𝒓𝒐𝒋 --
 
 use std::sync::Arc;
 
@@ -24,7 +25,6 @@ use bevy::{
 };
 use wgpu::{DeviceDescriptor, InstanceDescriptor, RequestAdapterOptions};
 
-#[allow(clippy::test_attr_in_doctest)]
 /// Runs a headless instance. In order to succesfully exit the app, make sure
 /// you send an AppExit event. This can be accomplished with an
 /// [`EventWriter`] or with [`World::send_event`]. This does _not_

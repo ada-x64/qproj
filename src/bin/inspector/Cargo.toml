@@ -1,5 +1,6 @@
-#  𝒒𝒑𝒓𝒐𝒋 -- copyright (c) the contributors
-#  SPDX-License-Identifier: MIT OR Apache-2.0
+# ------------------------------------------
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# -------------------------------- 𝒒𝒑𝒓𝒐𝒋 --
 
 
 [package]
@@ -22,15 +23,12 @@ pedantic = "warn"
 
 [features]
 dev = ["bevy/dynamic_linking"]
-debug = []
 
 [dependencies]
 # workspace
 q_utils = { workspace = true }
-q_player = { workspace = true }
 q_tasks = { workspace = true }
-q_worldgen = { workspace = true }
-q_app = { workspace = true }
+q_app = { workspace = true, features = ["dev", "inspector"] }
 q_service = { workspace = true }
 
 # others
@@ -44,7 +42,7 @@ egui_dock = "0.16.0"
 egui-notify = "0.19.0"
 derivative = "2.2.0"
 egui-file-dialog = "0.10.0"
-thiserror= {workspace = true}
+thiserror = { workspace = true }
 
 [dev-dependencies]
 q_test = { workspace = true }

@@ -11,8 +11,7 @@
 ---
 
 [![License](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)](https://github.com/bevyengine/bevy#license)
-[![CI](https://github.com/ada-x64/q_service/actions/workflows/ci.yaml/badge.svg)](https://github.com/ada-x64/q_service/actions)
-[![codecov](https://codecov.io/github/ada-x64/q_service/graph/badge.svg?token=2gqZobeujo)](https://codecov.io/github/ada-x64/q_service)
+[![CI](https://github.com/ada-x64/qproj/actions/workflows/ci.yaml/badge.svg)](https://github.com/ada-x64/qproj/actions)
 [![enbyware](https://pride-badges.pony.workers.dev/static/v1?label=enbyware&labelColor=%23555&stripeWidth=8&stripeColors=FCF434%2CFFFFFF%2C9C59D1%2C2C2C2C "they/she")](https://en.pronouns.page/are/they&she)
 
 **This project is under active development. Tests may not pass, performance may
@@ -26,6 +25,8 @@ Read more [on my blog.](https://cubething.dev/qproj/general-introduction)
 - Chunked and optimized procedural 3D terrain generation
 - An event-driven, service-oriented architecture built on top of [q_service](https://github.com/ada-x64/q_service)
 - A custom editor
+- Highly optimized build times with [mold](https://github.com/rui314/mold), [sccache](https://github.com/mozilla/sccache), and [cranelift](https://github.com/rust-lang/rustc_codegen_cranelift)
+- Environment management with [mise](https://mise.jdx.dev)
 - ... more
 
 ## Getting Started
@@ -38,20 +39,10 @@ git clone --recursive-submodules https://github.com/ada-x64/qproj
 
 ### System deps
 
-- UNIX-like environment (I use Ubuntu WSL and Manjaro Linux)
+- UNIX-like environment (I use Manjaro Linux)
 - [mise](https://mise.jdx.dev)
-- python3
-- bash
 
 Call `mise run` to see a list of all the available commands.
-
-### Structure
-
-This project uses a workspace configuration to split dependencies. Each crate
-should have a single distinct feature and should be represented in a bevy
-plugin. The final executable should be in the src/ directory and should involve
-as little configuration as possible. Read more about it [on my
-blog.](https://www.cubething.dev/qproj/architecture-1---plugin-hierarchies)
 
 ## License
 

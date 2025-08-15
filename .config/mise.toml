@@ -1,83 +1,145 @@
-#  𝒒𝒑𝒓𝒐𝒋 -- copyright (c) the contributors
-#  SPDX-License-Identifier: MIT OR Apache-2.0
+# ------------------------------------------
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# -------------------------------- 𝒒𝒑𝒓𝒐𝒋 --
 
 [tools]
-python = "3.12"
-uv = "latest"
-
-"cargo:cargo-deny" = "latest"
-"cargo:cargo-nextest" = "latest"
-"cargo:https://github.com/TheBevyFlock/bevy_cli.git" = { version = "latest", crate = "bevy_cli" }
-mold = "latest"
-ruff = "latest"
-
-[tools.rust]
-version = "nightly-2025-06-25"
-components = "rustc-codegen-cranelift,rustc-dev,llvm-tools-preview"
-targets = "x86_64-pc-windows-msvc,x86_64-unknown-linux-gnu"
+"cargo:sccache" = "latest"
+"mold" = "latest"
 
 [env]
-UV_PROJECT_ENVIRONMENT = "{{config_root}}/.venv"
+"RUSTC_WRAPPER" = "sccache"
 
-### TASKS ###
+[tools."cargo:https://github.com/TheBevyFlock/bevy_cli.git"]
+version = "latest"
+crate = "bevy_cli"
 
-## INTERNAL ##
+[tools.rust]
+# keep in sync with bevy_cli
+version = "nightly-2025-06-26"
+components = "rustc-codegen-cranelift-preview,rustc-dev,llvm-tools-preview"
+targets = "x86_64-pc-windows-msvc,x86_64-unknown-linux-gnu"
 
-[tasks.setup]
-description = "Sets up the development environment"
-run = ["uv sync"]
+## CHECKS #####################################################################
 
-[tasks._chk_deps]
+[tasks."check:deps"]
+alias = "deny"
+wait_for = ["check", "fix"]
+tools = { "cargo:cargo-deny" = "latest" }
 description = "Check dependencies with cargo-deny"
-run = "cargo deny --workspace -L error check advisories bans sources --hide-inclusion-graph"
-
-[tasks._chk_python]
-description = "Check Python formatting and types"
 run = """
-    uv run --active ruff check ./scripts
+cargo deny --workspace \
+    -L error \
+    check advisories bans sources \
+    --hide-inclusion-graph
 """
 
-[tasks._chk_rust]
-description = "Check Rust formatting and linting"
+[tasks."check:headers"]
+alias = "check-headers"
+wait_for = ["check", "fix"]
+depends = ["fix:headers --fail-on-fix"]
+
+[tasks.bevy_lint]
+hide = true
+wait_for = ["check", "fix"]
 run = """
-    cargo fmt -- --check
-    bevy lint --locked --workspace --all-targets --bin q_inspector
-    bevy lint --locked --workspace --all-targets --bin q_app
+    # bevy_lint
+    export CARGO=$(rustup which --toolchain nightly-2025-06-26 cargo) bevy_lint
+
+    if [ '{{flag(name="fix")}}' = 'true' ]; then
+        FIX=" --fix";
+    fi
+
+    bevy lint --locked --all-features \
+        $FIX \
+        {{arg(name="package", var=true)}};
 """
 
-[tasks._chk_headers]
-description = "Check file headers"
-run = "uv run --active ./scripts/headers.py"
-
-## PUBLIC ##
-
-[tasks.fmt]
-description = "Format everything"
+[tasks.clippy]
+hide = true
+wait_for = ["check", "fix"]
 run = """
-    cargo fmt
-    uv run --active ruff format ./scripts
-    uv run --active ./scripts/headers.py --fix
+    # clippy
+    if [ '{{flag(name="fix")}}' = 'true' ]; then
+        FIX=" --fix";
+    fi
+
+    cargo --color=always clippy --locked --all-features \
+        $FIX \
+        {{arg(name="package", var=true)}};
 """
+
+[tasks."check:pkg:inspector"]
+alias = "check-inspector"
+depends = ["clippy -p q_inspector", "bevy_lint -p q_inspector"]
+sources = ["src/bin/inspector/**"]
+
+[tasks."check:pkg:app"]
+alias = "check-app"
+depends = ["clippy -p q_app", "bevy_lint -p q_app"]
+sources = ["src/bin/app/**"]
+
+[tasks."check:pkg:tests"]
+alias = "check-tests"
+depends = ["clippy -p q_test"]
+sources = ["src/bin/lib/test/**"]
+
+[tasks."check:pkg:utils"]
+alias = "check-utils"
+depends = ["clippy -p q_utils"]
+sources = ["src/bin/lib/utils/**"]
 
 [tasks.check]
-description = "Check formatting; lint python, rust, and bevy"
-depends = ["_chk_rust", "_chk_python", "_chk_headers", "_chk_deps"]
+description = "Lint the workspace."
+confirm = "This may take a while. Prefer using the individual checks. Proceed anyways?"
+depends_post = ["check:*", "check:pkg:*"]
 
-[tasks.fix]
-description = "Run check with various --fix flags enabled"
+## FIXES ######################################################################
+
+[tasks."fix:headers"]
+alias = "fix-headers"
+wait_for = ["check", "fix"]
+tools = { "uv" = "latest", "pipx:add_header_comment" = "latest" }
+description = "Check file headers"
 run = """
-    cargo fmt
-    bevy lint --locked --workspace --all-targets --fix --bin q_inspector
-    bevy lint --locked --workspace --all-targets --fix --bin q_app
-    uv run --active ruff check --fix ./scripts
-    uv run --active ./scripts/headers.py --fix
+    # Checking headers
+
+    if [ '{{flag(name="fail-on-fix")}}' = 'true' ]; then
+        FAIL_ON_FIX=" --fail-on-fix";
+    fi
+
+    shopt -s globstar
+
+    uv run add-header-comment --header-filepath header.txt \
+        $FAIL_ON_FIX \
+        ./.config/*.toml \
+        ./src/**/Cargo.toml \
+        ./*.toml;
+
+    uv run add-header-comment --header-filepath header.txt\
+        $FAIL_ON_FIX \
+        --comment-style='//' \
+        src/**/*.rs;
 """
 
+[tasks."fix:rust"]
+alias = "fix-rust"
+description = "Fix any fixable issues in rust. Includes formatting."
+depends = ["check:pkg:* --fix"]
+
+[tasks.fix]
+description = "Fix all fixable issues."
+confirm = "This may take a while. Prefer using the individual checks. Proceed anyways?"
+depends = ["fix:*"]
+
+## BUILD AND DEPLOY ###########################################################
+
 [tasks.ci]
+tools = { "act" = "latest" }
 description = "Test CI locally with nektos/act"
-run = "uv run --active ./scripts/ci.py"
+run = "act -P ubuntu-24.04=ghcr.io/catthehacker/ubuntu:act-24.04"
 
 [tasks.test]
+tools = { "cargo:cargo-nextest" = "latest" }
 description = "Run tests for a specific package or all packages"
 run = """
 if [ "$1" = "all" ]; then

@@ -1,5 +1,6 @@
-// 𝒒𝒑𝒓𝒐𝒋 -- copyright (c) the contributors
+// ------------------------------------------
 // SPDX-License-Identifier: MIT OR Apache-2.0
+// -------------------------------- 𝒒𝒑𝒓𝒐𝒋 --
 
 pub trait TextUtils {
     /// Length is the cutoff point. Tolerance specifies how many characters we

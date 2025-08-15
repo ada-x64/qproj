@@ -1,5 +1,6 @@
-#  𝒒𝒑𝒓𝒐𝒋 -- copyright (c) the contributors
-#  SPDX-License-Identifier: MIT OR Apache-2.0
+# ------------------------------------------
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# -------------------------------- 𝒒𝒑𝒓𝒐𝒋 --
 
 
 [package]
@@ -18,6 +19,7 @@ workspace = true
 
 [features]
 dev = ["bevy/dynamic_linking"]
+inspector = ["dep:bevy-inspector-egui"]
 
 [dependencies]
 # general deps
@@ -26,6 +28,15 @@ bevy_kira_audio = { workspace = true }
 rand = { workspace = true }
 itertools = { workspace = true }
 avian3d = { workspace = true }
+bevy-tnua = "0.24.0"
+bevy_dolly.workspace = true
+derive_builder.workspace = true
+bevy-tnua-avian3d = "0.5.0"
+thiserror.workspace = true
+serde.workspace = true
+bevy-inspector-egui = { workspace = true, optional = true }
+ron.workspace = true
+noise_expr.workspace = true
 
 # keep the following in sync with Bevy's dependencies
 winit = { version = "0.30", default-features = false }
@@ -33,6 +44,7 @@ image = { version = "0.25", default-features = false }
 blake3 = { workspace = true }
 
 # local deps
-q_worldgen = { workspace = true }
-q_player = { workspace = true }
+q_utils = { workspace = true }
 q_tasks = { workspace = true }
+q_service = { workspace = true }
+meshopt.workspace = true

@@ -2,3 +2,6 @@
 	path = submodules/q_service
 	url = https://github.com/ada-x64/q_service
 	branch = main
+[submodule "submodules/q_task"]
+	path = submodules/q_task
+	url = https://github.com/ada-x64/q_task

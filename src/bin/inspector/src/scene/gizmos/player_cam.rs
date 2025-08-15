@@ -1,9 +1,10 @@
-// 𝒒𝒑𝒓𝒐𝒋 -- copyright (c) the contributors
+// ------------------------------------------
 // SPDX-License-Identifier: MIT OR Apache-2.0
+// -------------------------------- 𝒒𝒑𝒓𝒐𝒋 --
 
 use bevy::color::palettes::css::RED;
 use bevy::prelude::*;
-use q_player::prelude::*;
+use q_app::player::prelude::*;
 use tiny_bail::prelude::*;
 
 pub fn draw_cam_gizmo(mut gizmos: Gizmos, q: Query<&Transform, With<PlayerCam>>) {

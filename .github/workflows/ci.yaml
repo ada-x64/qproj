@@ -1,0 +1,23 @@
+name: Cargo Build & Test
+
+on:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-24.04
+    env:
+      CARGO_TERM_COLOR: always
+    strategy:
+      matrix:
+        target: [x86_64-pc-windows-msvc, x86_64-unknown-linux-gnu]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: jdx/mise-action@v2
+      - run: mise check

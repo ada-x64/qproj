@@ -1,5 +1,6 @@
-#  𝒒𝒑𝒓𝒐𝒋 -- copyright (c) the contributors
-#  SPDX-License-Identifier: MIT OR Apache-2.0
+# ------------------------------------------
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# -------------------------------- 𝒒𝒑𝒓𝒐𝒋 --
 
 
 ## Workspace ##################################################################
@@ -59,6 +60,9 @@ itertools = "0.14.0"
 thiserror = "2.0.12"
 bevy-inspector-egui = "0.31"
 avian3d = "0.3"
+serde = { version = "1.0.219", features = ["derive"] }
+ron = "0.10"
+
 # TODO: Update this when the patch is merged.
 bevy_dolly = { git = "https://github.com/BlackPhlox/bevy_dolly.git", branch = "bevy_0.16" }
 derive_builder = "0.20.2"
@@ -66,14 +70,13 @@ derive_builder = "0.20.2"
 ## crates in the workspace ####################################################
 
 ## lib
-q_worldgen = { path = "src/lib/worldgen" }
-q_player = { path = "src/lib/player" }
 q_utils = { path = "src/lib/utils" }
-q_tasks = { path = "src/lib/tasks" }
 q_test = { path = "src/lib/test" }
 
 ## crates
 q_service = { path = "submodules/q_service" }
+q_tasks = { path = "submodules/q_task" }
+noise_expr = { git = "https://github.com/ada-x64/noise_gui", package = "noise_expr" }
 
 ## bin
 q_inspector = { path = "src/bin/inspector" }

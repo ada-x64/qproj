@@ -16,11 +16,9 @@
     "label": "Debug game",
     "adapter": "CodeLLDB",
     "build": {
-      "command": "just build quell",
-      "args": []
+      "command": "cargo",
+      "args": ["build", "-p", "q_app"]
     },
-    "program": "$ZED_WORKTREE_ROOT/target/debug/q_inspector",
-    "request": "launch",
     "sourceLanguages": ["rust"]
   }
 ]
