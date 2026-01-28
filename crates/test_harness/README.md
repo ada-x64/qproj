@@ -1,5 +1,5 @@
 <div align="center">
-<img src=".doc/logo.png" height=300 alt="Illustration of a common robin with worms in its mouth. Text, 'bevy test harness'" title="test harness logo" />
+<img src="../../.doc/test-harness.png" height=300 alt="Illustration of a common robin with worms in its mouth. Text, 'bevy test harness'" title="test harness logo" />
 </div>
 
 This is a simple test harness for bevy projects.

@@ -1,5 +1,5 @@
 <div align="center">
-<a href="https://cubething.dev/qproj/general-introduction"><img src=".doc/logo.png" height=300 alt="Illustration of a bluejay with text, 'tfw - bevy template framework'" title="tfw logo" /></a>
+<img src="../../.doc/tfw.png" height=300 alt="Illustration of a bluejay with text, 'tfw - bevy template framework'" title="tfw logo" />
 </div>
 
 This is a template-based template for a bevy project. It is a simplification of the work done for [q_service.](https://github.com/ada-x64/q_service)

@@ -1,4 +1,8 @@
-This is the TFW library crate.
+<div align="center">
+<img src="../../.doc/tfw.png" height=300 alt="Illustration of a bluejay with text, 'tfw - bevy template framework'" title="tfw logo" />
+</div>
+
+This is the TFW library crate. See [template](../template/README.md) for an implementation.
 
 ## Testing patterns
 

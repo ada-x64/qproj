@@ -1,5 +1,5 @@
 [package]
-name = "bevy-test-harness"
+name = "bevy_test_harness"
 version = "0.1.0"
 edition = "2024"
 description = "Simple test harness for Bevy applications."

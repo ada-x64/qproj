@@ -5,8 +5,8 @@ edition = "2024"
 
 [dependencies]
 # bevy
-bevy = {workspace = true}
-bevy_asset_loader = {workspace = true}
+bevy = {version="0.18", features=["default_app", "default_platform", "common_api"]}
+bevy_asset_loader = "0.25"
 
 # not bevy
 tiny_bail = "0.7"
