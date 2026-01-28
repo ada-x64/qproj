@@ -25,6 +25,6 @@ _This continues the work started [here.](https://github.com/ada-x64/qproj_OLD)_
 
 ## Compatility
 
-| branch | bevy |
-| ------ | ---- |
-| main   | 0.18 |
+| branch/tag | bevy |
+| ---------- | ---- |
+| main       | 0.18 |

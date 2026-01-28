@@ -1,5 +1,5 @@
 <div align="center">
-<img src=".doc/cmd-prompt.png" height=300 alt="Logo - 'bevy command prompt' over a sketch of a green magpie" />
+<img src="../../.doc/cmd-prompt.png" height=300 alt="Logo - 'bevy command prompt' over a sketch of a green magpie" />
 </div>
 
 This is an attempt at a `bevy_ui`-native dev console.

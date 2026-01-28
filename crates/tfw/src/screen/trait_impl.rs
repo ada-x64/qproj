@@ -1,3 +1,5 @@
+use std::any::TypeId;
+
 use bevy::ecs::component::ComponentIdFor;
 
 pub use crate::prelude::*;
@@ -27,15 +29,15 @@ pub trait Screen:
     + Sync
     + 'static
 {
-    /// The associated settings type. Set as [EmptySettings] for no settings.
+    /// The associated settings type. Set as [NoSettings] for no settings.
     type SETTINGS: Resource + FromWorld;
     /// Any associated assets which will load before the screen is considered
-    /// ready. Use [EmptyAssetCollection] to skip loading.
+    /// ready. Use [NoAssets] to skip loading.
     /// If you want to load in assets without blocking the scoped systems,
     /// you should include asset collections and states within a service.
     type ASSETS: AssetCollection;
     /// [LoadingStrategy] for the [Screen].
-    const STRATEGY: LoadingStrategy;
+    const STRATEGY: LoadingStrategy = LoadingStrategy::Nonblocking;
 
     fn name() -> String {
         let default = Self::default();
@@ -55,5 +57,9 @@ pub trait Screen:
         debug!("Trigger load ({})", Self::name());
         next_state.set(ScreenState::Loading);
         commands.run_schedule(UnloadSchedule);
+    }
+
+    fn has_assets() -> bool {
+        TypeId::of::<Self::ASSETS>() != TypeId::of::<NoAssets>()
     }
 }

@@ -131,7 +131,7 @@ where
         app.add_schedule(self.schedule);
         app.init_resource::<S::SETTINGS>();
         let id = app.world_mut().register_component::<S>();
-        let system_id = app.world_mut().register_system(S::trigger_load);
+        let system_id = app.world_mut().register_system_cached(S::trigger_load);
         let mut registry = app.world_mut().get_resource_or_init::<ScreenRegistry>();
         registry.push(ScreenIndex {
             name: S::name(),
@@ -143,21 +143,19 @@ where
         app.add_observer(on_switch_screen::<S>);
 
         // scope systems
-        let (config, fixed_config) = match S::STRATEGY {
-            LoadingStrategy::Blocking => {
-                let condition = in_state(ScreenState::<S>::Ready);
-                (
-                    self.scope.run_if(condition.clone()),
-                    self.fixed_scope.run_if(condition),
-                )
-            }
-            LoadingStrategy::Nonblocking => {
-                let condition = not(in_state(ScreenState::<S>::Unloaded));
-                (
-                    self.scope.run_if(condition.clone()),
-                    self.fixed_scope.run_if(condition),
-                )
-            }
+        let blocking = S::has_assets() && S::STRATEGY == LoadingStrategy::Blocking;
+        let (config, fixed_config) = if blocking {
+            let condition = in_state(ScreenState::<S>::Ready);
+            (
+                self.scope.run_if(condition.clone()),
+                self.fixed_scope.run_if(condition),
+            )
+        } else {
+            let condition = not(in_state(ScreenState::<S>::Unloaded));
+            (
+                self.scope.run_if(condition.clone()),
+                self.fixed_scope.run_if(condition),
+            )
         };
         app.configure_sets(self.scope, config);
         app.configure_sets(self.fixed_scope, fixed_config);
@@ -178,11 +176,14 @@ where
 
         // init state
         app.init_state::<ScreenState<S>>();
-        app.add_loading_state(
-            LoadingState::new(ScreenState::<S>::Loading)
-                .continue_to_state(ScreenState::<S>::Ready)
-                .load_collection::<S::ASSETS>(),
-        );
+        if S::has_assets() {
+            debug!("Adding loading state for {}", S::name());
+            app.add_loading_state(
+                LoadingState::new(ScreenState::<S>::Loading)
+                    .continue_to_state(ScreenState::<S>::Ready)
+                    .load_collection::<S::ASSETS>(),
+            );
+        }
 
         // set up unload schedule
         app.configure_sets(
