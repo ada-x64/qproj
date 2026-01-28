@@ -2,7 +2,6 @@ use crate::prelude::*;
 
 mod data;
 mod screen;
-mod state;
 mod systems;
 
 pub mod prelude {
