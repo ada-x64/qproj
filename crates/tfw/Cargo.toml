@@ -21,6 +21,8 @@ variadics_please = "1.1.0"
 # local
 bevy_test_harness = {path="../test_harness"}
 
+bevy_asset = {version="0.18", features=["multi_threaded"]}
+
 [dev-dependencies]
 # just for a few inspector things... should really fork them
 bevy-inspector-egui = "0.36"

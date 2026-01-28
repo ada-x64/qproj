@@ -1794,6 +1794,7 @@ name = "bevy_test_harness"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bevy_asset",
  "log",
 ]
 
@@ -5586,6 +5587,7 @@ dependencies = [
  "anyhow",
  "bevy",
  "bevy-inspector-egui",
+ "bevy_asset",
  "bevy_asset_loader",
  "bevy_test_harness",
  "bitflags 2.10.0",

@@ -4,7 +4,7 @@ pub use app::prelude;
 
 mod globals {
     use bevy::{ecs::schedule::ExecutorKind, prelude::*};
-    use bevy_test_harness::TestRunnerPlugin;
+    use bevy_test_harness::{TestRunnerPlugin, TestRunnerTimeout};
     #[derive(Resource, Default)]
     struct TheHandle(Handle<Image>);
     #[test]
@@ -14,6 +14,7 @@ mod globals {
             executor_kind: ExecutorKind::MultiThreaded,
             ..Default::default()
         });
+        app.insert_resource(TestRunnerTimeout(0.25));
         app.init_resource::<TheHandle>();
         app.add_systems(
             Startup,

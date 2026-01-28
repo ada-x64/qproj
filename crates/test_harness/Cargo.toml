@@ -8,6 +8,7 @@ repository = "https://github.com/ada-x64/bevy-test-harness"
 
 [dependencies]
 bevy = { version = "0.18.0", default-features = false, features = ["default_app", "default_platform"] }
+bevy_asset = {version="0.18.0", features = ["multi_threaded"]}
 
 [dev-dependencies]
 log = "0.4.29"
