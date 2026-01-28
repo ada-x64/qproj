@@ -2,6 +2,7 @@ mod entity_scoping;
 mod system_scoping;
 
 use crate::prelude::*;
+use bevy_test_harness::TestRunnerPlugin;
 use tfw::{TfwPlugin, TfwSettings};
 
 // the rest of the tests use non-blocking asset loading to circumvent the delay.

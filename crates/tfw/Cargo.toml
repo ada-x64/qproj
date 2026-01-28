@@ -18,6 +18,9 @@ anyhow = "1.0.99"
 strum = { version = "0.27.2", features = ["derive"] }
 variadics_please = "1.1.0"
 
+# local
+bevy_test_harness = {path="../test_harness"}
+
 [dev-dependencies]
 # just for a few inspector things... should really fork them
 bevy-inspector-egui = "0.36"

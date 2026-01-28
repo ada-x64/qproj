@@ -3,18 +3,19 @@
     "rust-analyzer": {
       "initialization_options": {
         "cargo": {
-          "features": "all"
+          "features": "all",
         },
         "check": {
           "command": "clippy",
-          "extraArgs": ["--locked", "--target-dir=target/rust-analyzer"]
-        }
-      }
-    }
+          "extraArgs": ["--locked", "--target-dir=target/rust-analyzer"],
+          "workspace": false,
+        },
+      },
+    },
   },
   "languages": {
     "Python": {
-      "language_servers": ["ruff", "basedpyright"]
-    }
-  }
+      "language_servers": ["ruff", "basedpyright"],
+    },
+  },
 }
