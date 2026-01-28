@@ -1,0 +1,8 @@
+/target
+*.log
+
+*.ignore.*
+*.diff.*
+diff
+
+__pycache__

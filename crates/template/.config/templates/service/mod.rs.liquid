@@ -1,0 +1,34 @@
+{%- assign name = name | snake_case -%}
+use crate::prelude::*;
+
+{% if use_bundle -%}
+mod bundle;
+{%- endif %}
+{% if use_events -%}
+mod events;
+{%- endif %}
+{% if use_systems -%}
+mod systems;
+{%- endif %}
+mod data;
+
+pub mod prelude {
+    pub use super::data::*;
+    {% if use_bundle -%}
+    pub use super::bundle::bundle as {{name | append: "_bundle" }};
+    {%- endif -%}
+    {% if use_systems -%}
+    pub use super::systems::systems as {{name | append: "_systems" }};
+    {%- endif -%}
+    // pub use super::my_submodule::prelude::*;
+}
+
+pub fn plugin(app: &mut App) {
+    {% if use_events %}
+    app.add_plugins(
+        events::plugin
+    );
+    {%- else %}
+    // app.add_plugins(/* ... */);
+    {% endif -%}
+}

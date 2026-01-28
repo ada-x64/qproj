@@ -1,0 +1,110 @@
+# GENERATION ##################################################################
+
+[tasks.new]
+raw=true
+alias=['generate', 'n']
+description="Generate a new service or screen."
+tools={"cargo:cargo-generate" = "latest"}
+usage = '''
+arg "<template>" help="The template to generate." {
+    choices "screen" "service"
+}
+
+arg "<name>" help="Name of the generated module." long_help="""
+The chosen template will be output to the src directory corresponding to the
+template, postfixed with given template name. For example, calling
+'mise new service foo/bar' will generate 'src/service/foo/bar/...'.
+"""
+
+flag "--base-path <path>" help="Base path for the project. Scripts expect modules named '$BASE_PATH/${service, screen}' Defaults to 'src'" default="src"
+
+flag "--debug" help="Enable debug output."
+'''
+run='''
+#!/usr/bin/bash
+TEMPLATE=${usage_template?}
+NAME=${usage_name?}
+DEBUG=${usage_debug:+--debug}
+BASE_PATH=${usage_base_path?}
+
+BASENAME=$(basename $NAME)
+DESTINATION="$(realpath $BASE_PATH/$TEMPLATE/$(dirname $NAME))"
+
+if [[ -n "$DEBUG" ]]; then
+cat <<EOF
+DEBUG
+TEMPLATE="$TEMPLATE"
+NAME="$NAME"
+BASENAME="$BASENAME"
+DESTINATION="$DESTINATION"
+EOF
+fi
+
+catch_err () {
+    VAL=$?
+    if [ $VAL -ne 0 ]; then
+        echo "Got exit code $VAL!"
+        echo "Reverting changes on fail..."
+        set -x
+        git restore $DESTINATION/mod.rs
+        rm $DESTINATION/$BASENAME -r
+        exit 1
+    fi
+}
+
+cargo generate \
+    --name "$BASENAME" \
+    -d name="$BASENAME" \
+    --path ".config/templates/$TEMPLATE" \
+    --destination "$DESTINATION";
+
+catch_err
+
+uv run .config/scripts/new_mod/main.py\
+    "$DESTINATION/$BASENAME"
+
+catch_err
+
+echo "[INFO] Formatting ..."
+cargo fmt -- -l;
+'''
+
+[tasks.delete]
+alias=['del', 'd']
+description="Remove a generated service or screen"
+usage = '''
+arg "<template>" help="The template to remove." {
+    choices "screen" "service"
+}
+
+arg "<name>" help="Name of the generated module." long_help="""
+The chosen template will be removed from the src directory corresponding to the
+template, postfixed with given template name. For example, calling
+'mise new service foo/bar' will generate 'src/service/foo/bar/...'.
+"""
+
+flag "--base-path <path>" help="Base path for the project. Scripts expect modules named '$BASE_PATH/${service, screen}' Defaults to 'src'" default="src"
+
+flag "--debug" help="Enable debug output."
+'''
+run='''
+#!/usr/bin/bash
+set -e
+TEMPLATE=${usage_template?}
+NAME=${usage_name?}
+BASE_PATH=${usage_base_path?}
+DESTINATION="$(realpath $BASE_PATH/$TEMPLATE/$NAME)"
+DEBUG=${usage_debug:+--debug}
+
+uv run .config/scripts/new_mod/main.py\
+    "$DESTINATION" \
+    --remove \
+    $DEBUG
+
+set -x
+rm -r $DESTINATION
+set +x
+
+echo "[INFO] Formatting ..."
+cargo fmt -- -l;
+'''

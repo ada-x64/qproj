@@ -1,0 +1,13 @@
+[package]
+name = "bevy-test-harness"
+version = "0.1.0"
+edition = "2024"
+description = "Simple test harness for Bevy applications."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/ada-x64/bevy-test-harness"
+
+[dependencies]
+bevy = { version = "0.18.0", default-features = false, features = ["default_app", "default_platform"] }
+
+[dev-dependencies]
+log = "0.4.29"
