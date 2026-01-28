@@ -3,7 +3,7 @@
 </div>
 
 ![ci](https://github.com/ada-x64/qproj/actions/workflows/ci.yml/badge.svg)
-![codecov]()
+[![codecov](https://codecov.io/gh/ada-x64/qproj/graph/badge.svg?token=AKP1aBwU4S)](https://codecov.io/gh/ada-x64/qproj)
 
 Monorepo for _qproj_. This includes utilities, templates, and more for my [bevy](https://bevy.org) game projects.
 
