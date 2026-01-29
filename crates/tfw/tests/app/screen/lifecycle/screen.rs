@@ -6,8 +6,8 @@ pub struct LifecycleSettings;
 
 #[derive(AssetCollection, Resource, Debug, Default)]
 pub struct LifecycleAssets {
-    #[asset(path = "test/cat2.png")]
-    pub img: Handle<Image>,
+    #[asset(path = "test/test.txt")]
+    pub img: Handle<TextAsset>,
 }
 
 #[derive(Resource, Debug, Default)]

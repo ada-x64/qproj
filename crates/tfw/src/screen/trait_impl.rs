@@ -55,7 +55,13 @@ pub trait Screen:
     /// Use this to trigger the load cycle for this screen.
     fn trigger_load(mut next_state: ResMut<NextState<ScreenState<Self>>>, mut commands: Commands) {
         debug!("Trigger load ({})", Self::name());
-        next_state.set(ScreenState::Loading);
+        // TODO: movement from loading to loaded should depened on a loading system
+        // which is independent from bevy_asset_loader
+        if Self::has_assets() {
+            next_state.set(ScreenState::Loading);
+        } else {
+            next_state.set(ScreenState::Ready);
+        }
         commands.run_schedule(UnloadSchedule);
     }
 

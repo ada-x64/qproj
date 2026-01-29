@@ -10,8 +10,8 @@ pub struct BlockingScopedSystemValue(pub u32);
 
 #[derive(AssetCollection, Resource, Debug, Default)]
 pub struct BlockingScopedSystemAssets {
-    #[asset(path = "test/cat2.png")]
-    _img: Handle<Image>,
+    #[asset(path = "test/test.txt")]
+    _img: Handle<TextAsset>,
 }
 
 #[derive(Component, Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Reflect)]

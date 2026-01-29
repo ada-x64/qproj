@@ -1,5 +1,4 @@
 use bevy_test_harness::prelude::*;
-use tfw::{TfwPlugin, TfwSettings};
 
 use crate::prelude::*;
 
@@ -8,18 +7,8 @@ struct SavedValue(u32);
 
 #[test]
 fn nonblocking() {
-    let mut app = App::new();
-    app.add_plugins((
-        TestRunnerPlugin::default(),
-        AppPlugin,
-        TfwPlugin {
-            settings: TfwSettings {
-                initial_screen: ScopedSystemScreen::name(),
-            },
-        },
-    ));
+    let mut app = get_test_app::<ScopedSystemScreen>();
     app.init_resource::<SavedValue>();
-
     app.add_step(
         0,
         |mut step: ResMut<NextState<Step>>,
@@ -85,16 +74,7 @@ fn blocking() {
     type Settings = BlockingScopedSystemSettings;
     type Value = BlockingScopedSystemValue;
 
-    let mut app = App::new();
-    app.add_plugins((
-        TestRunnerPlugin::default(),
-        AppPlugin,
-        TfwPlugin {
-            settings: TfwSettings {
-                initial_screen: Screen::name(),
-            },
-        },
-    ));
+    let mut app = get_test_app::<Screen>();
     app.insert_resource(Settings {
         initial_value: 100,
         unload_value: 200,

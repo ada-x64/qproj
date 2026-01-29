@@ -1,21 +1,10 @@
 use bevy_test_harness::prelude::*;
-use tfw::{TfwPlugin, TfwSettings};
 
 use crate::prelude::*;
 
 #[test]
 fn screen_transitions() {
-    let mut app = App::new();
-    app.add_plugins((
-        TestRunnerPlugin::default(),
-        AppPlugin,
-        TfwPlugin {
-            settings: TfwSettings {
-                initial_screen: EmptyScreen::name(),
-            },
-        },
-    ));
-
+    let mut app = get_test_app::<EmptyScreen>();
     app.add_step(
         0,
         |mut step: ResMut<NextState<Step>>,
@@ -92,17 +81,7 @@ fn screen_transitions() {
 
 #[test]
 fn persistent_entities() {
-    let mut app = App::new();
-    app.add_plugins((
-        TestRunnerPlugin::default(),
-        AppPlugin,
-        TfwPlugin {
-            settings: TfwSettings {
-                initial_screen: NamedEntityScreen::name(),
-            },
-        },
-    ));
-
+    let mut app = get_test_app::<NamedEntityScreen>();
     app.insert_resource(NamedEntityScreenSettings {
         entity_name: "1".into(),
     });
@@ -157,17 +136,7 @@ struct Empty;
 /// replaced with [EntityEvent]. But, this checks the scoping query functions as intended.
 #[test]
 fn observer_cleanup() {
-    let mut app = App::new();
-    app.add_plugins((
-        TestRunnerPlugin::default(),
-        AppPlugin,
-        TfwPlugin {
-            settings: TfwSettings {
-                initial_screen: EmptyScreen::name(),
-            },
-        },
-    ));
-
+    let mut app = get_test_app::<EmptyScreen>();
     app.add_step(
         0,
         |mut commands: Commands,

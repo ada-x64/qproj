@@ -25,12 +25,13 @@ pub struct TfwSettings {
 
 /// The main export plugin for TFW. `Screens` should be an enum with screen
 /// names. Refer to the template documentation for more details.
-pub struct TfwPlugin {
-    pub settings: TfwSettings,
-}
+// TODO: Can make this default if you want runtime-compatible settings.
+// Just add them on app finish()/cleanup()
+#[derive(Deref, DerefMut)]
+pub struct TfwPlugin(pub TfwSettings);
 impl Plugin for TfwPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(self.settings.clone());
+        app.insert_resource(self.0.clone());
         app.add_plugins(screen::plugin);
     }
 }

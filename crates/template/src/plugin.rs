@@ -39,12 +39,10 @@ impl Plugin for AppPlugin {
     fn build(&self, app: &mut App) {
         app.world_mut().insert_resource(self.settings.clone());
         app.add_plugins((
-            tfw::TfwPlugin {
-                settings: TfwSettings {
-                    // TODO: FIXME
-                    initial_screen: self.settings.initial_screen.clone(),
-                },
-            },
+            tfw::TfwPlugin(TfwSettings {
+                // TODO: FIXME
+                initial_screen: self.settings.initial_screen.clone(),
+            }),
             crate::service::plugin,
             crate::screen::plugin,
         ))

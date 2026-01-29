@@ -83,7 +83,6 @@ impl Plugin for TestRunnerPlugin {
                 ..Default::default()
             },
             AssetPlugin::default(),
-            ImagePlugin::default(),
             StatesPlugin,
         ));
         app.init_resource::<LogTestSteps>();
@@ -114,28 +113,28 @@ impl Plugin for TestRunnerPlugin {
 
         app.init_state::<Step>();
 
-        // configure_sets!(
-        //     app,
-        //     self.executor_kind,
-        //     StateTransition,
-        //     PreStartup,
-        //     Startup,
-        //     PostStartup,
-        //     First,
-        //     PreUpdate,
-        //     RunFixedMainLoop,
-        //     Update,
-        //     SpawnScene,
-        //     PostUpdate,
-        //     Last,
-        //     Main,
-        //     FixedMain,
-        //     FixedFirst,
-        //     FixedUpdate,
-        //     FixedPreUpdate,
-        //     FixedPostUpdate,
-        //     FixedLast
-        // );
+        configure_sets!(
+            app,
+            self.executor_kind,
+            StateTransition,
+            PreStartup,
+            Startup,
+            PostStartup,
+            First,
+            PreUpdate,
+            RunFixedMainLoop,
+            Update,
+            SpawnScene,
+            PostUpdate,
+            Last,
+            Main,
+            FixedMain,
+            FixedFirst,
+            FixedUpdate,
+            FixedPreUpdate,
+            FixedPostUpdate,
+            FixedLast
+        );
     }
 }
 
