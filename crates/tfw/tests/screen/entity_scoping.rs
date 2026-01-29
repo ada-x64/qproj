@@ -20,7 +20,7 @@ fn screen_transitions() {
         |mut step: ResMut<NextState<Step>>,
          mut commands: Commands,
          q: Query<(Entity, &Name)>,
-         screen_state: Res<State<ScreenState<NamedEntityScreen>>>| {
+         screen_state: ScreenState<NamedEntityScreen>| {
             if !screen_state.is_ready() {
                 return;
             }
@@ -41,7 +41,7 @@ fn screen_transitions() {
          mut settings: ResMut<NamedEntityScreenSettings>,
          mut commands: Commands,
          q: Query<(Entity, &Name)>,
-         screen_state: Res<State<ScreenState<EmptyScreen>>>| {
+         screen_state: ScreenState<EmptyScreen>| {
             if !screen_state.is_ready() {
                 return;
             }
@@ -61,7 +61,7 @@ fn screen_transitions() {
         3,
         |mut commands: Commands,
          q: Query<(Entity, &Name)>,
-         screen_state: Res<State<ScreenState<NamedEntityScreen>>>| {
+         screen_state: ScreenState<NamedEntityScreen>| {
             if !screen_state.is_ready() {
                 return;
             }
@@ -87,7 +87,7 @@ fn persistent_entities() {
     });
     app.add_step(
         0,
-        |mut commands: Commands, state: Res<State<ScreenState<NamedEntityScreen>>>| {
+        |mut commands: Commands, state: ScreenState<NamedEntityScreen>| {
             if !state.is_ready() {
                 return;
             }
@@ -114,7 +114,7 @@ fn persistent_entities() {
     )
     .add_step(
         1,
-        |mut commands: Commands, state: Res<State<ScreenState<EmptyScreen>>>| {
+        |mut commands: Commands, state: ScreenState<EmptyScreen>| {
             if !state.is_ready() {
                 return;
             }
@@ -140,7 +140,7 @@ fn observer_cleanup() {
     app.add_step(
         0,
         |mut commands: Commands,
-         screen_state: Res<State<ScreenState<EmptyScreen>>>,
+         screen_state: ScreenState<EmptyScreen>,
          mut step: ResMut<NextState<Step>>| {
             if !screen_state.is_ready() {
                 return;
@@ -163,7 +163,7 @@ fn observer_cleanup() {
     )
     .add_step(
         1,
-        |mut commands: Commands, screen_state: Res<State<ScreenState<NamedEntityScreen>>>| {
+        |mut commands: Commands, screen_state: ScreenState<NamedEntityScreen>| {
             if !screen_state.is_ready() {
                 return;
             }

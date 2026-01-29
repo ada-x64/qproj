@@ -18,20 +18,35 @@ pub mod prelude {
     pub(crate) use bevy::prelude::*;
 }
 
-#[derive(Resource, Debug, Reflect, Clone)]
+#[derive(Default, Resource, Reflect, Debug)]
 pub struct TfwSettings {
-    pub initial_screen: String,
+    /// Prefer to initialize this with [Self::with_initial_screen]
+    pub initial_screen_name: Option<String>,
+}
+impl TfwSettings {
+    pub fn with_initial_screen<S: Screen>() -> Self {
+        Self {
+            initial_screen_name: Some(S::name()),
+        }
+    }
 }
 
 /// The main export plugin for TFW. `Screens` should be an enum with screen
 /// names. Refer to the template documentation for more details.
-// TODO: Can make this default if you want runtime-compatible settings.
-// Just add them on app finish()/cleanup()
-#[derive(Deref, DerefMut)]
-pub struct TfwPlugin(pub TfwSettings);
+/// The template parameter refers to the initial screen.
+#[derive(Default, Debug)]
+pub struct TfwPlugin;
 impl Plugin for TfwPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(self.0.clone());
         app.add_plugins(screen::plugin);
+        app.init_resource::<TfwSettings>();
+        app.add_systems(
+            Startup,
+            |mut commands: Commands, settings: Res<TfwSettings>| {
+                if let Some(initial_screen) = settings.initial_screen_name.clone() {
+                    commands.trigger(SwitchToScreenByName(initial_screen));
+                }
+            },
+        );
     }
 }

@@ -9,14 +9,14 @@ use crate::prelude::*;
 fn lifecycle() {
     let mut app = get_test_app::<LifecycleScreen>();
     app.add_systems(
-        OnEnter(ScreenState::<LifecycleScreen>::Loading),
+        on_screen_load::<LifecycleScreen>(),
         |mut r: ResMut<LifecycleStatus>| {
             info!("loading");
             r.loading = true;
         },
     );
     app.add_systems(
-        OnEnter(ScreenState::<LifecycleScreen>::Ready),
+        on_screen_ready::<LifecycleScreen>(),
         |mut r: ResMut<LifecycleStatus>, mut commands: Commands| {
             info!("ready");
             r.ready = true;
@@ -24,14 +24,14 @@ fn lifecycle() {
         },
     );
     app.add_systems(
-        OnEnter(ScreenState::<LifecycleScreen>::Unloaded),
+        on_screen_unloaded::<LifecycleScreen>(),
         |mut r: ResMut<LifecycleStatus>| {
             info!("unloaded");
             r.unloaded = true;
         },
     );
     app.add_systems(
-        OnEnter(ScreenState::<EmptyScreen>::Ready),
+        on_screen_ready::<EmptyScreen>(),
         |r: Res<LifecycleStatus>, mut commands: Commands| {
             let ok = r.loading && r.ready && r.unloaded && r.in_init && r.in_unload;
             if ok {

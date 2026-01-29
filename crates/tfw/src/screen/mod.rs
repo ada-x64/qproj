@@ -2,7 +2,7 @@
 
 use bevy::app::HierarchyPropagatePlugin;
 
-use crate::{TfwSettings, prelude::*};
+use crate::prelude::*;
 
 mod data;
 mod scope;
@@ -23,11 +23,4 @@ pub fn plugin(app: &mut App) {
         HierarchyPropagatePlugin::<ScreenScoped>::new(PostUpdate),
     ));
     app.add_plugins(systems::plugin);
-    // This occurs _after_ registration
-    app.add_systems(
-        Startup,
-        |settings: Res<TfwSettings>, mut commands: Commands| {
-            commands.trigger(SwitchToScreenByName(settings.initial_screen.clone()));
-        },
-    );
 }

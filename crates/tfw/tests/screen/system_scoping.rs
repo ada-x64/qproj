@@ -15,7 +15,7 @@ fn nonblocking() {
          mut commands: Commands,
          mut saved_value: ResMut<SavedValue>,
          value: Res<ScopedSystemValue>,
-         screen_state: Res<State<ScreenState<ScopedSystemScreen>>>| {
+         screen_state: ScreenState<ScopedSystemScreen>| {
             if !screen_state.is_ready() {
                 return;
             }
@@ -32,7 +32,7 @@ fn nonblocking() {
          mut commands: Commands,
          value: Res<ScopedSystemValue>,
          saved_value: Res<SavedValue>,
-         screen_state: Res<State<ScreenState<EmptyScreen>>>| {
+         screen_state: ScreenState<EmptyScreen>| {
             if !screen_state.is_ready() {
                 return;
             }
@@ -51,7 +51,7 @@ fn nonblocking() {
         |mut commands: Commands,
          value: Res<ScopedSystemValue>,
          saved_value: ResMut<SavedValue>,
-         screen_state: Res<State<ScreenState<ScopedSystemScreen>>>| {
+         screen_state: ScreenState<ScopedSystemScreen>| {
             if !screen_state.is_ready() {
                 return;
             }
@@ -86,7 +86,7 @@ fn blocking() {
          mut commands: Commands,
          settings: Res<Settings>,
          value: Res<Value>,
-         screen_state: Res<State<ScreenState<Screen>>>| {
+         screen_state: ScreenState<Screen>| {
             if !screen_state.is_ready() {
                 if *value != Value::default() {
                     error!("Got spurious value change!");
@@ -124,7 +124,7 @@ fn blocking() {
          mut commands: Commands,
          value: Res<Value>,
          settings: Res<Settings>,
-         screen_state: Res<State<ScreenState<EmptyScreen>>>| {
+         screen_state: ScreenState<EmptyScreen>| {
             // assert value has been frozen
             if **value != settings.unload_value {
                 error!("Value does not match unload_value");
@@ -143,7 +143,7 @@ fn blocking() {
         |mut commands: Commands,
          value: Res<Value>,
          settings: Res<Settings>,
-         screen_state: Res<State<ScreenState<Screen>>>| {
+         screen_state: ScreenState<Screen>| {
             if !screen_state.is_ready() {
                 if **value != settings.unload_value {
                     error!("Got spurious value change!");

@@ -10,17 +10,12 @@ mod globals {
     use bevy::prelude::*;
     use bevy_asset::{AssetLoader, AsyncReadExt};
     use bevy_test_harness::{TestRunnerPlugin, TestRunnerTimeout};
-    use tfw::{TfwPlugin, prelude::Screen};
+    use tfw::{TfwPlugin, TfwSettings, prelude::Screen};
 
     pub fn get_test_app<InitialScreen: Screen>() -> App {
         let mut app = App::new();
-        app.add_plugins((
-            TestRunnerPlugin::default(),
-            AppPlugin,
-            TfwPlugin(tfw::TfwSettings {
-                initial_screen: InitialScreen::name(),
-            }),
-        ));
+        app.add_plugins((TestRunnerPlugin::default(), AppPlugin, TfwPlugin));
+        app.insert_resource(TfwSettings::with_initial_screen::<InitialScreen>());
         app.init_asset::<TextAsset>();
         app.init_asset_loader::<TextAssetLoader>();
         app

@@ -1,6 +1,6 @@
 export CARGO_TERM_COLOR="always"
 export PYTHONUNBUFFERED=1
-# export RUSTC_WRAPPER="sccache"
+export RUSTC_WRAPPER="sccache"
 export MISE_EXPERIMENTAL=1
 
 if [[ -n "$SSH_CLIENT" ]]; then

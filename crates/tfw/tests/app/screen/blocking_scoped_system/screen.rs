@@ -41,7 +41,7 @@ fn unload(
 
 pub fn plugin(app: &mut App) {
     ScreenScopeBuilder::<BlockingScopedSystemScreen>::new(app)
-        .add_systems(increment)
+        .add_systems(ScreenScheduleKind::Main, increment)
         .on_ready(init)
         .on_unload(unload)
         .build();

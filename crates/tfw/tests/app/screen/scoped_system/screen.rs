@@ -15,6 +15,6 @@ impl Screen for ScopedSystemScreen {
 
 pub fn plugin(app: &mut App) {
     ScreenScopeBuilder::<ScopedSystemScreen>::new(app)
-        .add_systems(scoped_service_systems().take())
+        .add_systems(ScreenScheduleKind::Main, scoped_service_systems().take())
         .build();
 }
