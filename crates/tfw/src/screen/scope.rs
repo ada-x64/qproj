@@ -97,7 +97,6 @@ where
 
     /// Builds the schedule and adds it to the app.
     pub fn build(self) {
-        debug!("Building screen {:?}", S::name());
         // init
         let app = self.app;
         app.init_resource::<S::SETTINGS>();
@@ -120,6 +119,7 @@ where
         data.set_skip_load(self.skip_load.unwrap_or(skip_load));
         data.set_skip_unload(self.skip_unload.unwrap_or(skip_unload));
         data.set_load_strategy(self.load_strategy);
+        debug!("Built screen {data:#?}");
         registry.insert(id, data);
 
         // watch screen switcher

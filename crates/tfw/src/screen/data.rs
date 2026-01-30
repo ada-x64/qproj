@@ -117,7 +117,11 @@ mod screens {
         /// Has no effect if already in Unloading or Unloaded states.
         pub fn unload(&mut self, tick: Tick) {
             if matches!(self.state, ScreenState::Loading | ScreenState::Ready) {
-                self.state = ScreenState::Unloading;
+                if self.skip_unload {
+                    self.state = ScreenState::Unloaded
+                } else {
+                    self.state = ScreenState::Unloading;
+                }
                 self.needs_update = true;
                 self.changed_at = tick;
             }

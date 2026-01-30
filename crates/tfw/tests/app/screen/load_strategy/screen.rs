@@ -37,8 +37,8 @@ impl LoadStrategyScreen {
 
     fn unloaded(data: ScreenDataRef<Self>, value: Res<FinalValue>, mut commands: Commands) {
         let expected_value = match data.data().load_strategy() {
-            LoadStrategy::Blocking => 100,
-            LoadStrategy::Nonblocking => 1,
+            LoadStrategy::Nonblocking => 100,
+            LoadStrategy::Blocking => 1,
         };
         info!("Got {}, expected {}", value.0, expected_value);
         if value.0 != expected_value {
