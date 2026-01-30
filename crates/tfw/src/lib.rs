@@ -1,62 +1,22 @@
 #![feature(register_tool)]
 #![register_tool(bevy)]
 #![allow(bevy::panicking_methods)]
+#![doc = include_str!("./doc.md")]
 
-use crate::prelude::*;
-
-/// General utility types
-pub mod data;
-/// Screen implementation
-pub mod screen;
+mod data;
+mod not;
+mod plugin;
+mod scope;
+mod systems;
+mod trait_impl;
 
 pub mod prelude {
-    pub use super::data::prelude::*;
     pub use super::data::*;
-    pub use super::screen::prelude::*;
-    #[doc(hidden)]
-    pub use bevy::ecs::{lifecycle::HookContext, world::DeferredWorld};
+    pub use super::not::*;
+    pub use super::scope::*;
+    pub(crate) use super::systems::*;
+    pub use super::trait_impl::*;
     pub(crate) use bevy::prelude::*;
     pub(crate) use std::marker::PhantomData;
     pub(crate) use tiny_bail::prelude::*;
-}
-
-#[derive(Default, Resource, Reflect, Debug)]
-pub struct TfwSettings {
-    /// Prefer to initialize this with [Self::with_initial_screen]
-    pub initial_screen_name: Option<String>,
-}
-impl TfwSettings {
-    pub fn with_initial_screen<S: Screen>() -> Self {
-        Self {
-            initial_screen_name: Some(S::name()),
-        }
-    }
-}
-
-/// The main export plugin for TFW. `Screens` should be an enum with screen
-/// names. Refer to the template documentation for more details.
-/// The template parameter refers to the initial screen.
-#[derive(Default, Debug)]
-pub struct TfwPlugin;
-impl Plugin for TfwPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_plugins(screen::plugin);
-        app.init_resource::<TfwSettings>();
-        app.add_message::<SwitchToScreenMsg>();
-        app.add_systems(
-            Startup,
-            |mut commands: Commands, settings: Res<TfwSettings>, registry: Res<ScreenRegistry>| {
-                if let Some(initial_screen) = settings.initial_screen_name.clone() {
-                    if let Some(cid) = registry
-                        .values()
-                        .find_map(|v| (v.name() == initial_screen).then_some(v.id()))
-                    {
-                        commands.write_message(SwitchToScreenMsg(cid));
-                    } else {
-                        warn!("Could not find screen with name {initial_screen}");
-                    }
-                }
-            },
-        );
-    }
 }
