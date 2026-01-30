@@ -1,22 +1,21 @@
-mod app;
-mod screen;
+mod screens;
 pub mod prelude {
-    pub use super::app::prelude::*;
     pub use super::globals::*;
+    pub use super::screens::prelude::*;
+    pub use bevy::prelude::*;
     pub use bevy_asset_loader::prelude::*;
+    pub use bevy_screens::prelude::*;
+    pub use bevy_test_harness::prelude::*;
 }
 
 mod globals {
-    use crate::{app::AppPlugin, prelude::EmptyScreen};
+    use crate::prelude::*;
     use bevy::asset::{AssetLoader, AsyncReadExt};
-    use bevy::prelude::*;
-    use bevy_test_harness::{TestRunnerPlugin, TestRunnerTimeout};
-    use tfw::{TfwPlugin, TfwSettings, prelude::Screen};
 
-    pub fn get_test_app<InitialScreen: Screen>() -> App {
+    pub fn get_test_app<S: Screen>() -> App {
         let mut app = App::new();
-        app.add_plugins((TestRunnerPlugin::default(), AppPlugin, TfwPlugin));
-        app.insert_resource(TfwSettings::with_initial_screen::<InitialScreen>());
+        app.add_plugins((TestRunnerPlugin::default(), ScreenPlugin));
+        app.insert_resource(InitialScreen::new::<S>());
         app.init_asset::<TextAsset>();
         app.init_asset_loader::<TextAssetLoader>();
         app

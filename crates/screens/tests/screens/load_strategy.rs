@@ -7,9 +7,7 @@ struct LoadStrategyScreenSettings {
 }
 #[derive(Component, Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Reflect)]
 struct LoadStrategyScreen;
-impl Screen for LoadStrategyScreen {
-    type SETTINGS = LoadStrategyScreenSettings;
-}
+impl Screen for LoadStrategyScreen {}
 #[derive(Resource, Debug, Default)]
 struct FinalValue(u32);
 
@@ -72,13 +70,13 @@ type Scr = LoadStrategyScreen;
 #[test]
 fn blocking() {
     let mut app = get_test_app::<Scr>();
-    app.add_plugins(Scr::plugin_blocking);
+    app.add_plugins((Scr::plugin_blocking, EmptyScreen::plugin));
     assert!(app.run().is_success());
 }
 
 #[test]
 fn nonblocking() {
     let mut app = get_test_app::<Scr>();
-    app.add_plugins(Scr::plugin_nonblocking);
+    app.add_plugins((Scr::plugin_nonblocking, EmptyScreen::plugin));
     assert!(app.run().is_success());
 }

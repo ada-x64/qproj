@@ -6,7 +6,6 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  RUST_LOG: app=debug,tfw=debug
   MISE_ENV: ci
 
 jobs:

@@ -1,9 +1,5 @@
 use crate::prelude::*;
 
-/// This struct can be used to dynamically change the screen's behavior.
-#[derive(PartialEq, Eq, Clone, Debug, Hash, Reflect, Default, Resource)]
-pub struct LifecycleSettings;
-
 macro_rules! gen_fns {
     ($($name:ident),*) => {
         $(
@@ -44,9 +40,7 @@ macro_rules! progress_by {
 /// The main [Screen] implementation.
 #[derive(Component, Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Reflect)]
 pub struct LifecycleScreen;
-impl Screen for LifecycleScreen {
-    type SETTINGS = LifecycleSettings;
-}
+impl Screen for LifecycleScreen {}
 impl LifecycleScreen {
     pub fn plugin(app: &mut App) {
         ScreenScopeBuilder::<LifecycleScreen>::new(app)
@@ -102,7 +96,7 @@ type Scr = LifecycleScreen;
 #[test]
 fn lifecycle() {
     let mut app = get_test_app::<Scr>();
-    app.add_plugins(Scr::plugin);
+    app.add_plugins((Scr::plugin, EmptyScreen::plugin));
     gen_test_fns!(app, on_screen_load, on_screen_ready, on_screen_unloaded);
     app.init_resource::<TestRes>();
     app.add_systems(

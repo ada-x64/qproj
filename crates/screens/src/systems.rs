@@ -117,7 +117,26 @@ fn run_fixed_schedules(registry: ResMut<ScreenRegistry>, mut commands: Commands)
     }
 }
 
+pub fn initial_screen(
+    mut commands: Commands,
+    initial_screen: Res<InitialScreen>,
+    registry: Res<ScreenRegistry>,
+) {
+    if let Some(initial_screen) = (*initial_screen).as_ref() {
+        if let Some(cid) = registry
+            .values()
+            .find_map(|v| (v.name() == initial_screen).then_some(v.id()))
+        {
+            info!("Switching to initial screen {}", *initial_screen);
+            commands.write_message(SwitchToScreenMsg(cid));
+        } else {
+            warn!("Could not find screen with name {initial_screen}");
+        }
+    }
+}
+
 pub fn plugin(app: &mut App) {
+    app.add_systems(Startup, initial_screen);
     app.add_systems(PostUpdate, handle_switch_msg);
     app.add_systems(Update, run_schedules);
     app.add_systems(FixedUpdate, run_fixed_schedules);

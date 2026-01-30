@@ -99,7 +99,6 @@ where
     pub fn build(self) {
         // init
         let app = self.app;
-        app.init_resource::<S::SETTINGS>();
         let id = app.world_mut().register_component::<S>();
         let tick = app.world_mut().change_tick();
         let mut registry = app.world_mut().get_resource_or_init::<ScreenRegistry>();
@@ -124,6 +123,7 @@ where
 
         // watch screen switcher
         app.add_observer(on_switch_screen::<S>);
+        info!("watching on_switch_screen for {}", S::name());
 
         // scope systems
         for (_, schedule) in self.schedules.into_iter() {

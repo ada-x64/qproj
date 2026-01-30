@@ -12,7 +12,8 @@ mod trait_impl;
 
 pub mod prelude {
     pub use super::data::*;
-    pub use super::not::*;
+    pub(crate) use super::not::*;
+    pub use super::plugin::*;
     pub use super::scope::*;
     pub(crate) use super::systems::*;
     pub use super::trait_impl::*;

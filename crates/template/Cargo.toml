@@ -32,7 +32,7 @@ variadics_please = "1.1.0"
 clap = {version = "4.5.54", features = ["derive"] }
 
 # workspace
-tfw = {path = "../tfw"}
+bevy_screens = {path = "../screens", version="0.1.0"}
 
 [build-dependencies]
 built = {version = "0.8.0", features=["chrono"]}

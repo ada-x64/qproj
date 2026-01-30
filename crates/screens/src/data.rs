@@ -46,6 +46,19 @@ mod general_api {
     /// use the [Propagate] component.
     #[derive(Component, Debug, Reflect, Clone, Copy, Default, PartialEq)]
     pub struct Persistent;
+
+    /// The first screen. Typically this will be a splash screen, a loading
+    /// screen, or a main menu.
+    #[derive(Resource, Default, Debug, Deref)]
+    pub struct InitialScreen(Option<String>);
+    impl InitialScreen {
+        pub fn new<S: Screen>() -> Self {
+            Self(Some(S::name()))
+        }
+        pub fn from_name(name: String) -> Self {
+            Self(Some(name))
+        }
+    }
 }
 pub use general_api::*;
 

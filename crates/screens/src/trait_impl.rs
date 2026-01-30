@@ -36,9 +36,6 @@ pub trait Screen:
     + Sync
     + 'static
 {
-    /// The associated settings type. Set as [NoSettings] for no settings.
-    type SETTINGS: Resource + FromWorld;
-
     fn name() -> String {
         let default = Self::default();
         Reflect::as_reflect(&default)
