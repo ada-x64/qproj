@@ -49,7 +49,7 @@ impl Plugin for TfwPlugin {
                 if let Some(initial_screen) = settings.initial_screen_name.clone() {
                     if let Some(cid) = registry
                         .values()
-                        .find_map(|v| (v.name == initial_screen).then_some(v.id))
+                        .find_map(|v| (v.name() == initial_screen).then_some(v.id()))
                     {
                         commands.write_message(SwitchToScreenMsg(cid));
                     } else {

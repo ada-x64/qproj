@@ -50,6 +50,8 @@ mod general_api {
 pub use general_api::*;
 
 mod screens {
+    use bevy::ecs::change_detection::Tick;
+
     use super::*;
 
     /// Marker struct for a screen.
@@ -65,70 +67,130 @@ mod screens {
     #[derive(Debug)]
     pub struct ScreenData {
         /// Serialized name of the [Screen]
-        pub name: String,
-        pub id: ComponentId,
-        pub state: ScreenState,
+        name: String,
+        id: ComponentId,
+        state: ScreenState,
         /// TypeId of the underlying [Screen] component
-        pub type_id: TypeId,
+        type_id: TypeId,
         /// Indicates that the state has changed and needs to run the corresponding state schedule.
-        pub changed: bool,
+        pub(crate) needs_update: bool,
+        pub(crate) changed_at: Tick,
+        pub(crate) initialized: bool,
         /// Should the Update schedule run even while loading?
-        pub load_strategy: LoadStrategy,
+        load_strategy: LoadStrategy,
         /// Initialize directly into Ready.
-        pub skip_load: bool,
+        skip_load: bool,
         /// Deinitialize immediately
-        pub skip_unload: bool,
+        skip_unload: bool,
     }
     impl ScreenData {
-        pub fn new<S: Screen>(id: ComponentId) -> Self {
+        pub fn new<S: Screen>(id: ComponentId, tick: Tick) -> Self {
             Self {
                 name: S::name(),
                 id,
                 state: ScreenState::Unloaded,
                 type_id: TypeId::of::<S>(),
-                changed: true,
+                needs_update: true,
                 skip_load: true,
                 skip_unload: true,
                 load_strategy: LoadStrategy::Blocking,
+                changed_at: tick,
+                initialized: false,
             }
         }
 
         /// Loads the screen.
         /// Has no effect if already in Loading or Ready states.
-        pub fn load(&mut self) {
+        pub fn load(&mut self, tick: Tick) {
             if matches!(self.state, ScreenState::Unloaded | ScreenState::Unloading) {
                 if self.skip_load {
                     self.state = ScreenState::Ready
                 } else {
                     self.state = ScreenState::Loading;
                 }
-                self.changed = true;
+                self.needs_update = true;
+                self.changed_at = tick;
             }
         }
 
         /// Unloads the screen.
         /// Has no effect if already in Unloading or Unloaded states.
-        pub fn unload(&mut self) {
+        pub fn unload(&mut self, tick: Tick) {
             if matches!(self.state, ScreenState::Loading | ScreenState::Ready) {
                 self.state = ScreenState::Unloading;
-                self.changed = true;
+                self.needs_update = true;
+                self.changed_at = tick;
             }
         }
         /// Finishes loading the screen.
         /// Has no effect if already in Loading or Ready states.
-        pub fn finish_loading(&mut self) {
+        pub fn finish_loading(&mut self, tick: Tick) {
             if matches!(self.state, ScreenState::Loading) {
                 self.state = ScreenState::Ready;
-                self.changed = true;
+                self.needs_update = true;
+                self.changed_at = tick;
             }
         }
         /// Finishes loading the screen.
         /// Has no effect if already in Loading or Ready states.
-        pub fn finish_unloading(&mut self) {
+        pub fn finish_unloading(&mut self, tick: Tick) {
             if matches!(self.state, ScreenState::Unloading) {
                 self.state = ScreenState::Unloaded;
-                self.changed = true;
+                self.needs_update = true;
+                self.changed_at = tick;
             }
+        }
+
+        pub fn load_strategy(&self) -> LoadStrategy {
+            self.load_strategy
+        }
+
+        pub fn skip_load(&self) -> bool {
+            self.skip_load
+        }
+
+        pub fn skip_unload(&self) -> bool {
+            self.skip_unload
+        }
+
+        pub fn set_skip_unload(&mut self, skip_unload: bool) {
+            self.skip_unload = skip_unload;
+        }
+
+        pub fn set_skip_load(&mut self, skip_load: bool) {
+            self.skip_load = skip_load;
+        }
+
+        pub fn set_load_strategy(&mut self, load_strategy: LoadStrategy) {
+            self.load_strategy = load_strategy;
+        }
+
+        pub fn initialized(&self) -> bool {
+            self.initialized
+        }
+
+        pub fn changed_at(&self) -> Tick {
+            self.changed_at
+        }
+
+        pub fn needs_update(&self) -> bool {
+            self.needs_update
+        }
+
+        pub fn type_id(&self) -> TypeId {
+            self.type_id
+        }
+
+        pub fn state(&self) -> ScreenState {
+            self.state
+        }
+
+        pub fn id(&self) -> ComponentId {
+            self.id
+        }
+
+        pub fn name(&self) -> &str {
+            &self.name
         }
     }
 }
@@ -202,6 +264,8 @@ impl ScreenState {
 }
 
 mod system_params {
+    use bevy::ecs::change_detection::Tick;
+
     use super::*;
 
     /// Read-only [SystemParam] for easy access to a screen's [ScreenData]
@@ -254,23 +318,28 @@ mod system_params {
         _ghost: PhantomData<S>,
         registry: Mut<'w, ScreenRegistry>,
         cid: ComponentId,
+        change_tick: Tick,
     }
     impl<'w, S: Screen> ScreenDataMut<'w, S> {
         /// Loads the screen. Has no effect if the screen is already Loaded or Ready.
         pub fn load(&mut self) {
-            self.data_mut().load();
+            let tick = self.change_tick;
+            self.data_mut().load(tick);
         }
         /// Unloads the screen. Has no effect if the screen is already Loaded or Ready.
         pub fn unload(&mut self) {
-            self.data_mut().unload();
+            let tick = self.change_tick;
+            self.data_mut().unload(tick);
         }
         /// Loads the screen. Has no effect if the screen is not Loading.
         pub fn finish_loading(&mut self) {
-            self.data_mut().finish_loading();
+            let tick = self.change_tick;
+            self.data_mut().finish_loading(tick);
         }
         /// Loads the screen. Has no effect if the screen is not Loading.
         pub fn finish_unloading(&mut self) {
-            self.data_mut().finish_unloading();
+            let tick = self.change_tick;
+            self.data_mut().finish_unloading(tick);
         }
         pub fn data(&self) -> &ScreenData {
             self.registry.get(&self.cid).unwrap()
@@ -299,7 +368,7 @@ mod system_params {
             _state: &'state mut Self::State,
             _system_meta: &bevy::ecs::system::SystemMeta,
             world: bevy::ecs::world::unsafe_world_cell::UnsafeWorldCell<'world>,
-            _change_tick: bevy::ecs::change_detection::Tick,
+            change_tick: bevy::ecs::change_detection::Tick,
         ) -> Self::Item<'world, 'state> {
             let registry = unsafe { world.get_resource_mut::<ScreenRegistry>().unwrap() };
             let cid = world.components().get_id(TypeId::of::<S>()).unwrap();
@@ -307,6 +376,7 @@ mod system_params {
                 registry,
                 cid,
                 _ghost: PhantomData,
+                change_tick,
             }
         }
     }
@@ -320,23 +390,23 @@ mod helpers {
     pub fn screen_has_state<S: Screen>(
         state: ScreenState,
     ) -> impl FnMut(ScreenDataRef<S>) -> bool + Clone {
-        move |data: ScreenDataRef<S>| data.data().state == state
+        move |data: ScreenDataRef<S>| data.data().state() == state
     }
     /// Is the screen still loading?
     pub fn screen_loading<S: Screen>() -> impl FnMut(ScreenDataRef<S>) -> bool + Clone {
-        |data: ScreenDataRef<S>| matches!(data.data().state, ScreenState::Loading)
+        |data: ScreenDataRef<S>| matches!(data.data().state(), ScreenState::Loading)
     }
     /// Has the screen finished loading?
     pub fn screen_ready<S: Screen>() -> impl FnMut(ScreenDataRef<S>) -> bool + Clone {
-        |data: ScreenDataRef<S>| matches!(data.data().state, ScreenState::Ready)
+        |data: ScreenDataRef<S>| matches!(data.data().state(), ScreenState::Ready)
     }
     /// Is the screen currently unloading?
     pub fn screen_unloading<S: Screen>() -> impl FnMut(ScreenDataRef<S>) -> bool + Clone {
-        |data: ScreenDataRef<S>| matches!(data.data().state, ScreenState::Unloading)
+        |data: ScreenDataRef<S>| matches!(data.data().state(), ScreenState::Unloading)
     }
     /// Has the screen finished unloading?
     pub fn screen_unloaded<S: Screen>() -> impl FnMut(ScreenDataRef<S>) -> bool + Clone {
-        |data: ScreenDataRef<S>| matches!(data.data().state, ScreenState::Unloaded)
+        |data: ScreenDataRef<S>| matches!(data.data().state(), ScreenState::Unloaded)
     }
 
     /// Label of a schedule which fires when the screen has begun to load.

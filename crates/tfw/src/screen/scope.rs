@@ -66,6 +66,9 @@ where
 
     /// Runs once on screen load. Shorthand for
     /// `app.add_systems(on_screen_load::<S>(), systems)`.
+    /// Note that this _will not_ automatically enable loading for this screen.
+    /// Make sure you either have systems in the [ScreenSchedule::Load](ScreenSchedule) schedule,
+    /// or you manually set [with_skip_load(false)](ScreenScopeBuilder::with_skip_load)
     pub fn on_load<M>(self, systems: impl IntoScheduleConfigs<ScheduleSystem, M>) -> Self {
         self.app.add_systems(on_screen_load::<S>(), systems);
         self
@@ -78,6 +81,9 @@ where
     }
     /// Runs once when screen begins to unload. Shorthand for
     /// `app.add_systems(on_screen_unload::<S>(), systems)`.
+    /// Note that this _will not_ automatically enable unloading for this screen.
+    /// Make sure you either have systems in the [ScreenSchedule::Unload](ScreenSchedule) schedule,
+    /// or you manually set [with_skip_unload(false)](ScreenScopeBuilder::with_skip_unload)
     pub fn on_unload<M>(self, systems: impl IntoScheduleConfigs<ScheduleSystem, M>) -> Self {
         self.app.add_systems(on_screen_unload::<S>(), systems);
         self
@@ -96,10 +102,11 @@ where
         let app = self.app;
         app.init_resource::<S::SETTINGS>();
         let id = app.world_mut().register_component::<S>();
+        let tick = app.world_mut().change_tick();
         let mut registry = app.world_mut().get_resource_or_init::<ScreenRegistry>();
 
         // insert data
-        let mut data = ScreenData::new::<S>(id);
+        let mut data = ScreenData::new::<S>(id, tick);
         let skip_load = self
             .schedules
             .get(&ScreenSchedule::Loading)
@@ -110,9 +117,9 @@ where
             .get(&ScreenSchedule::Unloading)
             .map(|v| v.systems_len() == 0)
             .unwrap_or_default();
-        data.skip_load = self.skip_load.unwrap_or(skip_load);
-        data.skip_unload = self.skip_unload.unwrap_or(skip_unload);
-        data.load_strategy = self.load_strategy;
+        data.set_skip_load(self.skip_load.unwrap_or(skip_load));
+        data.set_skip_unload(self.skip_unload.unwrap_or(skip_unload));
+        data.set_load_strategy(self.load_strategy);
         registry.insert(id, data);
 
         // watch screen switcher
