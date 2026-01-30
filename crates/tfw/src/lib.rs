@@ -16,6 +16,7 @@ pub mod prelude {
     #[doc(hidden)]
     pub use bevy::ecs::{lifecycle::HookContext, world::DeferredWorld};
     pub(crate) use bevy::prelude::*;
+    pub(crate) use std::marker::PhantomData;
     pub(crate) use tiny_bail::prelude::*;
 }
 
@@ -41,6 +42,7 @@ impl Plugin for TfwPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(screen::plugin);
         app.init_resource::<TfwSettings>();
+        app.add_message::<SwitchToScreenMsg>();
         app.add_systems(
             Startup,
             |mut commands: Commands, settings: Res<TfwSettings>, registry: Res<ScreenRegistry>| {

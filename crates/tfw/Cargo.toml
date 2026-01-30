@@ -6,7 +6,6 @@ edition = "2024"
 [dependencies]
 # bevy
 bevy = {version="0.18"} # features=["default_app", "default_platform", "common_api"]}
-bevy_asset_loader = "0.25"
 
 # not bevy
 tiny_bail = "0.7"
@@ -21,11 +20,10 @@ variadics_please = "1.1.0"
 # local
 bevy_test_harness = {path="../test_harness"}
 
-bevy_asset = {version="0.18", features=["multi_threaded"]}
-
 [dev-dependencies]
 # just for a few inspector things... should really fork them
 bevy-inspector-egui = "0.36"
+bevy_asset_loader = "0.25"
 
 [lints]
 workspace = true

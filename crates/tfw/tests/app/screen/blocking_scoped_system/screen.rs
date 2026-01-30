@@ -18,8 +18,6 @@ pub struct BlockingScopedSystemAssets {
 pub struct BlockingScopedSystemScreen;
 impl Screen for BlockingScopedSystemScreen {
     type SETTINGS = BlockingScopedSystemSettings;
-    type ASSETS = BlockingScopedSystemAssets;
-    const STRATEGY: LoadingStrategy = LoadingStrategy::Blocking;
 }
 
 fn increment(mut value: ResMut<BlockingScopedSystemValue>) {
@@ -41,7 +39,8 @@ fn unload(
 
 pub fn plugin(app: &mut App) {
     ScreenScopeBuilder::<BlockingScopedSystemScreen>::new(app)
-        .add_systems(ScreenSchedule::Main, increment)
+        .add_systems(ScreenSchedule::Update, increment)
+        .with_load_strategy(LoadStrategy::Blocking) // default value
         .on_ready(init)
         .on_unload(unload)
         .build();

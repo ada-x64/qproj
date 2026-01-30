@@ -16,6 +16,9 @@ mod general_api {
     /// [SwitchToScreenMsg] with the screen's [ComponentId].
     #[derive(Event, Debug, PartialEq, Eq, Clone, Deref, Default)]
     pub struct SwitchToScreen<S: Screen>(PhantomData<S>);
+    pub fn switch_to_screen<S: Screen>() -> SwitchToScreen<S> {
+        SwitchToScreen::<S>::default()
+    }
 
     /// Switches to the given screen by its [ComponentId]. When possible, prefer
     /// to use [SwitchToScreen] to ensure type safety. This is a [Message] so we
@@ -61,9 +64,72 @@ mod screens {
     /// Data about a given screen. This is where all the screen's identifying information lives, including it's [ScreenState].
     #[derive(Debug)]
     pub struct ScreenData {
+        /// Serialized name of the [Screen]
         pub name: String,
         pub id: ComponentId,
         pub state: ScreenState,
+        /// TypeId of the underlying [Screen] component
+        pub type_id: TypeId,
+        /// Indicates that the state has changed and needs to run the corresponding state schedule.
+        pub changed: bool,
+        /// Should the Update schedule run even while loading?
+        pub load_strategy: LoadStrategy,
+        /// Initialize directly into Ready.
+        pub skip_load: bool,
+        /// Deinitialize immediately
+        pub skip_unload: bool,
+    }
+    impl ScreenData {
+        pub fn new<S: Screen>(id: ComponentId) -> Self {
+            Self {
+                name: S::name(),
+                id,
+                state: ScreenState::Unloaded,
+                type_id: TypeId::of::<S>(),
+                changed: true,
+                skip_load: true,
+                skip_unload: true,
+                load_strategy: LoadStrategy::Blocking,
+            }
+        }
+
+        /// Loads the screen.
+        /// Has no effect if already in Loading or Ready states.
+        pub fn load(&mut self) {
+            if matches!(self.state, ScreenState::Unloaded | ScreenState::Unloading) {
+                if self.skip_load {
+                    self.state = ScreenState::Ready
+                } else {
+                    self.state = ScreenState::Loading;
+                }
+                self.changed = true;
+            }
+        }
+
+        /// Unloads the screen.
+        /// Has no effect if already in Unloading or Unloaded states.
+        pub fn unload(&mut self) {
+            if matches!(self.state, ScreenState::Loading | ScreenState::Ready) {
+                self.state = ScreenState::Unloading;
+                self.changed = true;
+            }
+        }
+        /// Finishes loading the screen.
+        /// Has no effect if already in Loading or Ready states.
+        pub fn finish_loading(&mut self) {
+            if matches!(self.state, ScreenState::Loading) {
+                self.state = ScreenState::Ready;
+                self.changed = true;
+            }
+        }
+        /// Finishes loading the screen.
+        /// Has no effect if already in Loading or Ready states.
+        pub fn finish_unloading(&mut self) {
+            if matches!(self.state, ScreenState::Unloading) {
+                self.state = ScreenState::Unloaded;
+                self.changed = true;
+            }
+        }
     }
 }
 pub use screens::*;
@@ -76,33 +142,36 @@ mod schedules {
     /// To use as a schedule, wrap it with [ScreenScheduleLabel].
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, strum::EnumIter)]
     pub enum ScreenSchedule {
-        Main,
-        Fixed,
-        Load,
-        Unload,
+        Update,
+        FixedUpdate,
+        Loading,
+        Unloading,
     }
     impl From<ScreenSchedule> for ScreenState {
         fn from(value: ScreenSchedule) -> Self {
             match value {
-                ScreenSchedule::Main | ScreenSchedule::Fixed => ScreenState::Ready,
-                ScreenSchedule::Load => ScreenState::Loading,
-                ScreenSchedule::Unload => ScreenState::Unloading,
+                ScreenSchedule::Update | ScreenSchedule::FixedUpdate => ScreenState::Ready,
+                ScreenSchedule::Loading => ScreenState::Loading,
+                ScreenSchedule::Unloading => ScreenState::Unloading,
             }
         }
     }
 
     /// Wrapper around [ScreenScheduleKind]. Needed to make schedules unique per type.
     #[derive(ScheduleLabel, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    pub struct ScreenScheduleLabel<S: Screen> {
-        _ghost: PhantomData<S>,
+    pub struct ScreenScheduleLabel {
+        id: TypeId,
         kind: ScreenSchedule,
     }
-    impl<S: Screen> ScreenScheduleLabel<S> {
-        pub fn new(kind: ScreenSchedule) -> Self {
+    impl ScreenScheduleLabel {
+        pub fn new<S: Screen>(kind: ScreenSchedule) -> Self {
             Self {
-                _ghost: PhantomData,
+                id: TypeId::of::<S>(),
                 kind,
             }
+        }
+        pub fn from_id(kind: ScreenSchedule, id: TypeId) -> Self {
+            Self { id, kind }
         }
     }
 }
@@ -136,11 +205,14 @@ mod system_params {
     use super::*;
 
     /// Read-only [SystemParam] for easy access to a screen's [ScreenData]
-    #[derive(Deref)]
     pub struct ScreenDataRef<'w, S: Screen> {
-        #[deref]
         data: &'w ScreenData,
         _ghost: PhantomData<S>,
+    }
+    impl<'w, S: Screen> ScreenDataRef<'w, S> {
+        pub fn data(&self) -> &'w ScreenData {
+            self.data
+        }
     }
 
     unsafe impl<'w, S: Screen> SystemParam for ScreenDataRef<'w, S> {
@@ -186,23 +258,19 @@ mod system_params {
     impl<'w, S: Screen> ScreenDataMut<'w, S> {
         /// Loads the screen. Has no effect if the screen is already Loaded or Ready.
         pub fn load(&mut self) {
-            let state = &mut self.data_mut().state;
-            match state {
-                ScreenState::Unloaded | ScreenState::Unloading => {
-                    *state = ScreenState::Loading;
-                }
-                _ => {}
-            }
+            self.data_mut().load();
         }
-        /// Unloads the screen. Has no effect if the screen is already Unloading or Unloaded.
+        /// Unloads the screen. Has no effect if the screen is already Loaded or Ready.
         pub fn unload(&mut self) {
-            let state = &mut self.data_mut().state;
-            match state {
-                ScreenState::Loading | ScreenState::Ready => {
-                    *state = ScreenState::Unloading;
-                }
-                _ => {}
-            }
+            self.data_mut().unload();
+        }
+        /// Loads the screen. Has no effect if the screen is not Loading.
+        pub fn finish_loading(&mut self) {
+            self.data_mut().finish_loading();
+        }
+        /// Loads the screen. Has no effect if the screen is not Loading.
+        pub fn finish_unloading(&mut self) {
+            self.data_mut().finish_unloading();
         }
         pub fn data(&self) -> &ScreenData {
             self.registry.get(&self.cid).unwrap()
@@ -252,51 +320,51 @@ mod helpers {
     pub fn screen_has_state<S: Screen>(
         state: ScreenState,
     ) -> impl FnMut(ScreenDataRef<S>) -> bool + Clone {
-        move |data: ScreenDataRef<S>| data.state == state
+        move |data: ScreenDataRef<S>| data.data().state == state
     }
     /// Is the screen still loading?
     pub fn screen_loading<S: Screen>() -> impl FnMut(ScreenDataRef<S>) -> bool + Clone {
-        |data: ScreenDataRef<S>| matches!(data.state, ScreenState::Loading)
+        |data: ScreenDataRef<S>| matches!(data.data().state, ScreenState::Loading)
     }
     /// Has the screen finished loading?
     pub fn screen_ready<S: Screen>() -> impl FnMut(ScreenDataRef<S>) -> bool + Clone {
-        |data: ScreenDataRef<S>| matches!(data.state, ScreenState::Ready)
+        |data: ScreenDataRef<S>| matches!(data.data().state, ScreenState::Ready)
     }
     /// Is the screen currently unloading?
     pub fn screen_unloading<S: Screen>() -> impl FnMut(ScreenDataRef<S>) -> bool + Clone {
-        |data: ScreenDataRef<S>| matches!(data.state, ScreenState::Unloading)
+        |data: ScreenDataRef<S>| matches!(data.data().state, ScreenState::Unloading)
     }
     /// Has the screen finished unloading?
     pub fn screen_unloaded<S: Screen>() -> impl FnMut(ScreenDataRef<S>) -> bool + Clone {
-        |data: ScreenDataRef<S>| matches!(data.state, ScreenState::Unloaded)
+        |data: ScreenDataRef<S>| matches!(data.data().state, ScreenState::Unloaded)
     }
 
     /// Label of a schedule which fires when the screen has begun to load.
-    #[derive(ScheduleLabel, Default, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-    pub struct OnScreenLoad<S: Screen>(PhantomData<S>);
-    pub fn on_screen_load<S: Screen>() -> OnScreenLoad<S> {
-        OnScreenLoad::<S>::default()
+    #[derive(ScheduleLabel, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+    pub struct OnScreenLoad(pub TypeId);
+    pub fn on_screen_load<S: Screen>() -> impl ScheduleLabel {
+        OnScreenLoad(TypeId::of::<S>())
     }
 
     /// Label of a schedule which fires when the screen has finished loading.
-    #[derive(ScheduleLabel, Default, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-    pub struct OnScreenReady<S: Screen>(PhantomData<S>);
+    #[derive(ScheduleLabel, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+    pub struct OnScreenReady(pub TypeId);
     pub fn on_screen_ready<S: Screen>() -> impl ScheduleLabel {
-        OnScreenReady::<S>::default()
+        OnScreenReady(TypeId::of::<S>())
     }
 
     /// Label of a schedule which fires when the screen is beginning to unload. Not to be confused with [OnScreenUnloaded].
-    #[derive(ScheduleLabel, Default, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-    pub struct OnScreenUnload<S: Screen>(PhantomData<S>);
+    #[derive(ScheduleLabel, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+    pub struct OnScreenUnload(pub TypeId);
     pub fn on_screen_unload<S: Screen>() -> impl ScheduleLabel {
-        OnScreenUnload::<S>::default()
+        OnScreenUnload(TypeId::of::<S>())
     }
 
     /// Label of a schedule which fires when the screen has finished unloading and is no longer active.
-    #[derive(ScheduleLabel, Default, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-    pub struct OnScreenUnloaded<S: Screen>(PhantomData<S>);
+    #[derive(ScheduleLabel, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+    pub struct OnScreenUnloaded(pub TypeId);
     pub fn on_screen_unloaded<S: Screen>() -> impl ScheduleLabel {
-        OnScreenUnloaded::<S>::default()
+        OnScreenUnloaded(TypeId::of::<S>())
     }
 }
 pub use helpers::*;

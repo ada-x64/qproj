@@ -3,12 +3,13 @@ mod screen;
 pub mod prelude {
     pub use super::app::prelude::*;
     pub use super::globals::*;
+    pub use bevy_asset_loader::prelude::*;
 }
 
 mod globals {
     use crate::{app::AppPlugin, prelude::EmptyScreen};
+    use bevy::asset::{AssetLoader, AsyncReadExt};
     use bevy::prelude::*;
-    use bevy_asset::{AssetLoader, AsyncReadExt};
     use bevy_test_harness::{TestRunnerPlugin, TestRunnerTimeout};
     use tfw::{TfwPlugin, TfwSettings, prelude::Screen};
 
@@ -33,9 +34,9 @@ mod globals {
 
         async fn load<'a>(
             &self,
-            reader: &mut dyn bevy_asset::io::Reader,
+            reader: &mut dyn bevy::asset::io::Reader,
             _settings: &Self::Settings,
-            _load_context: &mut bevy_asset::LoadContext<'a>,
+            _load_context: &mut bevy::asset::LoadContext<'a>,
         ) -> Result<Self::Asset, Self::Error> {
             let mut string = String::new();
 

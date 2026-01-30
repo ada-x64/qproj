@@ -4,8 +4,6 @@ use crate::prelude::*;
 pub struct EmptyScreen;
 impl Screen for EmptyScreen {
     type SETTINGS = NoSettings;
-    type ASSETS = NoAssets;
-    const STRATEGY: LoadingStrategy = LoadingStrategy::Nonblocking;
 }
 
 pub fn plugin(app: &mut App) {

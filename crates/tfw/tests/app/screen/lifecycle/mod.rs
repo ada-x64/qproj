@@ -1,6 +1,7 @@
 use crate::prelude::*;
 
 mod screen;
+mod test;
 pub mod prelude {
     pub use super::screen::{LifecycleScreen, LifecycleSettings, LifecycleStatus};
 }

@@ -21,7 +21,7 @@ fn screen_transitions() {
          mut commands: Commands,
          q: Query<(Entity, &Name)>,
          data: ScreenDataRef<NamedEntityScreen>| {
-            if !data.state.is_ready() {
+            if !data.data().state.is_ready() {
                 return;
             }
             commands.log_hierarchy();
@@ -42,7 +42,7 @@ fn screen_transitions() {
          mut commands: Commands,
          q: Query<(Entity, &Name)>,
          data: ScreenDataRef<EmptyScreen>| {
-            if !data.state.is_ready() {
+            if !data.data().state.is_ready() {
                 return;
             }
             commands.log_hierarchy();
@@ -62,7 +62,7 @@ fn screen_transitions() {
         |mut commands: Commands,
          q: Query<(Entity, &Name)>,
          data: ScreenDataRef<NamedEntityScreen>| {
-            if !data.state.is_ready() {
+            if !data.data().state.is_ready() {
                 return;
             }
             commands.log_hierarchy();
@@ -88,7 +88,7 @@ fn persistent_entities() {
     app.add_step(
         0,
         |mut commands: Commands, data: ScreenDataRef<NamedEntityScreen>| {
-            if !data.state.is_ready() {
+            if !data.data().state.is_ready() {
                 return;
             }
             commands.spawn((
@@ -115,7 +115,7 @@ fn persistent_entities() {
     .add_step(
         1,
         |mut commands: Commands, data: ScreenDataRef<EmptyScreen>| {
-            if !data.state.is_ready() {
+            if !data.data().state.is_ready() {
                 return;
             }
             commands.log_hierarchy();
@@ -142,7 +142,7 @@ fn observer_cleanup() {
         |mut commands: Commands,
          data: ScreenDataRef<EmptyScreen>,
          mut step: ResMut<NextState<Step>>| {
-            if !data.state.is_ready() {
+            if !data.data().state.is_ready() {
                 return;
             }
             commands.spawn((
@@ -164,7 +164,7 @@ fn observer_cleanup() {
     .add_step(
         1,
         |mut commands: Commands, data: ScreenDataRef<NamedEntityScreen>| {
-            if !data.state.is_ready() {
+            if !data.data().state.is_ready() {
                 return;
             }
             commands.find_no_entity("Parent");

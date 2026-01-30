@@ -4,8 +4,6 @@ use crate::prelude::*;
 pub struct SplashScreen;
 impl Screen for SplashScreen {
     type SETTINGS = NoSettings;
-    type ASSETS = NoAssets;
-    const STRATEGY: LoadingStrategy = LoadingStrategy::Nonblocking;
 }
 
 pub fn plugin(app: &mut App) {

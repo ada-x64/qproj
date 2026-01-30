@@ -5,6 +5,7 @@ use crate::prelude::*;
 #[derive(Resource, Deref, DerefMut, Default)]
 struct SavedValue(u32);
 
+// TODO: Need a different screen for this.
 #[test]
 fn nonblocking() {
     let mut app = get_test_app::<ScopedSystemScreen>();
@@ -16,7 +17,7 @@ fn nonblocking() {
          mut saved_value: ResMut<SavedValue>,
          value: Res<ScopedSystemValue>,
          data: ScreenDataRef<ScopedSystemScreen>| {
-            if !data.state.is_ready() {
+            if !data.data().state.is_ready() {
                 return;
             }
             info_once!(?value);
@@ -33,7 +34,7 @@ fn nonblocking() {
          value: Res<ScopedSystemValue>,
          saved_value: Res<SavedValue>,
          data: ScreenDataRef<EmptyScreen>| {
-            if !data.state.is_ready() {
+            if !data.data().state.is_ready() {
                 return;
             }
             info_once!(?value);
@@ -52,7 +53,7 @@ fn nonblocking() {
          value: Res<ScopedSystemValue>,
          saved_value: ResMut<SavedValue>,
          data: ScreenDataRef<ScopedSystemScreen>| {
-            if !data.state.is_ready() {
+            if !data.data().state.is_ready() {
                 return;
             }
             info_once!(?value);
@@ -87,7 +88,7 @@ fn blocking() {
          settings: Res<Settings>,
          value: Res<Value>,
          data: ScreenDataRef<Screen>| {
-            if !data.state.is_ready() {
+            if !data.data().state.is_ready() {
                 if *value != Value::default() {
                     error!("Got spurious value change!");
                     info!("Step = 1, Value = {}", **value);
@@ -131,7 +132,7 @@ fn blocking() {
                 info!("Step = 2, Value = {}", **value);
                 commands.write_message(AppExit::error());
             }
-            if !data.state.is_ready() {
+            if !data.data().state.is_ready() {
                 return;
             }
             commands.trigger(SwitchToScreen::<Screen>::default());
@@ -144,7 +145,7 @@ fn blocking() {
          value: Res<Value>,
          settings: Res<Settings>,
          data: ScreenDataRef<Screen>| {
-            if !data.state.is_ready() {
+            if !data.data().state.is_ready() {
                 if **value != settings.unload_value {
                     error!("Got spurious value change!");
                     info!("Step = 3, Value = {}", **value);

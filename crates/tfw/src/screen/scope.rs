@@ -1,7 +1,6 @@
-use std::marker::PhantomData;
-
 pub use crate::prelude::*;
 use bevy::{ecs::system::ScheduleSystem, platform::collections::HashMap};
+use strum::IntoEnumIterator;
 
 // TODO: DOCUMENT ME
 pub struct ScreenScopeBuilder<'a, S>
@@ -10,6 +9,9 @@ where
 {
     schedules: HashMap<ScreenSchedule, Schedule>,
     app: &'a mut App,
+    skip_load: Option<bool>,
+    skip_unload: Option<bool>,
+    load_strategy: LoadStrategy,
     _ghost: PhantomData<S>,
 }
 
@@ -18,15 +20,38 @@ where
     S: Screen,
 {
     pub fn new(app: &'a mut App) -> Self {
+        let schedules = ScreenSchedule::iter()
+            .map(|kind| (kind, Schedule::new(ScreenScheduleLabel::new::<S>(kind))))
+            .collect::<HashMap<_, _>>();
         Self {
-            schedules: HashMap::default(),
+            schedules,
             app,
+            skip_load: None,
+            skip_unload: None,
+            load_strategy: LoadStrategy::default(),
             _ghost: PhantomData,
         }
     }
 
-    /// Add systems to the schedule scope. Will run before or after [Update]
-    /// according to the builder's [Order]
+    /// Initialize directly into ready state. By default this is true, unless
+    /// there are systems present in the Load schedule.
+    pub fn with_skip_load(mut self, val: bool) -> Self {
+        self.skip_load = Some(val);
+        self
+    }
+    /// Deinitialize directly into unloaded state. By default this is true,
+    /// unless there are systems present in the Unload schedule.
+    pub fn with_skip_unload(mut self, val: bool) -> Self {
+        self.skip_unload = Some(val);
+        self
+    }
+    /// Sets the [LoadingStrategy]. By default, this is Blocking.
+    pub fn with_load_strategy(mut self, val: LoadStrategy) -> Self {
+        self.load_strategy = val;
+        self
+    }
+
+    /// Add systems to the schedule scope. Will run in the specified schedule.
     pub fn add_systems<M>(
         mut self,
         kind: ScreenSchedule,
@@ -34,131 +59,90 @@ where
     ) -> Self {
         self.schedules
             .entry(kind)
-            .or_insert(Schedule::new(ScreenScheduleLabel::<S>::new(kind)))
+            .or_insert(Schedule::new(ScreenScheduleLabel::new::<S>(kind)))
             .add_systems(systems);
         self
     }
 
     /// Runs once on screen load. Shorthand for
-    /// `app.add_systems(OnScreenLoad::<S>::default(), systems)`.
+    /// `app.add_systems(on_screen_load::<S>(), systems)`.
     pub fn on_load<M>(self, systems: impl IntoScheduleConfigs<ScheduleSystem, M>) -> Self {
-        self.app.add_systems(OnScreenLoad::<S>::default(), systems);
+        self.app.add_systems(on_screen_load::<S>(), systems);
         self
     }
     /// Runs once on screen ready. Shorthand for
-    /// `app.add_systems(OnScreenReady::<S>::default(), systems)`.
+    /// `app.add_systems(on_screen_ready::<S>(), systems)`.
     pub fn on_ready<M>(self, systems: impl IntoScheduleConfigs<ScheduleSystem, M>) -> Self {
-        self.app.add_systems(OnScreenReady::<S>::default(), systems);
+        self.app.add_systems(on_screen_ready::<S>(), systems);
         self
     }
     /// Runs once when screen begins to unload. Shorthand for
-    /// `app.add_systems(OnScreenUnload::<S>::default(), systems)`.
+    /// `app.add_systems(on_screen_unload::<S>(), systems)`.
     pub fn on_unload<M>(self, systems: impl IntoScheduleConfigs<ScheduleSystem, M>) -> Self {
-        self.app
-            .add_systems(OnScreenUnload::<S>::default(), systems);
+        self.app.add_systems(on_screen_unload::<S>(), systems);
         self
     }
     /// Runs once when screen finished unloading. Shorthand for
-    /// `app.add_systems(OnScreenUnloaded::<S>::default(), systems)`.
+    /// `app.add_systems(on_screen_unloaded::<S>(), systems)`.
     pub fn on_unloaded<M>(self, systems: impl IntoScheduleConfigs<ScheduleSystem, M>) -> Self {
-        self.app
-            .add_systems(OnScreenUnloaded::<S>::default(), systems);
+        self.app.add_systems(on_screen_unloaded::<S>(), systems);
         self
     }
 
     /// Builds the schedule and adds it to the app.
     pub fn build(self) {
-        let app = self.app;
         debug!("Building screen {:?}", S::name());
-
-        // insert data
+        // init
+        let app = self.app;
         app.init_resource::<S::SETTINGS>();
         let id = app.world_mut().register_component::<S>();
         let mut registry = app.world_mut().get_resource_or_init::<ScreenRegistry>();
-        registry.insert(
-            id,
-            ScreenData {
-                name: S::name(),
-                id,
-                state: ScreenState::Unloaded,
-            },
-        );
+
+        // insert data
+        let mut data = ScreenData::new::<S>(id);
+        let skip_load = self
+            .schedules
+            .get(&ScreenSchedule::Loading)
+            .map(|v| v.systems_len() == 0)
+            .unwrap_or_default();
+        let skip_unload = self
+            .schedules
+            .get(&ScreenSchedule::Unloading)
+            .map(|v| v.systems_len() == 0)
+            .unwrap_or_default();
+        data.skip_load = self.skip_load.unwrap_or(skip_load);
+        data.skip_unload = self.skip_unload.unwrap_or(skip_unload);
+        data.load_strategy = self.load_strategy;
+        registry.insert(id, data);
 
         // watch screen switcher
         app.add_observer(on_switch_screen::<S>);
 
         // scope systems
-        let blocking = S::has_assets() && S::STRATEGY == LoadingStrategy::Blocking;
-        for (screen_schedule, schedule) in self.schedules.into_iter() {
-            let label = schedule.label();
+        for (_, schedule) in self.schedules.into_iter() {
             app.add_schedule(schedule);
-            let system = move |mut commands: Commands, data: ScreenDataRef<S>| {
-                let bypass = !blocking
-                    && matches!(
-                        screen_schedule,
-                        ScreenSchedule::Fixed | ScreenSchedule::Main
-                    )
-                    && data.state != ScreenState::Unloaded;
-                if bypass || data.state == screen_schedule.into() {
-                    commands.run_schedule(label);
-                }
-            };
-            if matches!(screen_schedule, ScreenSchedule::Fixed) {
-                app.add_systems(FixedPreUpdate, system);
-            } else {
-                app.add_systems(PreUpdate, system);
-            };
         }
 
-        // NOTE: Because this is no longer a state-based sysyt
-        // if S::has_assets() {
-        //     debug!("Adding loading state for {}", S::name());
-        //     app.add_loading_state(
-        //         LoadingState::new(ScreenState::<S>::loading())
-        //             .continue_to_state(ScreenState::<S>::ready())
-        //             .load_collection::<S::ASSETS>(),
-        //     );
-        // }
-
-        // // set up unload schedule
-        // app.configure_sets(
-        //     UnloadSchedule,
-        //     (
-        //         PostUnloadSystems::<S>::default().after(UnloadSystems::<S>::default()),
-        //         UnloadSystems::<S>::default()
-        //             .run_if(not(screen_has_state::<S>(ScreenState::Unloaded))),
-        //     ),
-        // );
-
         // spawn on load
-        app.add_systems(OnScreenLoad::<S>::default(), S::spawn);
+        app.add_systems(on_screen_load::<S>(), S::spawn);
 
         // Lifecycle
         #[cfg(debug_assertions)]
         {
-            app.add_systems(OnScreenLoad::<S>::default(), || {
-                debug!("Loading {:?}", S::name())
-            });
-            app.add_systems(OnScreenReady::<S>::default(), || {
-                debug!("Ready {:?}", S::name())
-            });
-            app.add_systems(OnScreenUnload::<S>::default(), || {
+            app.add_systems(on_screen_load::<S>(), || debug!("Loading {:?}", S::name()));
+            app.add_systems(on_screen_ready::<S>(), || debug!("Ready {:?}", S::name()));
+            app.add_systems(on_screen_unload::<S>(), || {
                 debug!("Unloading {:?}", S::name())
             });
-            app.add_systems(OnScreenUnloaded::<S>::default(), || {
+            app.add_systems(on_screen_unloaded::<S>(), || {
                 debug!("Unloaded {:?}", S::name())
             });
         }
+        app.add_systems(on_screen_unloaded::<S>(), clean_up_scoped_entities::<S>);
     }
 }
 
-fn unload<S: Screen>(mut screen_state: ScreenDataMut<S>) {
-    debug!("UnloadSystems {:?}", S::name());
-    screen_state.unload();
-}
-
-/// This function clears out all the non-screen-scoped entities.
-fn post_unload<S: Screen>(
+fn clean_up_scoped_entities<S: Screen>(
     mut commands: Commands,
     mut next_state: ScreenDataMut<S>,
     // Any entity which is (explicitly marked as ScreenScoped, or is _not_ marked
@@ -174,7 +158,6 @@ fn post_unload<S: Screen>(
         ),
     >,
 ) {
-    debug!("PostUnloadSystems {:?}", S::name());
     screen_scoped.iter().for_each(|e| {
         commands.entity(e).despawn();
     });

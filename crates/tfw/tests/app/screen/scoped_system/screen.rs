@@ -9,12 +9,10 @@ pub struct ScopedSystemSettings {
 pub struct ScopedSystemScreen;
 impl Screen for ScopedSystemScreen {
     type SETTINGS = ScopedSystemSettings;
-    type ASSETS = NoAssets;
-    const STRATEGY: LoadingStrategy = LoadingStrategy::Nonblocking;
 }
 
 pub fn plugin(app: &mut App) {
     ScreenScopeBuilder::<ScopedSystemScreen>::new(app)
-        .add_systems(ScreenSchedule::Main, scoped_service_systems().take())
+        .add_systems(ScreenSchedule::Update, scoped_service_systems().take())
         .build();
 }

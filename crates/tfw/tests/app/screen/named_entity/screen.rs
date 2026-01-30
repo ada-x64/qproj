@@ -9,8 +9,6 @@ pub struct NamedEntityScreenSettings {
 pub struct NamedEntityScreen;
 impl Screen for NamedEntityScreen {
     type SETTINGS = NamedEntityScreenSettings;
-    type ASSETS = NoAssets;
-    const STRATEGY: LoadingStrategy = LoadingStrategy::Nonblocking;
 }
 
 fn init(settings: Res<NamedEntityScreenSettings>, mut commands: Commands) {

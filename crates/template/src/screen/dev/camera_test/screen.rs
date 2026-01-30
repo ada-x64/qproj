@@ -4,8 +4,6 @@ use crate::{prelude::*, screen::dev::camera_test};
 pub struct CameraTestScreen;
 impl Screen for CameraTestScreen {
     type SETTINGS = NoSettings;
-    type ASSETS = NoAssets;
-    const STRATEGY: LoadingStrategy = LoadingStrategy::Nonblocking;
 }
 
 /// spawn the scene.
@@ -54,7 +52,7 @@ pub fn plugin(app: &mut App) {
     ScreenScopeBuilder::<CameraTestScreen>::new(app)
         .on_ready(init)
         .add_systems(
-            ScreenSchedule::Main,
+            ScreenSchedule::Update,
             (camera_test::systems().take(), camera_systems().take()),
         )
         .build();

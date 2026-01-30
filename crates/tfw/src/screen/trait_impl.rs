@@ -1,30 +1,21 @@
-use std::any::TypeId;
-
-use bevy::ecs::component::ComponentIdFor;
-
 pub use crate::prelude::*;
+use bevy::ecs::component::ComponentIdFor;
 
 /// An empty settings parameter.
 #[derive(Resource, Default)]
 pub struct NoSettings;
 
-/// An empty [AssetCollection]. Combine this with the Nonblocking
-/// [LoadingStrategy] to skip asset loading.
-/// Note: This will _never_ resolve, so the [ScreenLoadingState] will _never_ be
-/// Ready.
-#[derive(Resource, Default, AssetCollection)]
-pub struct NoAssets {}
-
 /// How should the screen load its assets?
 /// If `LoadingStrategy` is Blocking, the screen's systems will not run until
 /// loading is complete. If it is Nonblocking, the screen's systems will run
 /// regardless of asset completion status.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum LoadingStrategy {
+#[derive(Default, Copy, Clone, Debug, PartialEq, Eq)]
+pub enum LoadStrategy {
+    #[default]
     Blocking,
     Nonblocking,
 }
-impl LoadingStrategy {
+impl LoadStrategy {
     pub fn is_blocking(&self) -> bool {
         matches!(self, Self::Blocking)
     }
@@ -47,13 +38,6 @@ pub trait Screen:
 {
     /// The associated settings type. Set as [NoSettings] for no settings.
     type SETTINGS: Resource + FromWorld;
-    /// Any associated assets which will load before the screen is considered
-    /// ready. Use [NoAssets] to skip loading.
-    /// If you want to load in assets without blocking the scoped systems,
-    /// you should include asset collections and states within a service.
-    type ASSETS: AssetCollection;
-    /// [LoadingStrategy] for the [Screen].
-    const STRATEGY: LoadingStrategy = LoadingStrategy::Nonblocking;
 
     fn name() -> String {
         let default = Self::default();
@@ -66,9 +50,5 @@ pub trait Screen:
     fn spawn(mut commands: Commands, id: ComponentIdFor<Self>) {
         debug!("Spawn ({})", Self::name());
         commands.spawn((Self::default(), Name::new(Self::name()), ScreenMarker(*id)));
-    }
-
-    fn has_assets() -> bool {
-        TypeId::of::<Self::ASSETS>() != TypeId::of::<NoAssets>()
     }
 }

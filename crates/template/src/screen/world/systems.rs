@@ -9,8 +9,8 @@ pub struct WorldAssets {
 pub struct WorldScreen;
 impl Screen for WorldScreen {
     type SETTINGS = NoSettings;
-    type ASSETS = WorldAssets;
-    const STRATEGY: LoadingStrategy = LoadingStrategy::Blocking;
+    // type ASSETS = WorldAssets;
+    // const LOADING_STRATEGY: LoadStrategy = LoadStrategy::Blocking;
 }
 
 fn init(mut commands: Commands) {
@@ -23,7 +23,7 @@ pub fn plugin(app: &mut App) {
     ScreenScopeBuilder::<WorldScreen>::new(app)
         .on_ready(init)
         .add_systems(
-            ScreenSchedule::Main,
+            ScreenSchedule::Update,
             (player_systems().take(), tracking_cam_systems().take()),
         )
         .build();
