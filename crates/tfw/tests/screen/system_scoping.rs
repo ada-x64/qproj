@@ -15,8 +15,8 @@ fn nonblocking() {
          mut commands: Commands,
          mut saved_value: ResMut<SavedValue>,
          value: Res<ScopedSystemValue>,
-         screen_state: ScreenState<ScopedSystemScreen>| {
-            if !screen_state.is_ready() {
+         data: ScreenDataRef<ScopedSystemScreen>| {
+            if !data.state.is_ready() {
                 return;
             }
             info_once!(?value);
@@ -32,8 +32,8 @@ fn nonblocking() {
          mut commands: Commands,
          value: Res<ScopedSystemValue>,
          saved_value: Res<SavedValue>,
-         screen_state: ScreenState<EmptyScreen>| {
-            if !screen_state.is_ready() {
+         data: ScreenDataRef<EmptyScreen>| {
+            if !data.state.is_ready() {
                 return;
             }
             info_once!(?value);
@@ -51,8 +51,8 @@ fn nonblocking() {
         |mut commands: Commands,
          value: Res<ScopedSystemValue>,
          saved_value: ResMut<SavedValue>,
-         screen_state: ScreenState<ScopedSystemScreen>| {
-            if !screen_state.is_ready() {
+         data: ScreenDataRef<ScopedSystemScreen>| {
+            if !data.state.is_ready() {
                 return;
             }
             info_once!(?value);
@@ -86,8 +86,8 @@ fn blocking() {
          mut commands: Commands,
          settings: Res<Settings>,
          value: Res<Value>,
-         screen_state: ScreenState<Screen>| {
-            if !screen_state.is_ready() {
+         data: ScreenDataRef<Screen>| {
+            if !data.state.is_ready() {
                 if *value != Value::default() {
                     error!("Got spurious value change!");
                     info!("Step = 1, Value = {}", **value);
@@ -124,14 +124,14 @@ fn blocking() {
          mut commands: Commands,
          value: Res<Value>,
          settings: Res<Settings>,
-         screen_state: ScreenState<EmptyScreen>| {
+         data: ScreenDataRef<EmptyScreen>| {
             // assert value has been frozen
             if **value != settings.unload_value {
                 error!("Value does not match unload_value");
                 info!("Step = 2, Value = {}", **value);
                 commands.write_message(AppExit::error());
             }
-            if !screen_state.is_ready() {
+            if !data.state.is_ready() {
                 return;
             }
             commands.trigger(SwitchToScreen::<Screen>::default());
@@ -143,8 +143,8 @@ fn blocking() {
         |mut commands: Commands,
          value: Res<Value>,
          settings: Res<Settings>,
-         screen_state: ScreenState<Screen>| {
-            if !screen_state.is_ready() {
+         data: ScreenDataRef<Screen>| {
+            if !data.state.is_ready() {
                 if **value != settings.unload_value {
                     error!("Got spurious value change!");
                     info!("Step = 3, Value = {}", **value);

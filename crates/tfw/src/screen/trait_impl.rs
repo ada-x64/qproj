@@ -4,17 +4,33 @@ use bevy::ecs::component::ComponentIdFor;
 
 pub use crate::prelude::*;
 
+/// An empty settings parameter.
+#[derive(Resource, Default)]
+pub struct NoSettings;
+
+/// An empty [AssetCollection]. Combine this with the Nonblocking
+/// [LoadingStrategy] to skip asset loading.
+/// Note: This will _never_ resolve, so the [ScreenLoadingState] will _never_ be
+/// Ready.
+#[derive(Resource, Default, AssetCollection)]
+pub struct NoAssets {}
+
+/// How should the screen load its assets?
+/// If `LoadingStrategy` is Blocking, the screen's systems will not run until
+/// loading is complete. If it is Nonblocking, the screen's systems will run
+/// regardless of asset completion status.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum LoadingStrategy {
+    Blocking,
+    Nonblocking,
+}
+impl LoadingStrategy {
+    pub fn is_blocking(&self) -> bool {
+        matches!(self, Self::Blocking)
+    }
+}
+
 /// Implementation trait for Screen components.
-/// ## Lifecycle
-/// Screens have two lifecycle functions.
-///
-/// The first is [Screen::init]
-/// which is called when the screen component's `on_add` hook is fired.
-/// This is meant to register systems and scoped observers.
-///
-/// The second lifecycle function is [Screen::unload]. This function
-/// is called before the screen unloads and is designed to run
-/// any cleanup logic before transitioning.
 pub trait Screen:
     Component
     + Sized

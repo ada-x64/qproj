@@ -22,7 +22,9 @@ fn init(mut commands: Commands) {
 pub fn plugin(app: &mut App) {
     ScreenScopeBuilder::<WorldScreen>::new(app)
         .on_ready(init)
-        .add_systems(player_systems().take())
-        .add_systems(tracking_cam_systems().take())
+        .add_systems(
+            ScreenSchedule::Main,
+            (player_systems().take(), tracking_cam_systems().take()),
+        )
         .build();
 }

@@ -16,6 +16,7 @@ pub mod prelude {
     #[doc(hidden)]
     pub use bevy::ecs::{lifecycle::HookContext, world::DeferredWorld};
     pub(crate) use bevy::prelude::*;
+    pub(crate) use tiny_bail::prelude::*;
 }
 
 #[derive(Default, Resource, Reflect, Debug)]
@@ -42,9 +43,16 @@ impl Plugin for TfwPlugin {
         app.init_resource::<TfwSettings>();
         app.add_systems(
             Startup,
-            |mut commands: Commands, settings: Res<TfwSettings>| {
+            |mut commands: Commands, settings: Res<TfwSettings>, registry: Res<ScreenRegistry>| {
                 if let Some(initial_screen) = settings.initial_screen_name.clone() {
-                    commands.trigger(SwitchToScreenByName(initial_screen));
+                    if let Some(cid) = registry
+                        .values()
+                        .find_map(|v| (v.name == initial_screen).then_some(v.id))
+                    {
+                        commands.write_message(SwitchToScreenMsg(cid));
+                    } else {
+                        warn!("Could not find screen with name {initial_screen}");
+                    }
                 }
             },
         );

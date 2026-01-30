@@ -53,7 +53,9 @@ fn init(
 pub fn plugin(app: &mut App) {
     ScreenScopeBuilder::<CameraTestScreen>::new(app)
         .on_ready(init)
-        .add_systems(camera_test::systems().take())
-        .add_systems(camera_systems().take())
+        .add_systems(
+            ScreenSchedule::Main,
+            (camera_test::systems().take(), camera_systems().take()),
+        )
         .build();
 }

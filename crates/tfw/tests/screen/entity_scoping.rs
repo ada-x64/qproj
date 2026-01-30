@@ -20,8 +20,8 @@ fn screen_transitions() {
         |mut step: ResMut<NextState<Step>>,
          mut commands: Commands,
          q: Query<(Entity, &Name)>,
-         screen_state: ScreenState<NamedEntityScreen>| {
-            if !screen_state.is_ready() {
+         data: ScreenDataRef<NamedEntityScreen>| {
+            if !data.state.is_ready() {
                 return;
             }
             commands.log_hierarchy();
@@ -41,8 +41,8 @@ fn screen_transitions() {
          mut settings: ResMut<NamedEntityScreenSettings>,
          mut commands: Commands,
          q: Query<(Entity, &Name)>,
-         screen_state: ScreenState<EmptyScreen>| {
-            if !screen_state.is_ready() {
+         data: ScreenDataRef<EmptyScreen>| {
+            if !data.state.is_ready() {
                 return;
             }
             commands.log_hierarchy();
@@ -61,8 +61,8 @@ fn screen_transitions() {
         3,
         |mut commands: Commands,
          q: Query<(Entity, &Name)>,
-         screen_state: ScreenState<NamedEntityScreen>| {
-            if !screen_state.is_ready() {
+         data: ScreenDataRef<NamedEntityScreen>| {
+            if !data.state.is_ready() {
                 return;
             }
             commands.log_hierarchy();
@@ -87,8 +87,8 @@ fn persistent_entities() {
     });
     app.add_step(
         0,
-        |mut commands: Commands, state: ScreenState<NamedEntityScreen>| {
-            if !state.is_ready() {
+        |mut commands: Commands, data: ScreenDataRef<NamedEntityScreen>| {
+            if !data.state.is_ready() {
                 return;
             }
             commands.spawn((
@@ -114,8 +114,8 @@ fn persistent_entities() {
     )
     .add_step(
         1,
-        |mut commands: Commands, state: ScreenState<EmptyScreen>| {
-            if !state.is_ready() {
+        |mut commands: Commands, data: ScreenDataRef<EmptyScreen>| {
+            if !data.state.is_ready() {
                 return;
             }
             commands.log_hierarchy();
@@ -140,9 +140,9 @@ fn observer_cleanup() {
     app.add_step(
         0,
         |mut commands: Commands,
-         screen_state: ScreenState<EmptyScreen>,
+         data: ScreenDataRef<EmptyScreen>,
          mut step: ResMut<NextState<Step>>| {
-            if !screen_state.is_ready() {
+            if !data.state.is_ready() {
                 return;
             }
             commands.spawn((
@@ -163,8 +163,8 @@ fn observer_cleanup() {
     )
     .add_step(
         1,
-        |mut commands: Commands, screen_state: ScreenState<NamedEntityScreen>| {
-            if !screen_state.is_ready() {
+        |mut commands: Commands, data: ScreenDataRef<NamedEntityScreen>| {
+            if !data.state.is_ready() {
                 return;
             }
             commands.find_no_entity("Parent");
