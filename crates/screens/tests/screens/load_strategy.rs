@@ -5,9 +5,10 @@ struct LoadStrategyScreenSettings {
     pub initial_value: u32,
     pub unload_value: u32,
 }
-#[derive(Component, Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Reflect)]
+
+#[derive(Screen, Component, Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Reflect)]
 struct LoadStrategyScreen;
-impl Screen for LoadStrategyScreen {}
+
 #[derive(Resource, Debug, Default)]
 struct FinalValue(u32);
 

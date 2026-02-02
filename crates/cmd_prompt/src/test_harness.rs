@@ -2,7 +2,7 @@ use bevy::{
     image::TextureAtlasPlugin, input::InputPlugin, input_focus::InputFocus, text::TextPlugin,
     ui::UiPlugin,
 };
-use bevy_test_harness::{TestRunnerPlugin, TestRunnerTimeout};
+use q_test_harness::{TestRunnerPlugin, TestRunnerTimeout};
 
 use crate::prelude::*;
 

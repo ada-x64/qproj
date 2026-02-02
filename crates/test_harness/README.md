@@ -34,6 +34,6 @@ This is a simple test harness for bevy projects.
 
 ## Compatibility table
 
-| bevy_test_harness | bevy |
+| q_test_harness | bevy |
 | ----------------- | ---- |
 | main              | 0.18 |

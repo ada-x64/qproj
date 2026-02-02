@@ -115,7 +115,7 @@ fn test_commands() {
     struct TestComponent;
     let mut app = App::new();
     app.add_plugins(TestRunnerPlugin {
-        log_filter: "bevy=error,bevy_test_harness=info".into(),
+        log_filter: "bevy=error,q_test_harness=info".into(),
         ..Default::default()
     });
     app.insert_resource(LogTestSteps(false));

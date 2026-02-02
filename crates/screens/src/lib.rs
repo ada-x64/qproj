@@ -18,6 +18,7 @@ pub mod prelude {
     pub(crate) use super::systems::*;
     pub use super::trait_impl::*;
     pub(crate) use bevy::prelude::*;
+    pub use q_screens_derive::*;
     pub(crate) use std::marker::PhantomData;
     pub(crate) use tiny_bail::prelude::*;
 }

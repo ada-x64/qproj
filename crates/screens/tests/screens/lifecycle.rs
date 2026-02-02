@@ -38,9 +38,8 @@ macro_rules! progress_by {
 }
 
 /// The main [Screen] implementation.
-#[derive(Component, Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Reflect)]
+#[derive(Screen, Component, Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Reflect)]
 pub struct LifecycleScreen;
-impl Screen for LifecycleScreen {}
 impl LifecycleScreen {
     pub fn plugin(app: &mut App) {
         ScreenScopeBuilder::<LifecycleScreen>::new(app)

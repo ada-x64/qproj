@@ -68,7 +68,7 @@ mod test {
     use bevy::input::ButtonState;
     use bevy::input::keyboard::Key;
     use bevy::input::keyboard::KeyboardInput;
-    use bevy_test_harness::prelude::*;
+    use q_test_harness::prelude::*;
 
     fn key_input(key_code: KeyCode, logical_key: Key, state: ButtonState) -> KeyboardInput {
         KeyboardInput {

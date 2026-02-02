@@ -4,8 +4,8 @@ pub mod prelude {
     pub use super::screens::prelude::*;
     pub use bevy::prelude::*;
     pub use bevy_asset_loader::prelude::*;
-    pub use bevy_screens::prelude::*;
-    pub use bevy_test_harness::prelude::*;
+    pub use q_screens::prelude::*;
+    pub use q_test_harness::prelude::*;
 }
 
 mod globals {

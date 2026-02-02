@@ -22,7 +22,7 @@ Features:
 - [x] Service-oriented framework
   - [x] Screen-scoped systems
 - [ ] Devex
-  - [ ] Lightweight console (with [bevy_ui_console](https://github.com/ada-x64/bevy_command_prompt))
+  - [ ] Lightweight console (with [bevy_ui_console](https://github.com/ada-x64/q_cmd_prompt))
   - [x] CLI
     - [x] Template scaffolding
       - [x] Screens

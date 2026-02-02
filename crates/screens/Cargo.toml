@@ -1,5 +1,5 @@
 [package]
-name = "bevy_screens"
+name = "q_screens"
 version = "0.1.0"
 edition = "2024"
 
@@ -18,7 +18,8 @@ strum = { version = "0.27.2", features = ["derive"] }
 variadics_please = "1.1.0"
 
 # local
-bevy_test_harness = {path="../test_harness", version="0.1.0"}
+q_test_harness = {path="../test_harness", version="0.1.0"}
+q_screens_derive = {path="./macros", version="0.1.0"}
 
 [dev-dependencies]
 # just for a few inspector things... should really fork them

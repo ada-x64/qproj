@@ -27,5 +27,5 @@ pub use plugin::{AppPlugin, AppSettings};
 pub mod prelude {
     pub use super::screen::prelude::*;
     pub use super::service::prelude::*;
-    pub use bevy_screens::prelude::*;
+    pub use q_screens::prelude::*;
 }
