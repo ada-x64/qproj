@@ -1,5 +1,5 @@
 <div align="center">
-<img src="/.doc/prompt.png" height=300 alt="Logo - 'bevy command prompt' over a sketch of a green magpie" />
+<img src="/.doc/q_cmd_prompt.png" height=300 alt="Logo - 'q command prompt' over a sketch of a green magpie" />
 </div>
 
 [![Coveralls](https://img.shields.io/coverallsCoverage/github/ada-x64/qproj?branch=q_cmd_prompt)](https://coveralls.io/github/ada-x64/qproj?branch=main)
