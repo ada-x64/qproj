@@ -1,5 +1,3 @@
-use tfw::TfwSettings;
-
 use crate::prelude::*;
 
 /// Allows for configuration of the application. When the "dev" feature is set,
@@ -38,16 +36,10 @@ pub struct AppPlugin {
 impl Plugin for AppPlugin {
     fn build(&self, app: &mut App) {
         app.world_mut().insert_resource(self.settings.clone());
-        app.add_plugins((
-            tfw::TfwPlugin {
-                settings: TfwSettings {
-                    // TODO: FIXME
-                    initial_screen: self.settings.initial_screen.clone(),
-                },
-            },
-            crate::service::plugin,
-            crate::screen::plugin,
-        ))
-        .insert_resource(self.settings.clone());
+        app.add_plugins((ScreenPlugin, crate::service::plugin, crate::screen::plugin))
+            .insert_resource(self.settings.clone());
+        app.insert_resource(InitialScreen::from_name(
+            self.settings.initial_screen.clone(),
+        ));
     }
 }

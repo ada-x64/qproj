@@ -83,7 +83,6 @@ impl Plugin for TestRunnerPlugin {
                 ..Default::default()
             },
             AssetPlugin::default(),
-            ImagePlugin::default(),
             StatesPlugin,
         ));
         app.init_resource::<LogTestSteps>();

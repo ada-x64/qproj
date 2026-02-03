@@ -6,5 +6,5 @@ pub mod prelude {
 }
 
 pub fn plugin(app: &mut App) {
-    app.add_plugins(systems::plugin);
+    app.register_screen::<SplashScreen>();
 }

@@ -1,12 +1,11 @@
 use crate::prelude::*;
 
-mod state;
-mod systems;
+mod screen;
 
 pub mod prelude {
-    pub use super::systems::WorldScreen;
+    pub use super::screen::WorldScreen;
 }
 
 pub fn plugin(app: &mut App) {
-    app.add_plugins((state::plugin, systems::plugin));
+    app.add_plugins(screen::plugin);
 }

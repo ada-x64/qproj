@@ -18,7 +18,7 @@ pub mod prelude {
 use bevy::{input_focus::InputFocus, ui::ui_layout_system};
 use prelude::*;
 
-/// The main entrypoint for bevy_command_prompt.
+/// The main entrypoint for q_cmd_prompt.
 pub struct ConsolePlugin;
 impl Plugin for ConsolePlugin {
     fn build(&self, app: &mut App) {

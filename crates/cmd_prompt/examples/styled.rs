@@ -1,6 +1,6 @@
 use bevy::color::palettes::tailwind;
 use bevy::prelude::*;
-use bevy_command_prompt::prelude::*;
+use q_cmd_prompt::prelude::*;
 
 pub fn main() {
     let mut app = App::new();

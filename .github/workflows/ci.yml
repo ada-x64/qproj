@@ -6,7 +6,6 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  RUST_LOG: app=debug,tfw=debug
   MISE_ENV: ci
 
 jobs:
@@ -47,7 +46,7 @@ jobs:
       - name: Install rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          toolchain: nightly-2025-12-11
+          toolchain: nightly-2026-01-22
           components: rustc-codegen-cranelift-preview,rustc-dev,llvm-tools-preview,clippy
 
       - uses: cargo-bins/cargo-binstall@main
@@ -60,12 +59,3 @@ jobs:
       - run: "mise clippy"
       - run: "mise bevy_lint"
       - run: "mise test"
-
-      - uses: taiki-e/install-action@cargo-llvm-cov
-      - name: Collect coverage data
-        run: cargo llvm-cov nextest
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          slug: ada-x64/qproj

@@ -1,8 +1,8 @@
 use crate::prelude::*;
 
 #[derive(Component, Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Reflect)]
-pub struct SplashScreen;
-impl Screen for SplashScreen {
+pub struct EmptyScreen;
+impl Screen for EmptyScreen {
     fn builder(builder: ScreenScopeBuilder<Self>) -> ScreenScopeBuilder<Self> {
         builder
     }

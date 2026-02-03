@@ -1,11 +1,13 @@
-use crate::{prelude::*, screen::dev::camera_test};
+use crate::prelude::*;
 
 #[derive(Component, Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Reflect)]
 pub struct CameraTestScreen;
 impl Screen for CameraTestScreen {
-    type SETTINGS = NoSettings;
-    type ASSETS = NoAssets;
-    const STRATEGY: LoadingStrategy = LoadingStrategy::Nonblocking;
+    fn builder(mut builder: ScreenScopeBuilder<Self>) -> ScreenScopeBuilder<Self> {
+        builder.add_systems(ScreenSchedule::Loading, init);
+        builder.add_systems(ScreenSchedule::Update, (update, camera_systems().take()));
+        builder
+    }
 }
 
 /// spawn the scene.
@@ -15,6 +17,7 @@ fn init(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut screen: ScreenDataMut<CameraTestScreen>,
 ) {
     // spawn everything
     let cube = meshes.add(Cuboid::default());
@@ -48,12 +51,15 @@ fn init(
     commands.trigger(SpawnCursorCapture);
     commands.spawn((tracking_cam_bundle(cube_entt), Name::new("Tracking Cam")));
     commands.spawn((flycam_bundle(), Name::new("Fly Cam")));
+
+    screen.finish_loading();
 }
 
-pub fn plugin(app: &mut App) {
-    ScreenScopeBuilder::<CameraTestScreen>::new(app)
-        .on_ready(init)
-        .add_systems(camera_test::systems().take())
-        .add_systems(camera_systems().take())
-        .build();
+fn update(mut query: Query<&mut Transform, With<Cube>>, time: Res<Time>) {
+    let mut tf = r!(query.single_mut());
+    *tf = tf.with_translation(Vec3::new(
+        3. * f32::cos(time.elapsed_secs()) - 1.5,
+        1.,
+        3. * f32::sin(time.elapsed_secs()) - 1.5,
+    ));
 }

@@ -1,8 +1,8 @@
 use bevy::{
-    image::TextureAtlasPlugin, input::InputPlugin, input_focus::InputFocus, text::TextPlugin,
-    ui::UiPlugin,
+    image::TextureAtlasPlugin, input::InputPlugin, input_focus::InputFocus,
+    render::texture::TexturePlugin, text::TextPlugin, ui::UiPlugin,
 };
-use bevy_test_harness::{TestRunnerPlugin, TestRunnerTimeout};
+use q_test_harness::{TestRunnerPlugin, TestRunnerTimeout};
 
 use crate::prelude::*;
 
@@ -20,6 +20,8 @@ pub fn plugin(app: &mut App) {
         UiPlugin,
         TextPlugin,
         TextureAtlasPlugin,
+        ImagePlugin::default(),
+        TexturePlugin,
     ));
     app.add_systems(Startup, setup);
     app.insert_resource(TestRunnerTimeout(1.));
