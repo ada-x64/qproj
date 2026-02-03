@@ -1,8 +1,10 @@
 <div align="center">
-<img src="../../.doc/tfw.png" height=300 alt="Illustration of a bluejay with text, 'tfw - bevy template framework'" title="tfw logo" />
+<img src="/.doc/tfw.png" height=300 alt="Illustration of a tufted titmouse with text, 'tfw - bevy template framework'" title="tfw logo" />
 </div>
 
 This is a template-based template for a bevy project. It is a simplification of the work done for [q_service.](https://github.com/ada-x64/q_service)
+
+_This continues the work started [here.](https://github.com/ada-x64/tfw)_
 
 ## Goals
 
@@ -14,35 +16,22 @@ Meta level goals:
 
 Features:
 
-- [x] Screen transitions
+- [x] Screen transitions (with [q_screens](../screens))
   - [x] Asset loading (with `bevy_asset_loader`).
-  - [ ] Asset unloading
+  - [x] Asset unloading
   - [x] Persist _only_ those entities marked `Persistent`.
   - [x] Propogation of persistence property to entity children.
 - [x] Service-oriented framework
   - [x] Screen-scoped systems
-- [ ] Devex
-  - [ ] Lightweight console (with [bevy_ui_console](https://github.com/ada-x64/q_cmd_prompt))
+- [x] Devex
+  - [x] Lightweight console (with [q_cmd_prompt](../cmd_prompt))
+    - [ ] Screen integration
+    - [ ] Utility commands
   - [x] CLI
     - [x] Template scaffolding
       - [x] Screens
       - [x] Services
 
-## System deps
+## About the bird
 
-- UNIX-like environment (I use Manjaro Linux)
-- [mise](https://mise.jdx.dev)
-
-Call `mise run` to see a list of all the available commands.
-
-### Developing over headless SSH
-
-The mise scripts allow you to develop over SSH. It assumes you have symmetric
-SSH access, and that both machines can use rsync. By default, builds will
-proceed with -Fdev and -Fdylib, but over ssh we do not dynamically link.
-This increases build times but allows us to sync far faster.
-
-## License
-
-This project is available under the terms of either the [Apache 2.0
-license](./LICENSE-APACHE.txt) or the [MIT license](./LICENSE-MIT.txt).
+"Tufted titmice nest in a hole in a tree, either a natural cavity, a human-made nest box, or sometimes an old woodpecker nest. They line the nest with soft materials, sometimes plucking hair from live mammals to use as material, a behavior known as kleptotrichy. If they find snakeskin sheddings, they may incorporate pieces into their nest." ([wikipedia](https://en.wikipedia.org/wiki/Tufted_titmouse))

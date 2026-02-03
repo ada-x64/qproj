@@ -230,31 +230,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
 
 [[package]]
-name = "app"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "avian3d",
- "bevy",
- "bevy-tnua",
- "bevy-tnua-avian3d",
- "bevy_asset_loader",
- "bevy_enhanced_input",
- "bevy_mod_debugdump",
- "bevy_rich_text3d",
- "bitflags 2.10.0",
- "built",
- "clap",
- "itertools 0.14.0",
- "q_screens",
- "serde",
- "strum",
- "thiserror 2.0.18",
- "tiny_bail",
- "variadics_please",
-]
-
-[[package]]
 name = "approx"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4878,22 +4853,12 @@ dependencies = [
  "bevy_asset_loader",
  "bitflags 2.10.0",
  "itertools 0.14.0",
- "q_screens_derive",
  "q_test_harness",
  "serde",
  "strum",
  "thiserror 2.0.18",
  "tiny_bail",
  "variadics_please",
-]
-
-[[package]]
-name = "q_screens_derive"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -5606,6 +5571,31 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06794f8f6c5c898b3275aebefa6b8a1cb24cd2c6c79397ab15774837a0bc5755"
 dependencies = [
  "winapi-util",
+]
+
+[[package]]
+name = "tfw"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "avian3d",
+ "bevy",
+ "bevy-tnua",
+ "bevy-tnua-avian3d",
+ "bevy_asset_loader",
+ "bevy_enhanced_input",
+ "bevy_mod_debugdump",
+ "bevy_rich_text3d",
+ "bitflags 2.10.0",
+ "built",
+ "clap",
+ "itertools 0.14.0",
+ "q_screens",
+ "serde",
+ "strum",
+ "thiserror 2.0.18",
+ "tiny_bail",
+ "variadics_please",
 ]
 
 [[package]]

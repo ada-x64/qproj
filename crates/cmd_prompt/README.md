@@ -1,8 +1,12 @@
 <div align="center">
-<img src="../../.doc/cmd-prompt.png" height=300 alt="Logo - 'bevy command prompt' over a sketch of a green magpie" />
+<img src="/.doc/prompt.png" height=300 alt="Logo - 'bevy command prompt' over a sketch of a green magpie" />
 </div>
 
+[![Coveralls](https://img.shields.io/coverallsCoverage/github/ada-x64/qproj?branch=q_cmd_prompt)](https://coveralls.io/github/ada-x64/qproj?branch=main)
+
 This is an attempt at a `bevy_ui`-native dev console.
+
+_This continues the work started [here.](https://github.com/ada-x64/bevy_command_prompt)_
 
 ## Inspiration
 
@@ -58,10 +62,4 @@ Devex comes first. This means that the console experience should be smooth and a
 This may require sacrificing 'realism' e.g. the signal/async support above in favor of one-shot execution.
 
 ## About the bird
-
-The bird on the logo is a [green
-magpie](https://en.wikipedia.org/wiki/Common_green_magpie), a common species of
-the crow family known for their intelligence and small size. The illustration is
-from the [Big Book of Bird
-Illustrations](https://www.overdrive.com/media/1405297/big-book-of-bird-illustrations)
-by Maggie Kate.
+"The common green magpie (Cissa chinensis) is a member of the crow family, roughly the size of the Eurasian jay or slightly smaller. In the wild, specimens are usually a bright and lush green in colour (which often fades to turquoise in captivity or with poor diet as the pigment is carotenoid-based), slightly lighter on the underside and have a thick black stripe from the bill through the eyes to the nape. Compared to that of the other members of its genus, the white-tipped tail is quite long. This all contrasts vividly with the red fleshy eye rims, bill and legs. The wings are reddish maroon." ((wikipedia)[https://en.wikipedia.org/wiki/Common_green_magpie])

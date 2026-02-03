@@ -1,6 +1,8 @@
 <div align="center">
-<img src="../../.doc/test-harness.png" height=300 alt="Illustration of a common robin with worms in its mouth. Text, 'bevy test harness'" title="test harness logo" />
+<img src="/.doc/q_test_harness.png" height=300 alt="Illustration of a common robin with worms in its mouth. Text, 'bevy test harness'" title="test harness logo" />
 </div>
+
+[ ![Coveralls](https://img.shields.io/coverallsCoverage/github/ada-x64/qproj?branch=q_test_harness) ]( https://coveralls.io/github/ada-x64/qproj?branch=main )
 
 This is a simple test harness for bevy projects.
 
@@ -84,3 +86,7 @@ fn pattern_2() {
 
 Note that in pattern 2 you _cannot_ use assertions as bevy systems run in
 separate threads. Panicking will not kill the process, but only the thread.
+
+## About the bird
+
+"The American robin (Turdus migratorius) is a migratory bird of the true thrush genus and Turdidae, the wider thrush family. It is named after the European robin because of its reddish-orange breast, though the two species are not closely related, with the European robin belonging to the Old World flycatcher family. According to the Partners in Flight database (2019), the American robin is the most abundant landbird in North America (with 370 million individuals), ahead of red-winged blackbirds, introduced European starlings, mourning doves and house finches. It has seven subspecies. " ([wikipedia](https://en.wikipedia.org/wiki/American_robin))
