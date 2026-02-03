@@ -2,6 +2,8 @@
 <img src="../../.doc/test-harness.png" height=300 alt="Illustration of a common robin with worms in its mouth. Text, 'bevy test harness'" title="test harness logo" />
 </div>
 
+![Coveralls](https://img.shields.io/coverallsCoverage/github/ada-x64/qproj?branch=q_test_harness)
+
 This is a simple test harness for bevy projects.
 
 ## Features
