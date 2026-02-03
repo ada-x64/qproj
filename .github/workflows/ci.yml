@@ -10,7 +10,7 @@ env:
 
 jobs:
   build_and_test:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         target: [x86_64-pc-windows-msvc, x86_64-unknown-linux-gnu]
@@ -59,12 +59,3 @@ jobs:
       - run: "mise clippy"
       - run: "mise bevy_lint"
       - run: "mise test"
-
-      - uses: taiki-e/install-action@cargo-llvm-cov
-      - name: Collect coverage data
-        run: RUSTFLAGS=-Zcodegen-backends=llvm cargo llvm-cov nextest
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          slug: ada-x64/qproj

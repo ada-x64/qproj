@@ -11,7 +11,7 @@ env:
 
 jobs:
   generate_codecov:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         package: [q_screens, q_cmd_prompt, q_test_harness]
@@ -33,6 +33,7 @@ jobs:
 
       - name: Run sccache-cache
         uses: mozilla-actions/sccache-action@v0.0.9
+        if: ${{contains(env.RUSTC_WRAPPER, 'sccache')}}
 
       - name: Install dependencies
         shell: bash
@@ -53,9 +54,20 @@ jobs:
       - uses: taiki-e/install-action@cargo-llvm-cov
       - uses: taiki-e/install-action@nextest
       - name: Collect coverage data
-        run: cargo llvm-cov nextest -p ${{ matrix.package }}
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v5
+        run: cargo llvm-cov nextest -p ${{ matrix.package }} --lcov --output-path report.lcov
+
+      - name: Upload to coveralls
+        uses: coverallsapp/github-action@v2.3.6
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          slug: ada-x64/qproj
+          parallel: true
+          flag-name: ${{matrix.package}}
+  finish:
+    runs-on: ubuntu-latest
+    needs: generate-coverage
+    if: ${{always()}}
+    steps:
+      - name: Finish coveralls upload
+        uses: coverallsapp/github-action@v2
+        with:
+          parallel-finished: true
+          carryforward: "q_screens,q_cmd_prompt,q_test_harness" # MUST MATCH ALL MATRIX VALUES

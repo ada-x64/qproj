@@ -103,6 +103,7 @@ act -P ubuntu-24.04=ghcr.io/catthehacker/ubuntu:act-24.04 \
     --env ACTIONS_RUNTIME_TOKEN=foo \
     --env ACTIONS_CACHE_URL=http://artifacts.docker.internal:8080/ \
     --artifact-server-path ../artifacts \
+    --env RUSTC_WRAPPER=""\
 """
 
 [tasks.test]
