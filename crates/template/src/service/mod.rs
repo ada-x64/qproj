@@ -8,6 +8,7 @@ mod input;
 mod player;
 mod third_party;
 mod ui;
+mod util;
 mod worldgen;
 
 pub mod prelude {
@@ -17,6 +18,7 @@ pub mod prelude {
     pub use super::input::prelude::*;
     pub use super::player::prelude::*;
     pub use super::third_party::prelude::*;
+    pub use super::util::*;
     pub use super::worldgen::prelude::*;
 }
 

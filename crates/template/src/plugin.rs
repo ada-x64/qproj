@@ -36,8 +36,10 @@ pub struct AppPlugin {
 impl Plugin for AppPlugin {
     fn build(&self, app: &mut App) {
         app.world_mut().insert_resource(self.settings.clone());
-        app.add_plugins((ScreensPlugin, crate::service::plugin, crate::screen::plugin))
+        app.add_plugins((ScreenPlugin, crate::service::plugin, crate::screen::plugin))
             .insert_resource(self.settings.clone());
-        app.insert_resource(InitialScreen::from_string(self.settings.initial_screen.clone()));
+        app.insert_resource(InitialScreen::from_name(
+            self.settings.initial_screen.clone(),
+        ));
     }
 }

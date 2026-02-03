@@ -2,15 +2,12 @@ use crate::prelude::*;
 
 mod data;
 mod screen;
-mod systems;
 
 pub mod prelude {
     pub use super::data::*;
     pub use super::screen::CameraTestScreen;
 }
 
-pub use systems::systems;
-
 pub fn plugin(app: &mut App) {
-    app.add_plugins(screen::plugin);
+    app.register_screen::<CameraTestScreen>();
 }

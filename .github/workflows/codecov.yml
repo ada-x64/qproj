@@ -8,6 +8,7 @@ env:
   RUST_BACKTRACE: 1
   MISE_ENV: ci
   RUSTFLAGS: -Zcodegen-backend=llvm
+  RUSTC_WRAPPER: sccache # disabled locally
 
 jobs:
   generate-coverage:

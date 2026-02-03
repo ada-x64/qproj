@@ -5,6 +5,7 @@ mod data;
 mod dev;
 
 mod splash;
+mod util;
 mod world;
 
 pub mod prelude {
@@ -16,6 +17,8 @@ pub mod prelude {
     #[allow(unused_imports)] // TEMP
     #[cfg(feature = "dev")]
     pub use super::dev::prelude::*;
+
+    pub use super::util::*;
 }
 
 pub fn plugin(app: &mut App) {

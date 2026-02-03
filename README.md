@@ -2,8 +2,7 @@
     <img height=300 src="./.doc/qproj.png" alt="illustration of a quail next to text, 'qproj' " title="qproj logo"></img>
 </div>
 
-![ci](https://github.com/ada-x64/qproj/actions/workflows/ci.yml/badge.svg)
-[![codecov](https://codecov.io/gh/ada-x64/qproj/graph/badge.svg?token=AKP1aBwU4S)](https://codecov.io/gh/ada-x64/qproj)
+![ci](https://github.com/ada-x64/qproj/actions/workflows/ci.yml/badge.svg) [![Coverage Status](https://coveralls.io/repos/github/ada-x64/qproj/badge.svg?branch=main)](https://coveralls.io/github/ada-x64/qproj?branch=main)
 
 Monorepo for _qproj_. This includes utilities, templates, and more for my [bevy](https://bevy.org) game projects.
 

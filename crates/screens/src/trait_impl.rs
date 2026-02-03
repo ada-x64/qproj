@@ -14,11 +14,6 @@ pub enum LoadStrategy {
     Blocking,
     Nonblocking,
 }
-impl LoadStrategy {
-    pub fn is_blocking(&self) -> bool {
-        matches!(self, Self::Blocking)
-    }
-}
 
 /// Implementation trait for Screen components.
 pub trait Screen:
