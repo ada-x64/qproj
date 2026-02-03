@@ -51,6 +51,7 @@ jobs:
           components: rustc-dev,llvm-tools-preview
 
       - uses: taiki-e/install-action@cargo-llvm-cov
+      - uses: taiki-e/install-action@nextest
       - name: Collect coverage data
         run: cargo llvm-cov nextest -p ${{ matrix.package }}
       - name: Upload coverage reports to Codecov
