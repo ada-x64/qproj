@@ -44,18 +44,18 @@ where
 
     /// Initialize directly into ready state. By default this is true, unless
     /// there are systems present in the Load schedule.
-    pub fn with_skip_load(mut self, val: bool) -> Self {
+    pub fn with_skip_load(&mut self, val: bool) -> &mut Self {
         self.skip_load = Some(val);
         self
     }
     /// Deinitialize directly into unloaded state. By default this is true,
     /// unless there are systems present in the Unload schedule.
-    pub fn with_skip_unload(mut self, val: bool) -> Self {
+    pub fn with_skip_unload(&mut self, val: bool) -> &mut Self {
         self.skip_unload = Some(val);
         self
     }
     /// Sets the [LoadingStrategy]. By default, this is Blocking.
-    pub fn with_load_strategy(mut self, val: LoadStrategy) -> Self {
+    pub fn with_load_strategy(&mut self, val: LoadStrategy) -> &mut Self {
         self.load_strategy = val;
         self
     }
@@ -82,10 +82,10 @@ where
     /// [with_skip_load(false)](ScreenScopeBuilder::with_skip_load), or the
     /// analgous for unloading.
     pub fn add_systems<M>(
-        mut self,
+        &mut self,
         kind: ScreenSchedule,
         systems: impl IntoScheduleConfigs<ScheduleSystem, M>,
-    ) -> Self {
+    ) -> &mut Self {
         self.schedules
             .entry(kind)
             .or_insert(Schedule::new(ScreenScheduleLabel::new::<S>(kind)))
@@ -155,9 +155,6 @@ where
             app.add_schedule(schedule);
         }
 
-        // spawn on load
-        app.add_systems(on_screen_load::<S>(), S::spawn);
-
         // Lifecycle
         #[cfg(debug_assertions)]
         {
@@ -185,7 +182,7 @@ where
 
 fn clean_up_scoped_entities<S: Screen>(
     mut commands: Commands,
-    mut next_state: ScreenDataMut<S>,
+    mut screen_data: ScreenDataMut<S>,
     // Any entity which is (explicitly marked as ScreenScoped, or is _not_ marked
     // as persistent) _and_ is not a top-level observer
     screen_scoped: Query<
@@ -195,12 +192,15 @@ fn clean_up_scoped_entities<S: Screen>(
                 With<ScreenScoped>,  // is explicitly screen-scoped
                 Without<Persistent>, // is explicitly persistent
             )>,
-            Not<(Or<(With<Observer>, With<Window>)>, Without<ChildOf>)>, // top-level items
         ),
     >,
+    top_levels: Query<Entity, (Or<(With<Observer>, With<Window>)>, Without<ChildOf>)>,
 ) {
-    screen_scoped.iter().for_each(|e| {
-        commands.entity(e).despawn();
-    });
-    next_state.unload();
+    screen_scoped
+        .iter()
+        .filter(|c| !top_levels.iter().contains(c))
+        .for_each(|e| {
+            commands.entity(e).detach_all_children().despawn();
+        });
+    screen_data.unload();
 }

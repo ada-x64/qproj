@@ -31,7 +31,7 @@ mod general_api {
     /// the [Screens] state changes. By default, all entities _except_ those listed
     /// in the [module documentation](crate::framework::screen) are screen-scoped.
     ///
-    /// Note: This is effectively used to stop the downward propagation of the
+    /// Note: This is effectively used to skip the propagation of the
     /// [Persistent] component. Since screen scoping is the default behavior, it
     /// should not be necessary to add this component in other cases.
     #[derive(Component, Debug, Reflect, Clone, Copy, Default, PartialEq)]
@@ -43,7 +43,7 @@ mod general_api {
     /// documentation](crate::framework::screen) are screen-scoped.
     ///
     /// In order to mark the children of this component as Persistent, you should
-    /// use the [Propagate] component.
+    /// use the [Propagate](bevy::app::Propagate) component.
     #[derive(Component, Debug, Reflect, Clone, Copy, Default, PartialEq)]
     pub struct Persistent;
 
@@ -68,7 +68,7 @@ mod screens {
     use super::*;
 
     /// Marker struct for a screen.
-    #[derive(Component, Reflect)]
+    #[derive(Component, Reflect, PartialEq)]
     pub struct ScreenMarker(pub ComponentId);
 
     /// Stores a map from the system's name to its spawn function.

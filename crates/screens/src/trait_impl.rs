@@ -1,5 +1,4 @@
 pub use crate::prelude::*;
-use bevy::ecs::component::ComponentIdFor;
 
 /// An empty settings parameter.
 #[derive(Resource, Default)]
@@ -42,11 +41,6 @@ pub trait Screen:
         Reflect::as_reflect(&default)
             .reflect_short_type_path()
             .to_owned()
-    }
-
-    /// Gets the spawn function. This is called when state is set to ScreenState::Loading.
-    fn spawn(mut commands: Commands, id: ComponentIdFor<Self>) {
-        commands.spawn((Self::default(), Name::new(Self::name()), ScreenMarker(*id)));
     }
 
     /// Get the builder for this screen. Used to scope systems.

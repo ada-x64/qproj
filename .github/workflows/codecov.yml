@@ -7,13 +7,15 @@ env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
   MISE_ENV: ci
+  RUSTFLAGS: -Zcodegen-backends=llvm
 
 jobs:
   build_and_test:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        target: [x86_64-pc-windows-msvc, x86_64-unknown-linux-gnu]
+        target: [x86_64-unknown-linux-gnu]
+        package: [q_screens, q_cmd_prompt, q_test_harness]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -47,22 +49,11 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: nightly-2025-12-11
-          components: rustc-codegen-cranelift-preview,rustc-dev,llvm-tools-preview,clippy
-
-      - uses: cargo-bins/cargo-binstall@main
-
-      - uses: jdx/mise-action@v3
-        with:
-          log_level: info
-
-      - run: "mise build"
-      - run: "mise clippy"
-      - run: "mise bevy_lint"
-      - run: "mise test"
+          components: rustc-dev,llvm-tools-preview
 
       - uses: taiki-e/install-action@cargo-llvm-cov
       - name: Collect coverage data
-        run: RUSTFLAGS=-Zcodegen-backends=llvm cargo llvm-cov nextest
+        run: cargo llvm-cov nextest -p ${{ matrix.package }}
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:

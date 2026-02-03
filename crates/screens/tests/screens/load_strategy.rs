@@ -7,7 +7,7 @@ struct FinalValue(u32);
 struct LoadStrategyScreen<const BLOCKING: bool>;
 
 impl<const BLOCKING: bool> Screen for LoadStrategyScreen<BLOCKING> {
-    fn builder(builder: ScreenScopeBuilder<Self>) -> ScreenScopeBuilder<Self> {
+    fn builder(mut builder: ScreenScopeBuilder<Self>) -> ScreenScopeBuilder<Self> {
         builder
             .with_load_strategy(if BLOCKING {
                 LoadStrategy::Blocking
@@ -16,7 +16,8 @@ impl<const BLOCKING: bool> Screen for LoadStrategyScreen<BLOCKING> {
             })
             .add_systems(ScreenSchedule::Update, Self::update)
             .add_systems(ScreenSchedule::Loading, Self::load)
-            .add_systems(ScreenSchedule::OnUnloaded, Self::unloaded)
+            .add_systems(ScreenSchedule::OnUnloaded, Self::unloaded);
+        builder
     }
 }
 

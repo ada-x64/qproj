@@ -1,3 +1,6 @@
+use bevy::ecs::component::ComponentIdFor;
+use itertools::Itertools;
+
 use crate::prelude::*;
 
 macro_rules! gen_fns {
@@ -66,11 +69,22 @@ macro_rules! progress_by {
 #[derive(Component, Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Reflect)]
 pub struct LifecycleScreen;
 impl Screen for LifecycleScreen {
-    fn builder(builder: ScreenScopeBuilder<Self>) -> ScreenScopeBuilder<Self> {
+    fn builder(mut builder: ScreenScopeBuilder<Self>) -> ScreenScopeBuilder<Self> {
         builder
             .add_systems(
                 ScreenSchedule::Loading,
-                (loading, progress_by!(finish_loading)),
+                (
+                    loading,
+                    progress_by!(finish_loading),
+                    |query: Query<&ScreenMarker>,
+                     id: ComponentIdFor<Self>,
+                     mut commands: Commands| {
+                        if !query.iter().contains(&ScreenMarker(id.get())) {
+                            error!("Failed to find LifecycleScreen in component hierarchy!");
+                            commands.write_message(AppExit::error());
+                        }
+                    },
+                ),
             )
             // progress to unload by loading in EmptyScreen
             .add_systems(
@@ -93,6 +107,14 @@ impl Screen for LifecycleScreen {
                 ScreenSchedule::OnUnloaded,
                 (
                     unloaded,
+                    |query: Query<&ScreenMarker>,
+                     id: ComponentIdFor<Self>,
+                     mut commands: Commands| {
+                        if query.iter().contains(&ScreenMarker(id.get())) {
+                            error!("Found LifecycleScreen in component hierarchy after unload!");
+                            commands.write_message(AppExit::error());
+                        }
+                    },
                     |r: Res<LifecycleStatus>, r2: Res<TestRes>, mut commands: Commands| {
                         let ok = r.ok() && r2.ok();
                         if ok {
@@ -107,7 +129,8 @@ impl Screen for LifecycleScreen {
                     },
                 )
                     .chain(),
-            )
+            );
+        builder
     }
 }
 

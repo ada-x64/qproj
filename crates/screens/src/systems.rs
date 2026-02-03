@@ -1,8 +1,7 @@
 //! This module contains all systems, including observers.
 
-use bevy::ecs::{component::ComponentIdFor, system::SystemChangeTick};
-
 use crate::prelude::*;
+use bevy::ecs::{component::ComponentIdFor, system::SystemChangeTick};
 
 fn handle_switch_msg(
     mut reader: MessageReader<SwitchToScreenMsg>,
@@ -37,8 +36,14 @@ fn run_schedules(
     mut registry: ResMut<ScreenRegistry>,
     mut commands: Commands,
     tick: SystemChangeTick,
+    screens: Query<&ScreenMarker>,
 ) {
     for data in registry.values_mut() {
+        if matches!(data.state(), ScreenState::Loading | ScreenState::Ready)
+            && !screens.iter().contains(&ScreenMarker(data.id()))
+        {
+            commands.spawn((ScreenMarker(data.id()), Name::new(data.name().to_owned())));
+        }
         match data.state() {
             ScreenState::Unloaded => {
                 if !data.initialized {
