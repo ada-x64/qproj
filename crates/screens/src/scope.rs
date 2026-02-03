@@ -2,30 +2,39 @@ pub use crate::prelude::*;
 use bevy::{ecs::system::ScheduleSystem, platform::collections::HashMap};
 use strum::IntoEnumIterator;
 
+pub trait RegisterScreen {
+    /// Registers a [Screen] to the application.
+    fn register_screen<S: Screen>(&mut self) -> &mut Self;
+}
+impl RegisterScreen for App {
+    fn register_screen<S: Screen>(&mut self) -> &mut Self {
+        S::builder(ScreenScopeBuilder::<S>::new()).build(self);
+        self
+    }
+}
+
 // TODO: DOCUMENT ME
-pub struct ScreenScopeBuilder<'a, S>
+pub struct ScreenScopeBuilder<S>
 where
     S: Screen,
 {
     schedules: HashMap<ScreenSchedule, Schedule>,
-    app: &'a mut App,
     skip_load: Option<bool>,
     skip_unload: Option<bool>,
     load_strategy: LoadStrategy,
     _ghost: PhantomData<S>,
 }
 
-impl<'a, S> ScreenScopeBuilder<'a, S>
+impl<S> ScreenScopeBuilder<S>
 where
     S: Screen,
 {
-    pub fn new(app: &'a mut App) -> Self {
+    pub fn new() -> Self {
         let schedules = ScreenSchedule::iter()
             .map(|kind| (kind, Schedule::new(ScreenScheduleLabel::new::<S>(kind))))
             .collect::<HashMap<_, _>>();
         Self {
             schedules,
-            app,
             skip_load: None,
             skip_unload: None,
             load_strategy: LoadStrategy::default(),
@@ -52,6 +61,26 @@ where
     }
 
     /// Add systems to the schedule scope. Will run in the specified schedule.
+    ///
+    /// The following schedules run on every (fixed) update:
+    ///
+    /// - Update
+    /// - FixedUpdate
+    /// - Loading
+    /// - Unloading
+    ///
+    /// ... While the following run only on screen state transitions:
+    ///
+    /// - OnLoad
+    /// - OnReady
+    /// - OnUnload
+    /// - OnUnloaded
+    ///
+    /// Note that adding an `On` system _will not_ automatically enable loading
+    /// or unloading for this screen. Make sure you either have systems in the
+    /// [ScreenSchedule::Load](ScreenSchedule) schedule, or you manually set
+    /// [with_skip_load(false)](ScreenScopeBuilder::with_skip_load), or the
+    /// analgous for unloading.
     pub fn add_systems<M>(
         mut self,
         kind: ScreenSchedule,
@@ -64,41 +93,8 @@ where
         self
     }
 
-    /// Runs once on screen load. Shorthand for
-    /// `app.add_systems(on_screen_load::<S>(), systems)`.
-    /// Note that this _will not_ automatically enable loading for this screen.
-    /// Make sure you either have systems in the [ScreenSchedule::Load](ScreenSchedule) schedule,
-    /// or you manually set [with_skip_load(false)](ScreenScopeBuilder::with_skip_load)
-    pub fn on_load<M>(self, systems: impl IntoScheduleConfigs<ScheduleSystem, M>) -> Self {
-        self.app.add_systems(on_screen_load::<S>(), systems);
-        self
-    }
-    /// Runs once on screen ready. Shorthand for
-    /// `app.add_systems(on_screen_ready::<S>(), systems)`.
-    pub fn on_ready<M>(self, systems: impl IntoScheduleConfigs<ScheduleSystem, M>) -> Self {
-        self.app.add_systems(on_screen_ready::<S>(), systems);
-        self
-    }
-    /// Runs once when screen begins to unload. Shorthand for
-    /// `app.add_systems(on_screen_unload::<S>(), systems)`.
-    /// Note that this _will not_ automatically enable unloading for this screen.
-    /// Make sure you either have systems in the [ScreenSchedule::Unload](ScreenSchedule) schedule,
-    /// or you manually set [with_skip_unload(false)](ScreenScopeBuilder::with_skip_unload)
-    pub fn on_unload<M>(self, systems: impl IntoScheduleConfigs<ScheduleSystem, M>) -> Self {
-        self.app.add_systems(on_screen_unload::<S>(), systems);
-        self
-    }
-    /// Runs once when screen finished unloading. Shorthand for
-    /// `app.add_systems(on_screen_unloaded::<S>(), systems)`.
-    pub fn on_unloaded<M>(self, systems: impl IntoScheduleConfigs<ScheduleSystem, M>) -> Self {
-        self.app.add_systems(on_screen_unloaded::<S>(), systems);
-        self
-    }
-
-    /// Builds the schedule and adds it to the app.
-    pub fn build(self) {
+    fn build(self, app: &mut App) {
         // init
-        let app = self.app;
         let id = app.world_mut().register_component::<S>();
         let tick = app.world_mut().change_tick();
         let mut registry = app.world_mut().get_resource_or_init::<ScreenRegistry>();
@@ -126,7 +122,36 @@ where
         info!("watching on_switch_screen for {}", S::name());
 
         // scope systems
-        for (_, schedule) in self.schedules.into_iter() {
+        for (kind, schedule) in self.schedules.into_iter() {
+            let label = schedule.label();
+            match kind {
+                ScreenSchedule::OnLoad => {
+                    app.add_systems(on_screen_load::<S>(), move |mut commands: Commands| {
+                        commands.run_schedule(label)
+                    });
+                }
+                ScreenSchedule::OnReady => {
+                    let label = schedule.label();
+                    app.add_systems(on_screen_ready::<S>(), move |mut commands: Commands| {
+                        commands.run_schedule(label)
+                    });
+                }
+                ScreenSchedule::OnUnload => {
+                    let label = schedule.label();
+                    app.add_systems(on_screen_unload::<S>(), move |mut commands: Commands| {
+                        commands.run_schedule(label)
+                    });
+                }
+                ScreenSchedule::OnUnloaded => {
+                    let label = schedule.label();
+                    app.add_systems(on_screen_unloaded::<S>(), move |mut commands: Commands| {
+                        commands.run_schedule(label)
+                    });
+                }
+                _ => {
+                    // run on update, see [run_schedules](systems.rs)
+                }
+            }
             app.add_schedule(schedule);
         }
 
@@ -146,6 +171,15 @@ where
             });
         }
         app.add_systems(on_screen_unloaded::<S>(), clean_up_scoped_entities::<S>);
+    }
+}
+
+impl<S> Default for ScreenScopeBuilder<S>
+where
+    S: Screen,
+{
+    fn default() -> Self {
+        Self::new()
     }
 }
 

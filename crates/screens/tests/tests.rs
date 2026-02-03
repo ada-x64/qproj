@@ -15,6 +15,7 @@ mod globals {
     pub fn get_test_app<S: Screen>() -> App {
         let mut app = App::new();
         app.add_plugins((TestRunnerPlugin::default(), ScreenPlugin));
+        app.register_screen::<S>();
         app.insert_resource(InitialScreen::new::<S>());
         app.init_asset::<TextAsset>();
         app.init_asset_loader::<TextAssetLoader>();

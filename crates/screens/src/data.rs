@@ -225,18 +225,17 @@ mod schedules {
         FixedUpdate,
         Loading,
         Unloading,
-    }
-    impl From<ScreenSchedule> for ScreenState {
-        fn from(value: ScreenSchedule) -> Self {
-            match value {
-                ScreenSchedule::Update | ScreenSchedule::FixedUpdate => ScreenState::Ready,
-                ScreenSchedule::Loading => ScreenState::Loading,
-                ScreenSchedule::Unloading => ScreenState::Unloading,
-            }
-        }
+        /// Can also be specified as [on_screen_load]
+        OnLoad,
+        /// Can also be specified as [on_screen_ready]
+        OnReady,
+        /// Can also be specified as [on_screen_unload]
+        OnUnload,
+        /// Can also be specified as [on_screen_unloaded]
+        OnUnloaded,
     }
 
-    /// Wrapper around [ScreenScheduleKind]. Needed to make schedules unique per type.
+    /// Wrapper around [ScreenSchedule]. Needed to make schedules unique per type.
     #[derive(ScheduleLabel, Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub struct ScreenScheduleLabel {
         id: TypeId,

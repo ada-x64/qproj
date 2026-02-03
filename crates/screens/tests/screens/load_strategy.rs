@@ -1,18 +1,26 @@
 use crate::prelude::*;
 
-#[derive(PartialEq, Eq, Clone, Debug, Hash, Reflect, Default, Resource)]
-struct LoadStrategyScreenSettings {
-    pub initial_value: u32,
-    pub unload_value: u32,
-}
-
-#[derive(Screen, Component, Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Reflect)]
-struct LoadStrategyScreen;
-
 #[derive(Resource, Debug, Default)]
 struct FinalValue(u32);
 
-impl LoadStrategyScreen {
+#[derive(Component, Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Reflect)]
+struct LoadStrategyScreen<const BLOCKING: bool>;
+
+impl<const BLOCKING: bool> Screen for LoadStrategyScreen<BLOCKING> {
+    fn builder(builder: ScreenScopeBuilder<Self>) -> ScreenScopeBuilder<Self> {
+        builder
+            .with_load_strategy(if BLOCKING {
+                LoadStrategy::Blocking
+            } else {
+                LoadStrategy::Nonblocking
+            })
+            .add_systems(ScreenSchedule::Update, Self::update)
+            .add_systems(ScreenSchedule::Loading, Self::load)
+            .add_systems(ScreenSchedule::OnUnloaded, Self::unloaded)
+    }
+}
+
+impl<const BLOCKING: bool> LoadStrategyScreen<BLOCKING> {
     fn load(mut count: Local<u32>, mut data: ScreenDataMut<Self>) {
         *count += 1;
         if *count == 100 {
@@ -46,38 +54,20 @@ impl LoadStrategyScreen {
             commands.write_message(AppExit::Success);
         }
     }
-
-    fn plugin(app: &mut App, load_strategy: LoadStrategy) {
-        ScreenScopeBuilder::<LoadStrategyScreen>::new(app)
-            .with_load_strategy(load_strategy)
-            .add_systems(ScreenSchedule::Update, Self::update)
-            .add_systems(ScreenSchedule::Loading, Self::load)
-            .on_unloaded(Self::unloaded)
-            .build();
-        app.init_resource::<FinalValue>();
-    }
-
-    pub fn plugin_blocking(app: &mut App) {
-        Self::plugin(app, LoadStrategy::Blocking);
-    }
-
-    pub fn plugin_nonblocking(app: &mut App) {
-        Self::plugin(app, LoadStrategy::Nonblocking);
-    }
 }
-
-type Scr = LoadStrategyScreen;
 
 #[test]
 fn blocking() {
-    let mut app = get_test_app::<Scr>();
-    app.add_plugins((Scr::plugin_blocking, EmptyScreen::plugin));
+    let mut app = get_test_app::<LoadStrategyScreen<true>>();
+    app.init_resource::<FinalValue>();
+    app.register_screen::<EmptyScreen>();
     assert!(app.run().is_success());
 }
 
 #[test]
 fn nonblocking() {
-    let mut app = get_test_app::<Scr>();
-    app.add_plugins((Scr::plugin_nonblocking, EmptyScreen::plugin));
+    let mut app = get_test_app::<LoadStrategyScreen<true>>();
+    app.init_resource::<FinalValue>();
+    app.register_screen::<EmptyScreen>();
     assert!(app.run().is_success());
 }

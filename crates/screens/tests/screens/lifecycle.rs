@@ -29,6 +29,31 @@ gen_fns!(
     unloaded
 );
 
+macro_rules! gen_test_fns {
+    ($($name:ident),*) => {
+        #[derive(Resource, Default, Debug)]
+        struct TestRes {
+            $($name: bool,)*
+        }
+        impl TestRes {
+            pub fn ok(&self) -> bool {
+                $(self.$name) &&*
+            }
+        }
+    }
+}
+macro_rules! impl_test_fns {
+    ($app:expr, $($name:ident),*) => {
+        $(
+            $app.add_systems(
+                $name::<LifecycleScreen>(),
+                |mut r: ResMut<TestRes>| {r.$name = true;}
+            );
+        )*
+    }
+}
+gen_test_fns!(on_screen_load, on_screen_ready, on_screen_unloaded);
+
 macro_rules! progress_by {
     ($name:ident) => {
         |mut data: ScreenDataMut<LifecycleScreen>| {
@@ -38,11 +63,11 @@ macro_rules! progress_by {
 }
 
 /// The main [Screen] implementation.
-#[derive(Screen, Component, Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Reflect)]
+#[derive(Component, Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Reflect)]
 pub struct LifecycleScreen;
-impl LifecycleScreen {
-    pub fn plugin(app: &mut App) {
-        ScreenScopeBuilder::<LifecycleScreen>::new(app)
+impl Screen for LifecycleScreen {
+    fn builder(builder: ScreenScopeBuilder<Self>) -> ScreenScopeBuilder<Self> {
+        builder
             .add_systems(
                 ScreenSchedule::Loading,
                 (loading, progress_by!(finish_loading)),
@@ -61,33 +86,28 @@ impl LifecycleScreen {
                 ScreenSchedule::Unloading,
                 (unloading, progress_by!(finish_unloading)),
             )
-            .on_load(load)
-            .on_ready(ready)
-            .on_unload(unload)
-            .on_unloaded(unloaded)
-            .build();
-        app.init_resource::<LifecycleStatus>();
-    }
-}
-
-macro_rules! gen_test_fns {
-    ($app:expr, $($name:ident),*) => {
-        #[derive(Resource, Default)]
-        struct TestRes {
-            $($name: bool,)*
-        }
-        impl TestRes {
-            pub fn ok(&self) -> bool {
-                $(self.$name) &&*
-            }
-        }
-
-        $(
-            $app.add_systems(
-                $name::<LifecycleScreen>(),
-                |mut r: ResMut<TestRes>| {r.$name = true;}
-            );
-        )*
+            .add_systems(ScreenSchedule::OnLoad, load)
+            .add_systems(ScreenSchedule::OnReady, ready)
+            .add_systems(ScreenSchedule::OnUnload, unload)
+            .add_systems(
+                ScreenSchedule::OnUnloaded,
+                (
+                    unloaded,
+                    |r: Res<LifecycleStatus>, r2: Res<TestRes>, mut commands: Commands| {
+                        let ok = r.ok() && r2.ok();
+                        if ok {
+                            info!("OK!");
+                            commands.write_message(AppExit::Success);
+                        } else {
+                            error!("Did not reach all expected points.");
+                            error!(?r);
+                            error!(?r2);
+                            commands.write_message(AppExit::error());
+                        }
+                    },
+                )
+                    .chain(),
+            )
     }
 }
 
@@ -95,23 +115,9 @@ type Scr = LifecycleScreen;
 #[test]
 fn lifecycle() {
     let mut app = get_test_app::<Scr>();
-    app.add_plugins((Scr::plugin, EmptyScreen::plugin));
-    gen_test_fns!(app, on_screen_load, on_screen_ready, on_screen_unloaded);
+    app.register_screen::<EmptyScreen>();
+    app.init_resource::<LifecycleStatus>();
     app.init_resource::<TestRes>();
-    app.add_systems(
-        // this should _not_ trigger on initialization
-        on_screen_unloaded::<Scr>(),
-        |r: Res<LifecycleStatus>, r2: Res<TestRes>, mut commands: Commands| {
-            let ok = r.ok() && r2.ok();
-            if ok {
-                info!("OK!");
-                commands.write_message(AppExit::Success);
-            } else {
-                error!("Did not reach all expected points.");
-                error!(?r);
-                commands.write_message(AppExit::error());
-            }
-        },
-    );
+    impl_test_fns!(app, on_screen_load, on_screen_ready, on_screen_unloaded);
     assert!(app.run().is_success());
 }
