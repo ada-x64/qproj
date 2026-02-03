@@ -7,7 +7,7 @@ env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
   MISE_ENV: ci
-  RUSTFLAGS: -Zcodegen-backends=llvm
+  RUSTFLAGS: -Zcodegen-backend=llvm
 
 jobs:
   build_and_test:
