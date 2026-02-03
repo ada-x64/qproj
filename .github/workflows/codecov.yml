@@ -10,7 +10,7 @@ env:
   RUSTFLAGS: -Zcodegen-backend=llvm
 
 jobs:
-  build_and_test:
+  generate_codecov:
     runs-on: ubuntu-24.04
     strategy:
       matrix:
