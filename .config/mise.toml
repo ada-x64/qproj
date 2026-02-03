@@ -10,15 +10,16 @@ sccache="latest"
 
 [tools.rust]
 # keep in sync with bevy_cli
-version = "nightly-2025-12-11"
+version = "nightly-2026-01-22"
 components = "rustc-codegen-cranelift-preview,rustc-dev,llvm-tools-preview,clippy"
 targets = "x86_64-pc-windows-msvc,x86_64-unknown-linux-gnu"
 
 [tasks.install_bevy_lint]
 hide = true
 run = """
-rustup run nightly-2025-12-11 cargo install \
+rustup run nightly-2026-01-22 cargo install \
     --git https://github.com/TheBevyFlock/bevy_cli.git \
+    --tag lint-v0.6.0 \
     --locked \
     bevy_lint || true
 """
