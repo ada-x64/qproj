@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 <csr-id-d1e276b1b9294cddb2ae313acd105c51890e5a8f/>
 <csr-id-5b40db89cbdbd037ba32343b288eadc9a8cc2b30/>
 <csr-id-48d6ccb2070e9250355ac2aeee97e6fd291ac244/>
+<csr-id-93251fedca0142b4aedf48b536fa0d7f20d92240/>
 
 ### Bug Fixes
 
@@ -34,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <csr-read-only-do-not-edit/>
 
- - 10 commits contributed to the release over the course of 1 calendar day.
+ - 11 commits contributed to the release over the course of 1 calendar day.
  - 5 commits were understood as [conventional](https://www.conventionalcommits.org).
  - 1 unique issue was worked on: [#1](https://github.com/ada-x64/qproj/issues/1)
 
@@ -47,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * **[#1](https://github.com/ada-x64/qproj/issues/1)**
     - Q_screens + rename crates ([`4b9285a`](https://github.com/ada-x64/qproj/commit/4b9285ad2d51a8b41dc27b3a267f552db687fafd))
  * **Uncategorized**
+    - Release q_screens v0.1.0 ([`8f79663`](https://github.com/ada-x64/qproj/commit/8f79663e7f2cb140a7ce02be0a3a2f6bc7c6eeda))
     - Q_screens description ([`93251fe`](https://github.com/ada-x64/qproj/commit/93251fedca0142b4aedf48b536fa0d7f20d92240))
     - Release q_screens v0.1.0 ([`3d2951f`](https://github.com/ada-x64/qproj/commit/3d2951fc79e59b80182d8434ae43ae787de69f04))
     - Merge pull request #2 from ada-x64/q_screens/prep-0.1 ([`3bc951a`](https://github.com/ada-x64/qproj/commit/3bc951a271a3257ee1996c521ea3ff014df1f3ba))
