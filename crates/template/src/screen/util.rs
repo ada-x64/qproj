@@ -1,28 +1,36 @@
-use std::marker::PhantomData;
+use std::any::TypeId;
 
 use crate::prelude::*;
 
 #[derive(States, Copy, Clone, Reflect, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-pub enum ScreenLoadingState<S: Screen> {
-    Loading,
-    Ready,
-    Unloaded,
-    _Ghost(PhantomData<S>),
+pub enum ScreenLoadingState {
+    Loading(TypeId),
+    Ready(TypeId),
+    Unloaded(TypeId),
 }
-impl<S: Screen> ScreenLoadingState<S> {
-    pub fn finish_loading(mut data: ScreenDataMut<S>) {
+impl ScreenLoadingState {
+    fn finish_loading<S: Screen>(mut data: ScreenDataMut<S>) {
         data.finish_loading();
     }
-    fn register(app: &mut App) {
-        app.add_systems(OnEnter(Self::Ready), Self::finish_loading);
+    fn register<S: Screen>(app: &mut App) {
+        app.add_systems(OnEnter(Self::ready::<S>()), Self::finish_loading::<S>);
         app.add_systems(
             on_screen_unloaded::<S>(),
-            |mut next: ResMut<NextState<Self>>| next.set(Self::Unloaded),
+            |mut next: ResMut<NextState<Self>>| next.set(Self::unloaded::<S>()),
         );
         app.add_systems(
             on_screen_load::<S>(),
-            |mut next: ResMut<NextState<Self>>| next.set(Self::Unloaded),
+            |mut next: ResMut<NextState<Self>>| next.set(Self::unloaded::<S>()),
         );
+    }
+    pub fn ready<S: Screen>() -> Self {
+        Self::Ready(TypeId::of::<S>())
+    }
+    pub fn loading<S: Screen>() -> Self {
+        Self::Loading(TypeId::of::<S>())
+    }
+    pub fn unloaded<S: Screen>() -> Self {
+        Self::Unloaded(TypeId::of::<S>())
     }
 }
 
@@ -32,6 +40,6 @@ pub trait ScreenLoadingExt {
 
 impl ScreenLoadingExt for App {
     fn register_screen_loading_state<S: Screen>(&mut self) {
-        ScreenLoadingState::<S>::register(self);
+        ScreenLoadingState::register::<S>(self);
     }
 }
