@@ -5,7 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## 0.1.0 (2026-02-04)
+
+<csr-id-456cd1aca4f5347ed6428eb9b4d0a82fd6e96a33/>
+<csr-id-d1e276b1b9294cddb2ae313acd105c51890e5a8f/>
+<csr-id-5b40db89cbdbd037ba32343b288eadc9a8cc2b30/>
+<csr-id-48d6ccb2070e9250355ac2aeee97e6fd291ac244/>
 
 ### Bug Fixes
 
@@ -16,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  - <csr-id-456cd1aca4f5347ed6428eb9b4d0a82fd6e96a33/> q_screens description
  - <csr-id-d1e276b1b9294cddb2ae313acd105c51890e5a8f/> add changelog
  - <csr-id-5b40db89cbdbd037ba32343b288eadc9a8cc2b30/> fully document q_screens
+
+### Other
+
+ - <csr-id-93251fedca0142b4aedf48b536fa0d7f20d92240/> q_screens description
 
 ### Test
 
@@ -38,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * **[#1](https://github.com/ada-x64/qproj/issues/1)**
     - Q_screens + rename crates ([`4b9285a`](https://github.com/ada-x64/qproj/commit/4b9285ad2d51a8b41dc27b3a267f552db687fafd))
  * **Uncategorized**
-    - Q_screens description ([`456cd1a`](https://github.com/ada-x64/qproj/commit/456cd1aca4f5347ed6428eb9b4d0a82fd6e96a33))
+    - Q_screens description ([`93251fe`](https://github.com/ada-x64/qproj/commit/93251fedca0142b4aedf48b536fa0d7f20d92240))
     - Release q_screens v0.1.0 ([`3d2951f`](https://github.com/ada-x64/qproj/commit/3d2951fc79e59b80182d8434ae43ae787de69f04))
     - Merge pull request #2 from ada-x64/q_screens/prep-0.1 ([`3bc951a`](https://github.com/ada-x64/qproj/commit/3bc951a271a3257ee1996c521ea3ff014df1f3ba))
     - Add changelog ([`d1e276b`](https://github.com/ada-x64/qproj/commit/d1e276b1b9294cddb2ae313acd105c51890e5a8f))
