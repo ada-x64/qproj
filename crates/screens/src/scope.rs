@@ -2,18 +2,32 @@ pub use crate::prelude::*;
 use bevy::{ecs::system::ScheduleSystem, platform::collections::HashMap};
 use strum::IntoEnumIterator;
 
+#[allow(missing_docs)]
 pub trait RegisterScreen {
     /// Registers a [Screen] to the application.
     fn register_screen<S: Screen>(&mut self) -> &mut Self;
 }
 impl RegisterScreen for App {
     fn register_screen<S: Screen>(&mut self) -> &mut Self {
-        S::builder(ScreenScopeBuilder::<S>::new()).build(self);
+        S::builder(ScreenScopeBuilder::<S>::default()).build(self);
         self
     }
 }
 
-// TODO: DOCUMENT ME
+/// The [ScreenScopeBuilder] is the main entrypoint for screen registration.
+/// Use it to add scoped systems to your screen. These scoped systems will only run
+/// when the screen is in the [ScreenState] analgous to the specified [ScreenSchedule].
+///
+/// When a screen is unloaded, it will clean up all entities marked as non-[Persistent] entities.
+/// Entities can be marked as [ScreenScoped] to opt out of persistence. This is primarily useful
+/// when propagating entity persistence, using [Propagate(Persistence).](bevy::app::Propagate)
+///
+/// Be aware that loading is _disabled by default,_ unless you specify
+/// a system to run in [ScreenSchedule::Loading], or you
+/// manually specify [Self::with_skip_load]. The same is true for unloading.
+///
+/// If you want to allow the screen to run its [Update] schedule while it is in
+/// [ScreenState::Loading], set [Self::with_load_strategy] to [LoadStrategy::Nonblocking].
 pub struct ScreenScopeBuilder<S>
 where
     S: Screen,
@@ -54,7 +68,7 @@ where
         self.skip_unload = Some(val);
         self
     }
-    /// Sets the [LoadingStrategy]. By default, this is Blocking.
+    /// Sets the [LoadStrategy]. By default, this is Blocking.
     pub fn with_load_strategy(&mut self, val: LoadStrategy) -> &mut Self {
         self.load_strategy = val;
         self

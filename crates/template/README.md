@@ -1,5 +1,5 @@
 <div align="center">
-<img src="/.doc/tfw.png" height=300 alt="Illustration of a tufted titmouse with text, 'tfw - bevy template framework'" title="tfw logo" />
+<img src="https://raw.githubusercontent.com/ada-x64/qproj/refs/heads/main/.doc/tfw.png" height=300 alt="Illustration of a tufted titmouse with text, 'tfw - bevy template framework'" title="tfw logo" />
 </div>
 
 This is a template-based template for a bevy project. It is a simplification of the work done for [q_service.](https://github.com/ada-x64/q_service)

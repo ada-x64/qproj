@@ -1,14 +1,21 @@
+#![doc = include_str!("../README.md")]
 #![feature(register_tool)]
 #![register_tool(bevy)]
 #![allow(bevy::panicking_methods)]
-#![doc = include_str!("./doc.md")]
+#![deny(missing_docs)]
 
-mod data;
+#[allow(unused_imports, reason = "used in docs")]
+use prelude::*;
+/// Resources, components, states, etc.
+pub mod data;
 mod plugin;
-mod scope;
+/// The [ScreenScopeBuilder] and friends.
+pub mod scope;
 mod systems;
-mod trait_impl;
+/// The [Screen] trait.
+pub mod trait_impl;
 
+/// The main export.
 pub mod prelude {
     pub use super::data::*;
     pub use super::plugin::*;

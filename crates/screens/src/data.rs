@@ -16,6 +16,8 @@ mod general_api {
     /// [SwitchToScreenMsg] with the screen's [ComponentId].
     #[derive(Event, Debug, PartialEq, Eq, Clone, Deref, Default)]
     pub struct SwitchToScreen<S: Screen>(PhantomData<S>);
+
+    /// See [SwitchToScreen]
     pub fn switch_to_screen<S: Screen>() -> SwitchToScreen<S> {
         SwitchToScreen::<S>::default()
     }
@@ -31,6 +33,8 @@ mod general_api {
     /// screen is not currently loading.
     #[derive(Event, Debug, PartialEq, Eq, Clone, Deref, Default)]
     pub struct FinishLoading<S: Screen>(PhantomData<S>);
+
+    /// See [FinishLoading]
     pub fn finish_loading<S: Screen>() -> FinishLoading<S> {
         FinishLoading::<S>::default()
     }
@@ -39,13 +43,15 @@ mod general_api {
     /// screen is not currently unloading.
     #[derive(Event, Debug, PartialEq, Eq, Clone, Deref, Default)]
     pub struct FinishUnloading<S: Screen>(PhantomData<S>);
+
+    /// See [FinishUnloading]
     pub fn finish_unloading<S: Screen>() -> FinishUnloading<S> {
         FinishUnloading::<S>::default()
     }
 
     /// Scopes an entity to the current screen. The entity will be cleaned up when
-    /// the [Screens] state changes. By default, all entities _except_ those listed
-    /// in the [module documentation](crate::framework::screen) are screen-scoped.
+    /// the [Screen] state changes. By default, all entities _except_ top-level
+    /// [Observer] and [Window] components are screen-scoped.
     ///
     /// Note: This is effectively used to skip the propagation of the
     /// [Persistent] component. Since screen scoping is the default behavior, it
@@ -55,8 +61,7 @@ mod general_api {
 
     /// Marks an entity as screen-persistent, i.e., this entity will _not_ be
     /// automatically cleaned up when the screen changes. By default, all entites
-    /// _except_ those listed in the [module
-    /// documentation](crate::framework::screen) are screen-scoped.
+    /// _except_ top-level [Observer] and [Window] components and are screen-scoped.
     ///
     /// In order to mark the children of this component as Persistent, you should
     /// use the [Propagate](bevy::app::Propagate) component.
@@ -68,9 +73,11 @@ mod general_api {
     #[derive(Resource, Default, Debug, Deref)]
     pub struct InitialScreen(Option<String>);
     impl InitialScreen {
+        #[allow(missing_docs)]
         pub fn new<S: Screen>() -> Self {
             Self(Some(S::name()))
         }
+        #[allow(missing_docs)]
         pub fn from_name(name: String) -> Self {
             Self(Some(name))
         }
@@ -113,6 +120,7 @@ mod screens {
         skip_unload: bool,
     }
     impl ScreenData {
+        #[allow(missing_docs)]
         pub fn new<S: Screen>(id: ComponentId, tick: Tick) -> Self {
             Self {
                 name: S::name(),
@@ -174,54 +182,67 @@ mod screens {
             }
         }
 
+        #[allow(missing_docs)]
         pub fn load_strategy(&self) -> LoadStrategy {
             self.load_strategy
         }
 
+        #[allow(missing_docs)]
         pub fn skip_load(&self) -> bool {
             self.skip_load
         }
 
+        #[allow(missing_docs)]
         pub fn skip_unload(&self) -> bool {
             self.skip_unload
         }
 
+        #[allow(missing_docs)]
         pub fn set_skip_unload(&mut self, skip_unload: bool) {
             self.skip_unload = skip_unload;
         }
 
+        #[allow(missing_docs)]
         pub fn set_skip_load(&mut self, skip_load: bool) {
             self.skip_load = skip_load;
         }
 
+        #[allow(missing_docs)]
         pub fn set_load_strategy(&mut self, load_strategy: LoadStrategy) {
             self.load_strategy = load_strategy;
         }
 
+        #[allow(missing_docs)]
         pub fn initialized(&self) -> bool {
             self.initialized
         }
 
+        #[allow(missing_docs)]
         pub fn changed_at(&self) -> Tick {
             self.changed_at
         }
 
+        #[allow(missing_docs)]
         pub fn needs_update(&self) -> bool {
             self.needs_update
         }
 
+        #[allow(missing_docs)]
         pub fn type_id(&self) -> TypeId {
             self.type_id
         }
 
+        #[allow(missing_docs)]
         pub fn state(&self) -> ScreenState {
             self.state
         }
 
+        #[allow(missing_docs)]
         pub fn id(&self) -> ComponentId {
             self.id
         }
 
+        #[allow(missing_docs)]
         pub fn name(&self) -> &str {
             &self.name
         }
@@ -231,15 +252,18 @@ pub use screens::*;
 
 mod schedules {
     use super::*;
-    /// Describes a screen's [Schedule]. All systems added to this schedule, using the
-    /// [ScreenScope] below, will be scoped to this screen's lifetime. That is,
-    /// they will only run when the screen is in [ScreenStatus::Ready].
+    /// Describes a screen's [Schedule]. All systems added to this schedule
+    /// will be scoped to this screen's lifetime.
     /// To use as a schedule, wrap it with [ScreenScheduleLabel].
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, strum::EnumIter)]
     pub enum ScreenSchedule {
+        /// Runs on [Update] when the screen has [ScreenState::Ready]
         Update,
+        /// Runs on [FixedUpdate] when the screen has [ScreenState::Ready]
         FixedUpdate,
+        /// Runs on [Update] when the screen has [ScreenState::Loading]
         Loading,
+        /// Runs on [Update] when the screen has [ScreenState::Unloading]
         Unloading,
         /// Can also be specified as [on_screen_load]
         OnLoad,
@@ -258,12 +282,14 @@ mod schedules {
         kind: ScreenSchedule,
     }
     impl ScreenScheduleLabel {
+        #[allow(missing_docs)]
         pub fn new<S: Screen>(kind: ScreenSchedule) -> Self {
             Self {
                 id: TypeId::of::<S>(),
                 kind,
             }
         }
+        #[allow(missing_docs)]
         pub fn from_id(kind: ScreenSchedule, id: TypeId) -> Self {
             Self { id, kind }
         }
@@ -306,6 +332,7 @@ mod system_params {
         _ghost: PhantomData<S>,
     }
     impl<'w, S: Screen> ScreenDataRef<'w, S> {
+        #[allow(missing_docs)]
         pub fn data(&self) -> &'w ScreenData {
             self.data
         }
@@ -373,6 +400,7 @@ mod system_params {
             let tick = self.change_tick;
             self.data_mut().finish_unloading(tick);
         }
+        #[allow(missing_docs)]
         pub fn data(&self) -> &ScreenData {
             self.registry.get(&self.cid).unwrap()
         }
@@ -444,6 +472,8 @@ mod helpers {
     /// Label of a schedule which fires when the screen has begun to load.
     #[derive(ScheduleLabel, Debug, PartialEq, Eq, Hash, Clone, Copy)]
     pub struct OnScreenLoad(pub TypeId);
+
+    /// See [OnScreenLoad]
     pub fn on_screen_load<S: Screen>() -> impl ScheduleLabel {
         OnScreenLoad(TypeId::of::<S>())
     }
@@ -451,6 +481,8 @@ mod helpers {
     /// Label of a schedule which fires when the screen has finished loading.
     #[derive(ScheduleLabel, Debug, PartialEq, Eq, Hash, Clone, Copy)]
     pub struct OnScreenReady(pub TypeId);
+
+    /// See [OnScreenReady]
     pub fn on_screen_ready<S: Screen>() -> impl ScheduleLabel {
         OnScreenReady(TypeId::of::<S>())
     }
@@ -458,6 +490,8 @@ mod helpers {
     /// Label of a schedule which fires when the screen is beginning to unload. Not to be confused with [OnScreenUnloaded].
     #[derive(ScheduleLabel, Debug, PartialEq, Eq, Hash, Clone, Copy)]
     pub struct OnScreenUnload(pub TypeId);
+
+    /// See [OnScreenUnload]
     pub fn on_screen_unload<S: Screen>() -> impl ScheduleLabel {
         OnScreenUnload(TypeId::of::<S>())
     }
@@ -465,6 +499,8 @@ mod helpers {
     /// Label of a schedule which fires when the screen has finished unloading and is no longer active.
     #[derive(ScheduleLabel, Debug, PartialEq, Eq, Hash, Clone, Copy)]
     pub struct OnScreenUnloaded(pub TypeId);
+
+    /// See [OnScreenUnloaded]
     pub fn on_screen_unloaded<S: Screen>() -> impl ScheduleLabel {
         OnScreenUnloaded(TypeId::of::<S>())
     }

@@ -24,7 +24,7 @@ fn handle_switch_msg(
     }
 }
 /// NOTE: This is registered in scope.rs
-pub fn on_switch_screen<S: Screen>(
+pub(crate) fn on_switch_screen<S: Screen>(
     _trigger: On<SwitchToScreen<S>>,
     id: ComponentIdFor<S>,
     mut commands: Commands,
@@ -32,10 +32,13 @@ pub fn on_switch_screen<S: Screen>(
     commands.write_message(SwitchToScreenMsg(id.get()));
 }
 
-pub fn on_finish_loading<S: Screen>(_trigger: On<FinishLoading<S>>, mut data: ScreenDataMut<S>) {
+pub(crate) fn on_finish_loading<S: Screen>(
+    _trigger: On<FinishLoading<S>>,
+    mut data: ScreenDataMut<S>,
+) {
     data.finish_loading();
 }
-pub fn on_finish_unloading<S: Screen>(
+pub(crate) fn on_finish_unloading<S: Screen>(
     _trigger: On<FinishUnloading<S>>,
     mut data: ScreenDataMut<S>,
 ) {
@@ -132,7 +135,7 @@ fn run_fixed_schedules(registry: ResMut<ScreenRegistry>, mut commands: Commands)
     }
 }
 
-pub fn initial_screen(
+pub(crate) fn initial_screen(
     mut commands: Commands,
     initial_screen: Res<InitialScreen>,
     registry: Res<ScreenRegistry>,
@@ -150,7 +153,7 @@ pub fn initial_screen(
     }
 }
 
-pub fn plugin(app: &mut App) {
+pub(crate) fn plugin(app: &mut App) {
     app.add_systems(Startup, initial_screen);
     app.add_systems(PostUpdate, handle_switch_msg);
     app.add_systems(Update, run_schedules);

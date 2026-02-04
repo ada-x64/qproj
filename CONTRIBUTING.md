@@ -8,6 +8,12 @@ need [mise](https://mise.jdx.dev/), an environment manager and task runner.
 Once you install mise, run `mise install` and `mise run` to get all the
 necessary tools and view the available actions.
 
+## Why a monorepo?
+
+These crates are all very closely related. It's likely that if you edit one,
+you'll need to edit another. Additionally, they all use the same build tooling,
+so overall it's more convenient to have them all in the same place.
+
 ## Testing
 
 Tests are handled

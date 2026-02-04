@@ -1,9 +1,9 @@
 <div align="center">
-<img src="/.doc/q_screens.png" height=300 alt="Illustration of a bowerbird with text 'q_screens'" title="tfw logo" />
+<img src="https://raw.githubusercontent.com/ada-x64/qproj/refs/heads/main/.doc/q_screens.png" height=300 alt="Illustration of a bowerbird with text 'q_screens'" title="tfw logo" />
 </div>
 
 
-[![Coveralls](https://img.shields.io/coverallsCoverage/github/ada-x64/qproj?branch=q_screens)](https://coveralls.io/github/ada-x64/qproj?branch=main)
+[![Coveralls](https://img.shields.io/coverallsCoverage/github/ada-x64/qproj?branch=q_screens)](https://coveralls.io/github/ada-x64/qproj?branch=q_screens)
 
 Screen implementation for Bevy.
 
