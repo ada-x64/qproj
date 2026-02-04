@@ -2,10 +2,12 @@
 name = "q_screens"
 version = "0.1.0"
 edition = "2024"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/ada-x64/qproj"
 
 [dependencies]
 # bevy
-bevy = {version="0.18"} # features=["default_app", "default_platform", "common_api"]}
+bevy = {version="0.18", features=["default_app", "default_platform", "common_api"]}
 
 # not bevy
 tiny_bail = "0.7"
@@ -17,13 +19,13 @@ anyhow = "1.0.99"
 strum = { version = "0.27.2", features = ["derive"] }
 variadics_please = "1.1.0"
 
-# local
-q_test_harness = {path="../test_harness", version="0.1.0"}
-
 [dev-dependencies]
 # just for a few inspector things... should really fork them
 bevy-inspector-egui = "0.36"
 bevy_asset_loader = "0.25"
+
+# local
+q_test_harness = {path="../test_harness", version="0.1.0"}
 
 [lints]
 workspace = true

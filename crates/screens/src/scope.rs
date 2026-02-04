@@ -2,18 +2,32 @@ pub use crate::prelude::*;
 use bevy::{ecs::system::ScheduleSystem, platform::collections::HashMap};
 use strum::IntoEnumIterator;
 
+#[allow(missing_docs)]
 pub trait RegisterScreen {
     /// Registers a [Screen] to the application.
     fn register_screen<S: Screen>(&mut self) -> &mut Self;
 }
 impl RegisterScreen for App {
     fn register_screen<S: Screen>(&mut self) -> &mut Self {
-        S::builder(ScreenScopeBuilder::<S>::new()).build(self);
+        S::builder(ScreenScopeBuilder::<S>::default()).build(self);
         self
     }
 }
 
-// TODO: DOCUMENT ME
+/// The [ScreenScopeBuilder] is the main entrypoint for screen registration.
+/// Use it to add scoped systems to your screen. These scoped systems will only run
+/// when the screen is in the [ScreenState] analgous to the specified [ScreenSchedule].
+///
+/// When a screen is unloaded, it will clean up all entities marked as non-[Persistent] entities.
+/// Entities can be marked as [ScreenScoped] to opt out of persistence. This is primarily useful
+/// when propagating entity persistence, using [Propagate(Persistence).](bevy::app::Propagate)
+///
+/// Be aware that loading is _disabled by default,_ unless you specify
+/// a system to run in [ScreenSchedule::Loading], or you
+/// manually specify [Self::with_skip_load]. The same is true for unloading.
+///
+/// If you want to allow the screen to run its [Update] schedule while it is in
+/// [ScreenState::Loading], set [Self::with_load_strategy] to [LoadStrategy::Nonblocking].
 pub struct ScreenScopeBuilder<S>
 where
     S: Screen,
@@ -29,19 +43,6 @@ impl<S> ScreenScopeBuilder<S>
 where
     S: Screen,
 {
-    pub fn new() -> Self {
-        let schedules = ScreenSchedule::iter()
-            .map(|kind| (kind, Schedule::new(ScreenScheduleLabel::new::<S>(kind))))
-            .collect::<HashMap<_, _>>();
-        Self {
-            schedules,
-            skip_load: None,
-            skip_unload: None,
-            load_strategy: LoadStrategy::default(),
-            _ghost: PhantomData,
-        }
-    }
-
     /// Initialize directly into ready state. By default this is true, unless
     /// there are systems present in the Load schedule.
     pub fn with_skip_load(&mut self, val: bool) -> &mut Self {
@@ -54,7 +55,7 @@ where
         self.skip_unload = Some(val);
         self
     }
-    /// Sets the [LoadingStrategy]. By default, this is Blocking.
+    /// Sets the [LoadStrategy]. By default, this is Blocking.
     pub fn with_load_strategy(&mut self, val: LoadStrategy) -> &mut Self {
         self.load_strategy = val;
         self
@@ -119,7 +120,8 @@ where
 
         // watch screen switcher
         app.add_observer(on_switch_screen::<S>);
-        info!("watching on_switch_screen for {}", S::name());
+        app.add_observer(on_finish_loading::<S>);
+        app.add_observer(on_finish_unloading::<S>);
 
         // scope systems
         for (kind, schedule) in self.schedules.into_iter() {
@@ -176,7 +178,16 @@ where
     S: Screen,
 {
     fn default() -> Self {
-        Self::new()
+        let schedules = ScreenSchedule::iter()
+            .map(|kind| (kind, Schedule::new(ScreenScheduleLabel::new::<S>(kind))))
+            .collect::<HashMap<_, _>>();
+        Self {
+            schedules,
+            skip_load: None,
+            skip_unload: None,
+            load_strategy: LoadStrategy::default(),
+            _ghost: PhantomData,
+        }
     }
 }
 

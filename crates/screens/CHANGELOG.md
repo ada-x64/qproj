@@ -1,0 +1,45 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## Unreleased
+
+### Bug Fixes
+
+ - <csr-id-78ef60a384dce3b409576cf93fb22be3414ee178/> reduce trait requirements for Screen + use Default instead of New for ScreenScopeBuilder
+
+### Other
+
+ - <csr-id-5b40db89cbdbd037ba32343b288eadc9a8cc2b30/> fully document q_screens
+
+### Test
+
+ - <csr-id-48d6ccb2070e9250355ac2aeee97e6fd291ac244/> add conditionals testing
+
+### Commit Statistics
+
+<csr-read-only-do-not-edit/>
+
+ - 6 commits contributed to the release.
+ - 3 commits were understood as [conventional](https://www.conventionalcommits.org).
+ - 1 unique issue was worked on: [#1](https://github.com/ada-x64/qproj/issues/1)
+
+### Commit Details
+
+<csr-read-only-do-not-edit/>
+
+<details><summary>view details</summary>
+
+ * **[#1](https://github.com/ada-x64/qproj/issues/1)**
+    - Q_screens + rename crates ([`4b9285a`](https://github.com/ada-x64/qproj/commit/4b9285ad2d51a8b41dc27b3a267f552db687fafd))
+ * **Uncategorized**
+    - Reduce trait requirements for Screen + use Default instead of New for ScreenScopeBuilder ([`78ef60a`](https://github.com/ada-x64/qproj/commit/78ef60a384dce3b409576cf93fb22be3414ee178))
+    - Fully document q_screens ([`5b40db8`](https://github.com/ada-x64/qproj/commit/5b40db89cbdbd037ba32343b288eadc9a8cc2b30))
+    - Prep for publish ([`945986f`](https://github.com/ada-x64/qproj/commit/945986f6ddacd75d3d28d56a124eb7656584a3ef))
+    - Add conditionals testing ([`48d6ccb`](https://github.com/ada-x64/qproj/commit/48d6ccb2070e9250355ac2aeee97e6fd291ac244))
+    - Update documentation, rm unused macro crate ([`66cc7dd`](https://github.com/ada-x64/qproj/commit/66cc7ddb859ac83934e07f2c246a8b7fd7953e7f))
+</details>
+

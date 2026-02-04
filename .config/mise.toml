@@ -111,16 +111,20 @@ act -P ubuntu-24.04=ghcr.io/catthehacker/ubuntu:act-24.04 \
 tools = { "cargo:cargo-nextest" = "latest" }
 description = "Run tests for a specific package or all packages"
 usage = """
-    flag "--rust-log <rust_log>" env="RUST_LOG"
-    arg "[rest]" double_dash = "required" default="" help="Passed directly to `cargo nextest`. Use `mise test -- help` for nextest help."
+    arg "[rest]" default="r --workspace" help="Passed directly to `cargo nextest`"
 """
 run = """
-if [ $usage_rust_log ]; then RUST_LOG=$usage_rust_log; fi
-if [ -n "${usage_rest?}" ]; then
-    cargo nextest ${usage_rest?}
-else
-    cargo nextest run --workspace
-fi
+cargo nextest ${usage_rest}
+"""
+
+[tasks.coverage]
+tools = { "cargo:cargo-llvm-cov" = "latest", "cargo:cargo-nextest" = "latest" }
+description = "Get test coverage report."
+usage = """
+    arg "[rest]" default="--html --open"
+"""
+run = """
+RUSTFLAGS=-Zcodegen-backend=llvm cargo llvm-cov nextest --html --open
 """
 
 # LOCAL #######################################################################

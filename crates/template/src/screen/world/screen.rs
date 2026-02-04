@@ -27,8 +27,8 @@ fn init(mut commands: Commands) {
 pub fn plugin(app: &mut App) {
     app.register_screen_loading_state::<WorldScreen>();
     app.add_loading_state(
-        LoadingState::new(ScreenLoadingState::<WorldScreen>::Loading)
-            .continue_to_state(ScreenLoadingState::<WorldScreen>::Ready)
+        LoadingState::new(ScreenLoadingState::loading::<WorldScreen>())
+            .continue_to_state(ScreenLoadingState::ready::<WorldScreen>())
             .load_collection::<WorldAssets>(),
     );
 }

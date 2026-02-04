@@ -55,6 +55,7 @@ macro_rules! impl_test_fns {
         )*
     }
 }
+
 gen_test_fns!(on_screen_load, on_screen_ready, on_screen_unloaded);
 
 macro_rules! progress_by {

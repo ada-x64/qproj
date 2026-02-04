@@ -10,26 +10,15 @@ pub struct NoSettings;
 /// regardless of asset completion status.
 #[derive(Default, Copy, Clone, Debug, PartialEq, Eq, Reflect)]
 pub enum LoadStrategy {
+    /// Block the screen running its [Update] schedules until loading is finished.
     #[default]
     Blocking,
+    /// Do not block the screen running its [Update] schedules until loading is finished.
     Nonblocking,
 }
 
 /// Implementation trait for Screen components.
-pub trait Screen:
-    Component
-    + Sized
-    + Default
-    + Reflect
-    + std::fmt::Debug
-    + Clone
-    + Copy
-    + Eq
-    + std::hash::Hash
-    + Send
-    + Sync
-    + 'static
-{
+pub trait Screen: Component + Reflect + Default + Sized + Send + Sync + 'static {
     /// The screen's public name. Used for serialization. Defaults to the short type path.
     fn name() -> String {
         let default = Self::default();
