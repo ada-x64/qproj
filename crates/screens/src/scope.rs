@@ -43,19 +43,6 @@ impl<S> ScreenScopeBuilder<S>
 where
     S: Screen,
 {
-    pub fn new() -> Self {
-        let schedules = ScreenSchedule::iter()
-            .map(|kind| (kind, Schedule::new(ScreenScheduleLabel::new::<S>(kind))))
-            .collect::<HashMap<_, _>>();
-        Self {
-            schedules,
-            skip_load: None,
-            skip_unload: None,
-            load_strategy: LoadStrategy::default(),
-            _ghost: PhantomData,
-        }
-    }
-
     /// Initialize directly into ready state. By default this is true, unless
     /// there are systems present in the Load schedule.
     pub fn with_skip_load(&mut self, val: bool) -> &mut Self {
@@ -191,7 +178,16 @@ where
     S: Screen,
 {
     fn default() -> Self {
-        Self::new()
+        let schedules = ScreenSchedule::iter()
+            .map(|kind| (kind, Schedule::new(ScreenScheduleLabel::new::<S>(kind))))
+            .collect::<HashMap<_, _>>();
+        Self {
+            schedules,
+            skip_load: None,
+            skip_unload: None,
+            load_strategy: LoadStrategy::default(),
+            _ghost: PhantomData,
+        }
     }
 }
 

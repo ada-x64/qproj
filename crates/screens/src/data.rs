@@ -301,24 +301,14 @@ pub use schedules::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum ScreenState {
     #[default]
+    #[allow(missing_docs)]
     Unloaded,
+    #[allow(missing_docs)]
     Loading,
+    #[allow(missing_docs)]
     Ready,
+    #[allow(missing_docs)]
     Unloading,
-}
-impl ScreenState {
-    pub fn is_ready(&self) -> bool {
-        matches!(self, Self::Ready)
-    }
-    pub fn is_loading(&self) -> bool {
-        matches!(self, Self::Loading)
-    }
-    pub fn is_unloading(&self) -> bool {
-        matches!(self, Self::Unloading)
-    }
-    pub fn is_unloaded(&self) -> bool {
-        matches!(self, Self::Unloaded)
-    }
 }
 
 mod system_params {
