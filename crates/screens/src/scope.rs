@@ -119,7 +119,8 @@ where
 
         // watch screen switcher
         app.add_observer(on_switch_screen::<S>);
-        info!("watching on_switch_screen for {}", S::name());
+        app.add_observer(on_finish_loading::<S>);
+        app.add_observer(on_finish_unloading::<S>);
 
         // scope systems
         for (kind, schedule) in self.schedules.into_iter() {

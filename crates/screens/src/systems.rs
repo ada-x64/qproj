@@ -32,6 +32,16 @@ pub fn on_switch_screen<S: Screen>(
     commands.write_message(SwitchToScreenMsg(id.get()));
 }
 
+pub fn on_finish_loading<S: Screen>(_trigger: On<FinishLoading<S>>, mut data: ScreenDataMut<S>) {
+    data.finish_loading();
+}
+pub fn on_finish_unloading<S: Screen>(
+    _trigger: On<FinishUnloading<S>>,
+    mut data: ScreenDataMut<S>,
+) {
+    data.finish_unloading();
+}
+
 fn run_schedules(
     mut registry: ResMut<ScreenRegistry>,
     mut commands: Commands,

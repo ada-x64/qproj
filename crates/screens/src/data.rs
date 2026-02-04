@@ -27,6 +27,22 @@ mod general_api {
     #[derive(Message, Debug, PartialEq, Eq, Clone, Deref)]
     pub struct SwitchToScreenMsg(pub ComponentId);
 
+    /// Will cause the given screen to finish loading. Has no effect if the
+    /// screen is not currently loading.
+    #[derive(Event, Debug, PartialEq, Eq, Clone, Deref, Default)]
+    pub struct FinishLoading<S: Screen>(PhantomData<S>);
+    pub fn finish_loading<S: Screen>() -> FinishLoading<S> {
+        FinishLoading::<S>::default()
+    }
+
+    /// Will cause the given screen to finish unloading. Has no effect if the
+    /// screen is not currently unloading.
+    #[derive(Event, Debug, PartialEq, Eq, Clone, Deref, Default)]
+    pub struct FinishUnloading<S: Screen>(PhantomData<S>);
+    pub fn finish_unloading<S: Screen>() -> FinishUnloading<S> {
+        FinishUnloading::<S>::default()
+    }
+
     /// Scopes an entity to the current screen. The entity will be cleaned up when
     /// the [Screens] state changes. By default, all entities _except_ those listed
     /// in the [module documentation](crate::framework::screen) are screen-scoped.

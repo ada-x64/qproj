@@ -67,7 +67,7 @@ fn blocking() {
 
 #[test]
 fn nonblocking() {
-    let mut app = get_test_app::<LoadStrategyScreen<true>>();
+    let mut app = get_test_app::<LoadStrategyScreen<false>>();
     app.init_resource::<FinalValue>();
     app.register_screen::<EmptyScreen>();
     assert!(app.run().is_success());
