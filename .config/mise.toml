@@ -1,5 +1,10 @@
 experimental_monorepo_root = true
 
+[monorepo]
+config_roots = [
+    "crates/template/.config"
+]
+
 [env]
 _.source = ".config/env.sh"
 
