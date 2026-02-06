@@ -145,7 +145,7 @@ pub(crate) fn initial_screen(
     screens: Screens,
 ) {
     if let Some(initial_screen) = (*initial_screen).as_ref() {
-        let info = screens.get_by_name(initial_screen).unwrap();
+        let info = r!(screens.get_by_name(initial_screen));
         commands.write_message(SwitchToScreenMsg(info.screen_id()));
     }
 }
