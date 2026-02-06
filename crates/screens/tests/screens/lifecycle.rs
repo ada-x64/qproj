@@ -1,6 +1,3 @@
-use bevy::ecs::component::ComponentIdFor;
-use itertools::Itertools;
-
 use crate::prelude::*;
 
 macro_rules! gen_fns {
@@ -60,7 +57,7 @@ gen_test_fns!(on_screen_load, on_screen_ready, on_screen_unloaded);
 
 macro_rules! progress_by {
     ($name:ident) => {
-        |mut data: ScreenDataMut<LifecycleScreen>| {
+        |mut data: ScreenInfoMut<LifecycleScreen>| {
             data.$name();
         }
     };
@@ -77,11 +74,13 @@ impl Screen for LifecycleScreen {
                 (
                     loading,
                     progress_by!(finish_loading),
-                    |query: Query<&ScreenMarker>,
-                     id: ComponentIdFor<Self>,
+                    |current_screen: Res<CurrentScreen>,
+                     id: ScreenIdFor<LifecycleScreen>,
+                     screens: Screens,
                      mut commands: Commands| {
-                        if !query.iter().contains(&ScreenMarker(id.get())) {
-                            error!("Failed to find LifecycleScreen in component hierarchy!");
+                        if current_screen.get_id() != Some(*id) {
+                            let s = screens.get_by_id(*id).unwrap();
+                            error!("while loading, current screen was {}", s.name());
                             commands.write_message(AppExit::error());
                         }
                     },
@@ -108,10 +107,10 @@ impl Screen for LifecycleScreen {
                 ScreenSchedule::OnUnloaded,
                 (
                     unloaded,
-                    |query: Query<&ScreenMarker>,
-                     id: ComponentIdFor<Self>,
+                    |current_screen: Res<CurrentScreen>,
+                     id: ScreenIdFor<Self>,
                      mut commands: Commands| {
-                        if query.iter().contains(&ScreenMarker(id.get())) {
+                        if current_screen.get_id() == Some(*id) {
                             error!("Found LifecycleScreen in component hierarchy after unload!");
                             commands.write_message(AppExit::error());
                         }

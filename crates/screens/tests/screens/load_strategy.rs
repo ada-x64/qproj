@@ -22,7 +22,7 @@ impl<const BLOCKING: bool> Screen for LoadStrategyScreen<BLOCKING> {
 }
 
 impl<const BLOCKING: bool> LoadStrategyScreen<BLOCKING> {
-    fn load(mut count: Local<u32>, mut data: ScreenDataMut<Self>) {
+    fn load(mut count: Local<u32>, mut data: ScreenInfoMut<Self>) {
         *count += 1;
         if *count == 100 {
             data.finish_loading();
@@ -32,7 +32,7 @@ impl<const BLOCKING: bool> LoadStrategyScreen<BLOCKING> {
 
     fn update(
         mut count: Local<u32>,
-        data: ScreenDataRef<Self>,
+        data: ScreenInfoRef<Self>,
         mut commands: Commands,
         mut value: ResMut<FinalValue>,
     ) {
@@ -43,7 +43,7 @@ impl<const BLOCKING: bool> LoadStrategyScreen<BLOCKING> {
         }
     }
 
-    fn unloaded(data: ScreenDataRef<Self>, value: Res<FinalValue>, mut commands: Commands) {
+    fn unloaded(data: ScreenInfoRef<Self>, value: Res<FinalValue>, mut commands: Commands) {
         let expected_value = match data.data().load_strategy() {
             LoadStrategy::Nonblocking => 100,
             LoadStrategy::Blocking => 1,

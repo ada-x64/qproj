@@ -9,7 +9,9 @@ pub struct ScreenPlugin;
 impl Plugin for ScreenPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ScreenRegistry>();
+        app.init_resource::<ScreenData>();
         app.init_resource::<InitialScreen>();
+        app.init_resource::<CurrentScreen>();
         app.add_message::<SwitchToScreenMsg>();
         app.add_plugins((
             HierarchyPropagatePlugin::<Persistent>::new(PostUpdate),

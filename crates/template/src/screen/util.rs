@@ -9,7 +9,7 @@ pub enum ScreenLoadingState {
     Unloaded(TypeId),
 }
 impl ScreenLoadingState {
-    fn finish_loading<S: Screen>(mut data: ScreenDataMut<S>) {
+    fn finish_loading<S: Screen>(mut data: ScreenInfoMut<S>) {
         data.finish_loading();
     }
     fn register<S: Screen>(app: &mut App) {
