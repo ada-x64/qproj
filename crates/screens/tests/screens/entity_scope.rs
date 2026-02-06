@@ -33,7 +33,7 @@ impl Screen for ScopedEntitiesScreen {
     fn builder(mut builder: ScreenScopeBuilder<Self>) -> ScreenScopeBuilder<Self> {
         builder.add_systems(
             ScreenSchedule::Loading,
-            |mut commands: Commands, mut data: ScreenDataMut<Self>| {
+            |mut commands: Commands, mut data: ScreenInfoMut<Self>| {
                 commands.spawn((
                     Target::PersistentParent,
                     Propagate(Persistent),

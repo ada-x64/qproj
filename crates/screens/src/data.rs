@@ -1,16 +1,23 @@
 use crate::prelude::*;
-use bevy::{
-    ecs::{
-        component::ComponentId,
-        schedule::ScheduleLabel,
-        system::{ReadOnlySystemParam, SystemParam},
-    },
-    platform::collections::HashMap,
+use bevy::ecs::{
+    schedule::ScheduleLabel,
+    system::{ReadOnlySystemParam, SystemParam},
 };
 use std::{any::TypeId, marker::PhantomData};
 
 mod general_api {
+    use thiserror::Error;
+
     use super::*;
+
+    #[allow(missing_docs)]
+    #[derive(Error, Debug)]
+    pub enum ScreenError {
+        #[error("Could not find screen {0}! Did you register it?")]
+        NoSuchScreen(String),
+        #[error("Could not find screen with ID {0:?}!")]
+        NoSuchScreenId(ScreenId),
+    }
 
     /// Call this when you want to switch screens. This will trigger a
     /// [SwitchToScreenMsg] with the screen's [ComponentId].
@@ -27,7 +34,16 @@ mod general_api {
     /// can buffer any [SwitchToScreenMsg]s to avoid conflicts. Only the last
     /// valid [SwitchToScreenMsg] will be read.
     #[derive(Message, Debug, PartialEq, Eq, Clone, Deref)]
-    pub struct SwitchToScreenMsg(pub ComponentId);
+    pub struct SwitchToScreenMsg(pub ScreenId);
+
+    /// Signals that the current screen has changed.
+    #[derive(Event, Debug, PartialEq, Eq, Clone)]
+    pub struct ScreenChanged {
+        #[allow(missing_docs)]
+        pub from: Option<ScreenId>,
+        #[allow(missing_docs)]
+        pub to: ScreenId,
+    }
 
     /// Will cause the given screen to finish loading. Has no effect if the
     /// screen is not currently loading.
@@ -86,28 +102,91 @@ mod general_api {
 pub use general_api::*;
 
 mod screens {
-    use bevy::ecs::change_detection::Tick;
+    use bevy::{ecs::change_detection::Tick, utils::TypeIdMap};
 
     use super::*;
 
-    /// Marker struct for a screen.
-    #[derive(Component, Reflect, PartialEq)]
-    pub struct ScreenMarker(pub ComponentId);
+    /// Generates [`ScreenId`]s.
+    #[derive(Resource, Debug, Default)]
+    pub(crate) struct ScreenIds {
+        next: bevy::platform::sync::atomic::AtomicUsize,
+    }
 
-    /// Stores a map from the system's name to its spawn function.
-    /// Used to dynamically load a screen.
+    impl ScreenIds {
+        pub fn next(&self) -> ScreenId {
+            ScreenId(
+                self.next
+                    .fetch_add(1, bevy::platform::sync::atomic::Ordering::Relaxed),
+            )
+        }
+    }
+    /// The screen's ID.
+    #[derive(Clone, Debug, PartialEq, Eq, Deref, Copy, Reflect)]
+    pub struct ScreenId(pub(crate) usize);
+
+    /// The screen registry holds a map between the screen's type id and it's [ScreenId].
     #[derive(Resource, Debug, Deref, DerefMut, Default)]
-    pub struct ScreenRegistry(HashMap<ComponentId, ScreenData>);
+    pub struct ScreenRegistry(TypeIdMap<ScreenId>);
+    impl ScreenRegistry {
+        #[allow(missing_docs)]
+        pub fn get(&self, id: &TypeId) -> Result<ScreenId, ScreenError> {
+            self.0
+                .get(id)
+                .copied()
+                .ok_or(ScreenError::NoSuchScreen(format!("{:?}", id)))
+        }
+    }
+
+    /// Efficiently accessible vec of screen data.
+    /// Do not use this directly. Instead prefer to use [ScreenDataRef] or [ScreenDataMut]
+    #[derive(Resource, Debug, Deref, DerefMut, Default)]
+    pub struct ScreenData(Vec<Option<ScreenInfo>>);
+    impl ScreenData {
+        #[allow(missing_docs)]
+        pub fn get(&self, id: ScreenId) -> Result<&ScreenInfo, ScreenError> {
+            self.0
+                .get(*id)
+                .and_then(|v| v.as_ref())
+                .ok_or(ScreenError::NoSuchScreenId(id))
+        }
+        #[allow(missing_docs)]
+        pub fn get_mut(&mut self, id: ScreenId) -> Result<&mut ScreenInfo, ScreenError> {
+            self.0
+                .get_mut(*id)
+                .and_then(|v| v.as_mut())
+                .ok_or(ScreenError::NoSuchScreenId(id))
+        }
+        #[allow(missing_docs)]
+        pub fn iter_some(&self) -> impl Iterator<Item = &ScreenInfo> {
+            self.0.iter().filter_map(|v| v.as_ref())
+        }
+        #[allow(missing_docs)]
+        pub fn iter_some_mut(&mut self) -> impl Iterator<Item = &mut ScreenInfo> {
+            self.0.iter_mut().filter_map(|v| v.as_mut())
+        }
+    }
+
+    /// The current screen's ID.
+    #[derive(Resource, Debug, Deref, DerefMut, Default)]
+    pub struct CurrentScreen(Option<ScreenId>);
+    impl CurrentScreen {
+        /// Gets the [ScreenId] for the given [Screen].
+        /// This will usually be populated, unless you have yet to switch to any screen.
+        pub fn get_id(&self) -> Option<ScreenId> {
+            self.0
+        }
+    }
 
     /// Data about a given screen. This is where all the screen's identifying information lives, including it's [ScreenState].
     #[derive(Debug)]
-    pub struct ScreenData {
+    pub struct ScreenInfo {
         /// Serialized name of the [Screen]
         name: String,
-        id: ComponentId,
         state: ScreenState,
-        /// TypeId of the underlying [Screen] component
+        /// [TypeId] of the underlying [Screen] component
         type_id: TypeId,
+        /// [ScreenId] of the underlying [Screen] component
+        screen_id: ScreenId,
         /// Indicates that the state has changed and needs to run the corresponding state schedule.
         pub(crate) needs_update: bool,
         pub(crate) changed_at: Tick,
@@ -119,12 +198,11 @@ mod screens {
         /// Deinitialize immediately
         skip_unload: bool,
     }
-    impl ScreenData {
+    impl ScreenInfo {
         #[allow(missing_docs)]
-        pub fn new<S: Screen>(id: ComponentId, tick: Tick) -> Self {
+        pub fn new<S: Screen>(screen_id: ScreenId, tick: Tick) -> Self {
             Self {
                 name: S::name(),
-                id,
                 state: ScreenState::Unloaded,
                 type_id: TypeId::of::<S>(),
                 needs_update: true,
@@ -133,6 +211,7 @@ mod screens {
                 load_strategy: LoadStrategy::Blocking,
                 changed_at: tick,
                 initialized: false,
+                screen_id,
             }
         }
 
@@ -238,13 +317,13 @@ mod screens {
         }
 
         #[allow(missing_docs)]
-        pub fn id(&self) -> ComponentId {
-            self.id
+        pub fn name(&self) -> &str {
+            &self.name
         }
 
         #[allow(missing_docs)]
-        pub fn name(&self) -> &str {
-            &self.name
+        pub fn screen_id(&self) -> ScreenId {
+            self.screen_id
         }
     }
 }
@@ -316,21 +395,21 @@ mod system_params {
 
     use super::*;
 
-    /// Read-only [SystemParam] for easy access to a screen's [ScreenData]
-    pub struct ScreenDataRef<'w, S: Screen> {
-        data: &'w ScreenData,
+    /// Read-only [SystemParam] for easy access to a screen's [ScreenInfo]
+    pub struct ScreenInfoRef<'w, S: Screen> {
+        data: &'w ScreenInfo,
         _ghost: PhantomData<S>,
     }
-    impl<'w, S: Screen> ScreenDataRef<'w, S> {
+    impl<'w, S: Screen> ScreenInfoRef<'w, S> {
         #[allow(missing_docs)]
-        pub fn data(&self) -> &'w ScreenData {
+        pub fn data(&self) -> &'w ScreenInfo {
             self.data
         }
     }
 
-    unsafe impl<'w, S: Screen> SystemParam for ScreenDataRef<'w, S> {
+    unsafe impl<'w, S: Screen> SystemParam for ScreenInfoRef<'w, S> {
         type State = ();
-        type Item<'world, 'state> = ScreenDataRef<'world, S>;
+        type Item<'world, 'state> = ScreenInfoRef<'world, S>;
 
         fn init_state(_world: &mut World) -> Self::State {}
 
@@ -350,57 +429,57 @@ mod system_params {
             world: bevy::ecs::world::unsafe_world_cell::UnsafeWorldCell<'world>,
             _change_tick: bevy::ecs::change_detection::Tick,
         ) -> Self::Item<'world, 'state> {
-            let cid = world.components().get_id(TypeId::of::<S>()).unwrap();
             let registry = unsafe { world.get_resource::<ScreenRegistry>().unwrap() };
-            let data = registry.get(&cid).unwrap();
-            ScreenDataRef {
+            let idx = registry.get(&TypeId::of::<S>()).unwrap();
+            let data_res = unsafe { world.get_resource::<ScreenData>().unwrap() };
+            let data = data_res
+                .get(idx)
+                .map_err(|_| ScreenError::NoSuchScreen(S::name()))
+                .unwrap();
+            ScreenInfoRef {
                 _ghost: PhantomData,
                 data,
             }
         }
     }
-    unsafe impl<'w, S: Screen> ReadOnlySystemParam for ScreenDataRef<'w, S> {}
+    unsafe impl<'w, S: Screen> ReadOnlySystemParam for ScreenInfoRef<'w, S> {}
 
     /// [SystemParam] for easy mutable access to the given screen's data.
     /// All functionality happens through helper functions for API sanity.
-    pub struct ScreenDataMut<'w, S: Screen> {
+    pub struct ScreenInfoMut<'w, S: Screen> {
         _ghost: PhantomData<S>,
-        registry: Mut<'w, ScreenRegistry>,
-        cid: ComponentId,
+        data: Mut<'w, ScreenInfo>,
         change_tick: Tick,
     }
-    impl<'w, S: Screen> ScreenDataMut<'w, S> {
+    impl<'w, S: Screen> ScreenInfoMut<'w, S> {
         /// Loads the screen. Has no effect if the screen is already Loaded or Ready.
         pub fn load(&mut self) {
             let tick = self.change_tick;
-            self.data_mut().load(tick);
+            self.data.load(tick);
         }
         /// Unloads the screen. Has no effect if the screen is already Loaded or Ready.
         pub fn unload(&mut self) {
             let tick = self.change_tick;
-            self.data_mut().unload(tick);
+            self.data.unload(tick);
         }
         /// Loads the screen. Has no effect if the screen is not Loading.
         pub fn finish_loading(&mut self) {
             let tick = self.change_tick;
-            self.data_mut().finish_loading(tick);
+            self.data.finish_loading(tick);
         }
         /// Loads the screen. Has no effect if the screen is not Loading.
         pub fn finish_unloading(&mut self) {
             let tick = self.change_tick;
-            self.data_mut().finish_unloading(tick);
+            self.data.finish_unloading(tick);
         }
         #[allow(missing_docs)]
-        pub fn data(&self) -> &ScreenData {
-            self.registry.get(&self.cid).unwrap()
-        }
-        fn data_mut(&mut self) -> &mut ScreenData {
-            self.registry.get_mut(&self.cid).unwrap()
+        pub fn data(&self) -> &ScreenInfo {
+            self.data.as_ref()
         }
     }
-    unsafe impl<'w, S: Screen> SystemParam for ScreenDataMut<'w, S> {
+    unsafe impl<'w, S: Screen> SystemParam for ScreenInfoMut<'w, S> {
         type State = ();
-        type Item<'world, 'state> = ScreenDataMut<'world, S>;
+        type Item<'world, 'state> = ScreenInfoMut<'world, S>;
 
         fn init_state(_world: &mut World) -> Self::State {}
 
@@ -421,16 +500,141 @@ mod system_params {
             change_tick: bevy::ecs::change_detection::Tick,
         ) -> Self::Item<'world, 'state> {
             let registry = unsafe { world.get_resource_mut::<ScreenRegistry>().unwrap() };
-            let cid = world.components().get_id(TypeId::of::<S>()).unwrap();
+            let data_res = unsafe { world.get_resource_mut::<ScreenData>().unwrap() };
+            let screen_id = registry
+                .get(&TypeId::of::<S>())
+                .map_err(|_| ScreenError::NoSuchScreen(S::name()))
+                .unwrap();
+            let data = data_res.map_unchanged(|res| res.get_mut(screen_id).unwrap());
             Self::Item {
-                registry,
-                cid,
+                data,
                 _ghost: PhantomData,
                 change_tick,
             }
         }
     }
+
+    /// Gets the [ScreenId] for the given [Screen]
+    #[derive(Debug, Copy, Clone, Deref)]
+    pub struct ScreenIdFor<S: Screen> {
+        #[deref]
+        id: ScreenId,
+        _ghost: PhantomData<S>,
+    }
+    unsafe impl<S: Screen> SystemParam for ScreenIdFor<S> {
+        type Item<'world, 'state> = ScreenIdFor<S>;
+        type State = ();
+
+        fn init_state(_: &mut World) -> Self::State {}
+
+        fn init_access(
+            _state: &Self::State,
+            _system_meta: &mut bevy::ecs::system::SystemMeta,
+            _component_access_set: &mut bevy::ecs::query::FilteredAccessSet,
+            _world: &mut World,
+        ) {
+        }
+
+        unsafe fn get_param<'world, 'state>(
+            _state: &'state mut Self::State,
+            _system_meta: &bevy::ecs::system::SystemMeta,
+            world: bevy::ecs::world::unsafe_world_cell::UnsafeWorldCell<'world>,
+            _change_tick: Tick,
+        ) -> Self::Item<'world, 'state> {
+            let registry = unsafe { world.get_resource::<ScreenRegistry>().unwrap() };
+            let id = registry.get(&TypeId::of::<S>()).unwrap();
+            Self {
+                id,
+                _ghost: PhantomData,
+            }
+        }
+    }
+    unsafe impl<S: Screen> ReadOnlySystemParam for ScreenIdFor<S> {}
+
+    /// [SystemParam] for easy access to all screen info.
+    #[derive(SystemParam)]
+    pub struct Screens<'w> {
+        registry: Res<'w, ScreenRegistry>,
+        data: Res<'w, ScreenData>,
+    }
+    impl<'w> Screens<'w> {
+        /// Gets the [ScreenInfo] for the first [Screen] with a matching name.
+        /// Note that screen name uniqueness is not enforced.
+        pub fn get_by_name(&self, name: &str) -> Result<&ScreenInfo, ScreenError> {
+            self.data
+                .iter_some()
+                .find(|v| v.name() == name)
+                .ok_or(ScreenError::NoSuchScreen(name.into()))
+        }
+        /// Gets the [ScreenInfo] for the [Screen] with the corresponding [TypeId]
+        pub fn get_by_type_id(&self, id: &TypeId) -> Result<&ScreenInfo, ScreenError> {
+            self.registry.get(id).and_then(|id| self.data.get(id))
+        }
+        /// Gets the [ScreenInfo] for the [Screen] with the corresponding [TypeId]
+        pub fn get_by_id(&self, id: ScreenId) -> Result<&ScreenInfo, ScreenError> {
+            self.data.get(id)
+        }
+        /// Gets the [ScreenInfo] for this [Screen]. Alternative to calling [ScreenInfoRef]
+        pub fn get<S: Screen>(&self) -> Result<&ScreenInfo, ScreenError> {
+            self.registry
+                .get(&TypeId::of::<S>())
+                .and_then(|id| self.data.get(id))
+        }
+    }
+    /// [SystemParam] for easy mutable access to all screen info.
+    #[derive(SystemParam)]
+    pub struct ScreensMut<'w> {
+        registry: ResMut<'w, ScreenRegistry>,
+        data: ResMut<'w, ScreenData>,
+    }
+    impl<'w> ScreensMut<'w> {
+        /// Gets the [ScreenInfo] for the first [Screen] with a matching name.
+        /// Note that screen name uniqueness is not enforced.
+        pub fn get_by_name(&self, name: &str) -> Result<&ScreenInfo, ScreenError> {
+            self.data
+                .iter_some()
+                .find(|v| v.name() == name)
+                .ok_or(ScreenError::NoSuchScreen(name.into()))
+        }
+        /// Gets the [ScreenInfo] for the [Screen] with the corresponding [TypeId]
+        pub fn get_by_type_id(&self, id: &TypeId) -> Result<&ScreenInfo, ScreenError> {
+            self.registry.get(id).and_then(|id| self.data.get(id))
+        }
+        /// Gets the [ScreenInfo] for the [Screen] with the corresponding [TypeId]
+        pub fn get_by_id(&self, id: ScreenId) -> Result<&ScreenInfo, ScreenError> {
+            self.data.get(id)
+        }
+        /// Gets the [ScreenInfo] for this [Screen]. Alternative to calling [ScreenInfoRef]
+        pub fn get<S: Screen>(&self) -> Result<&ScreenInfo, ScreenError> {
+            self.registry
+                .get(&TypeId::of::<S>())
+                .and_then(|id| self.data.get(id))
+        }
+        /// Mutably gets the [ScreenInfo] for the first [Screen] with a matching name.
+        /// Note that screen name uniqueness is not enforced.
+        pub fn get_by_name_mut(&mut self, name: &str) -> Result<&mut ScreenInfo, ScreenError> {
+            self.data
+                .iter_some_mut()
+                .find(|v| v.name() == name)
+                .ok_or(ScreenError::NoSuchScreen(name.into()))
+        }
+        /// Mutably gets the [ScreenInfo] for the [Screen] with the corresponding [TypeId].
+        pub fn get_by_type_id_mut(&mut self, id: &TypeId) -> Result<&mut ScreenInfo, ScreenError> {
+            self.registry.get(id).and_then(|id| self.data.get_mut(id))
+        }
+        /// Mutably gets the [ScreenInfo] for this [Screen]. Alternative to calling [ScreenInfoRef]
+        pub fn get_mut<S: Screen>(&mut self) -> Result<&mut ScreenInfo, ScreenError> {
+            self.registry
+                .get(&TypeId::of::<S>())
+                .and_then(|id| self.data.get_mut(id))
+        }
+        /// Gets the [ScreenInfo] for the [Screen] with the corresponding [TypeId]
+        pub fn get_by_id_mut(&mut self, id: ScreenId) -> Result<&mut ScreenInfo, ScreenError> {
+            self.data.get_mut(id)
+        }
+    }
 }
+
 pub use system_params::*;
 
 mod helpers {
@@ -439,24 +643,24 @@ mod helpers {
     /// Condition, like [in_state], but for screens.
     pub fn screen_has_state<S: Screen>(
         state: ScreenState,
-    ) -> impl FnMut(ScreenDataRef<S>) -> bool + Clone {
-        move |data: ScreenDataRef<S>| data.data().state() == state
+    ) -> impl FnMut(ScreenInfoRef<S>) -> bool + Clone {
+        move |data: ScreenInfoRef<S>| data.data().state() == state
     }
     /// Is the screen still loading?
-    pub fn screen_loading<S: Screen>() -> impl FnMut(ScreenDataRef<S>) -> bool + Clone {
-        |data: ScreenDataRef<S>| matches!(data.data().state(), ScreenState::Loading)
+    pub fn screen_loading<S: Screen>() -> impl FnMut(ScreenInfoRef<S>) -> bool + Clone {
+        |data: ScreenInfoRef<S>| matches!(data.data().state(), ScreenState::Loading)
     }
     /// Has the screen finished loading?
-    pub fn screen_ready<S: Screen>() -> impl FnMut(ScreenDataRef<S>) -> bool + Clone {
-        |data: ScreenDataRef<S>| matches!(data.data().state(), ScreenState::Ready)
+    pub fn screen_ready<S: Screen>() -> impl FnMut(ScreenInfoRef<S>) -> bool + Clone {
+        |data: ScreenInfoRef<S>| matches!(data.data().state(), ScreenState::Ready)
     }
     /// Is the screen currently unloading?
-    pub fn screen_unloading<S: Screen>() -> impl FnMut(ScreenDataRef<S>) -> bool + Clone {
-        |data: ScreenDataRef<S>| matches!(data.data().state(), ScreenState::Unloading)
+    pub fn screen_unloading<S: Screen>() -> impl FnMut(ScreenInfoRef<S>) -> bool + Clone {
+        |data: ScreenInfoRef<S>| matches!(data.data().state(), ScreenState::Unloading)
     }
     /// Has the screen finished unloading?
-    pub fn screen_unloaded<S: Screen>() -> impl FnMut(ScreenDataRef<S>) -> bool + Clone {
-        |data: ScreenDataRef<S>| matches!(data.data().state(), ScreenState::Unloaded)
+    pub fn screen_unloaded<S: Screen>() -> impl FnMut(ScreenInfoRef<S>) -> bool + Clone {
+        |data: ScreenInfoRef<S>| matches!(data.data().state(), ScreenState::Unloaded)
     }
 
     /// Label of a schedule which fires when the screen has begun to load.

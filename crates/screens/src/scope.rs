@@ -1,3 +1,5 @@
+use std::any::TypeId;
+
 pub use crate::prelude::*;
 use bevy::{ecs::system::ScheduleSystem, platform::collections::HashMap};
 use strum::IntoEnumIterator;
@@ -95,13 +97,20 @@ where
     }
 
     fn build(self, app: &mut App) {
-        // init
-        let id = app.world_mut().register_component::<S>();
-        let tick = app.world_mut().change_tick();
-        let mut registry = app.world_mut().get_resource_or_init::<ScreenRegistry>();
+        if let Some(registry) = app.world().get_resource::<ScreenRegistry>()
+            && registry.get(&TypeId::of::<S>()).is_ok()
+        {
+            warn!("Already registered {}, not registering again", S::name());
+            return;
+        }
 
-        // insert data
-        let mut data = ScreenData::new::<S>(id, tick);
+        let id = {
+            let ids = app.world_mut().get_resource_or_init::<ScreenIds>();
+            ids.next()
+        };
+
+        let tick = app.world_mut().change_tick();
+        let mut data = ScreenInfo::new::<S>(id, tick);
         let skip_load = self
             .schedules
             .get(&ScreenSchedule::Loading)
@@ -115,8 +124,17 @@ where
         data.set_skip_load(self.skip_load.unwrap_or(skip_load));
         data.set_skip_unload(self.skip_unload.unwrap_or(skip_unload));
         data.set_load_strategy(self.load_strategy);
-        debug!("Built screen {data:#?}");
-        registry.insert(id, data);
+
+        {
+            let mut data_res = app.world_mut().get_resource_or_init::<ScreenData>();
+            let min_size = id.min(data_res.len());
+            data_res.resize_with(min_size, || None);
+            data_res.insert(*id, Some(data));
+        };
+        {
+            let mut registry = app.world_mut().get_resource_or_init::<ScreenRegistry>();
+            registry.insert(TypeId::of::<S>(), id);
+        };
 
         // watch screen switcher
         app.add_observer(on_switch_screen::<S>);
@@ -170,6 +188,7 @@ where
             });
         }
         app.add_systems(on_screen_unloaded::<S>(), clean_up_scoped_entities::<S>);
+        debug!("Built {} (id={:?})", S::name(), id);
     }
 }
 
@@ -193,7 +212,7 @@ where
 
 fn clean_up_scoped_entities<S: Screen>(
     mut commands: Commands,
-    mut screen_data: ScreenDataMut<S>,
+    mut screen_data: ScreenInfoMut<S>,
     // Any entity which is (explicitly marked as ScreenScoped, or is _not_ marked
     // as persistent) _and_ is not a top-level observer
     screen_scoped: Query<

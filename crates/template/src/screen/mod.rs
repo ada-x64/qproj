@@ -1,6 +1,5 @@
 use crate::prelude::*;
 
-mod data;
 #[cfg(feature = "dev")]
 mod dev;
 
@@ -9,8 +8,6 @@ mod util;
 mod world;
 
 pub mod prelude {
-    pub use super::data::*;
-
     pub use super::splash::prelude::*;
     pub use super::world::prelude::*;
 

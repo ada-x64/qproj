@@ -17,7 +17,7 @@ fn init(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut screen: ScreenDataMut<CameraTestScreen>,
+    mut screen: ScreenInfoMut<CameraTestScreen>,
 ) {
     // spawn everything
     let cube = meshes.add(Cuboid::default());

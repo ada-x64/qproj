@@ -7,7 +7,7 @@
         },
         "check": {
           "command": "clippy",
-          "extraArgs": ["--locked", "--target-dir=target/rust-analyzer"],
+          "extraArgs": ["--target-dir=target/rust-analyzer"],
           "workspace": false,
         },
       },

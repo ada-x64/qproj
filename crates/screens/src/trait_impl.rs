@@ -1,9 +1,5 @@
 pub use crate::prelude::*;
 
-/// An empty settings parameter.
-#[derive(Resource, Default)]
-pub struct NoSettings;
-
 /// How should the screen load its assets?
 /// If `LoadingStrategy` is Blocking, the screen's systems will not run until
 /// loading is complete. If it is Nonblocking, the screen's systems will run
