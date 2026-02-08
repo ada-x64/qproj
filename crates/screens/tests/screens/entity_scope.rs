@@ -6,6 +6,9 @@ use itertools::Itertools;
 
 use crate::prelude::*;
 
+// TODO: Test that screens which spawn entities in `load` are able to access those entities.
+// Don't run `load` until all the scoped entities are removed!
+
 #[derive(Component, PartialEq, Debug, Copy, Clone)]
 #[component(on_insert = Self::on_insert)]
 enum Target {

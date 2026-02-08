@@ -215,10 +215,11 @@ mod screens {
             }
         }
 
-        /// Loads the screen.
-        /// Has no effect if already in Loading or Ready states.
-        pub fn load(&mut self, tick: Tick) {
-            if matches!(self.state, ScreenState::Unloaded | ScreenState::Unloading) {
+        pub(crate) fn load(&mut self, tick: Tick) {
+            if matches!(
+                self.state,
+                ScreenState::Unloaded | ScreenState::Unloading | ScreenState::LoadQueued
+            ) {
                 if self.skip_load {
                     self.state = ScreenState::Ready
                 } else {
@@ -234,10 +235,20 @@ mod screens {
         pub fn unload(&mut self, tick: Tick) {
             if matches!(self.state, ScreenState::Loading | ScreenState::Ready) {
                 if self.skip_unload {
-                    self.state = ScreenState::Unloaded
+                    self.state = ScreenState::Cleanup;
                 } else {
                     self.state = ScreenState::Unloading;
                 }
+                self.needs_update = true;
+                self.changed_at = tick;
+            }
+        }
+        /// Queues the screen to load, unloading any other screens and waiting
+        /// until their cleanup is complete.
+        /// Only works if in the `Unloaded` state.
+        pub fn queue_load(&mut self, tick: Tick) {
+            if matches!(self.state, ScreenState::Unloaded) {
+                self.state = ScreenState::LoadQueued;
                 self.needs_update = true;
                 self.changed_at = tick;
             }
@@ -255,6 +266,14 @@ mod screens {
         /// Has no effect if already in Loading or Ready states.
         pub fn finish_unloading(&mut self, tick: Tick) {
             if matches!(self.state, ScreenState::Unloading) {
+                self.state = ScreenState::Cleanup;
+                self.needs_update = true;
+                self.changed_at = tick;
+            }
+        }
+
+        pub(crate) fn finish_cleanup(&mut self, tick: Tick) {
+            if matches!(self.state, ScreenState::Cleanup) {
                 self.state = ScreenState::Unloaded;
                 self.needs_update = true;
                 self.changed_at = tick;
@@ -344,6 +363,8 @@ mod schedules {
         Loading,
         /// Runs on [Update] when the screen has [ScreenState::Unloading]
         Unloading,
+        /// For internal use! Runs after [ScreenState::Unloading]. Used to clean up screen-scoped entities.
+        Cleanup,
         /// Can also be specified as [on_screen_load]
         OnLoad,
         /// Can also be specified as [on_screen_ready]
@@ -354,6 +375,7 @@ mod schedules {
         OnUnloaded,
     }
 
+    // TODO: This should use ScreenId internally.
     /// Wrapper around [ScreenSchedule]. Needed to make schedules unique per type.
     #[derive(ScheduleLabel, Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub struct ScreenScheduleLabel {
@@ -380,14 +402,18 @@ pub use schedules::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum ScreenState {
     #[default]
-    #[allow(missing_docs)]
+    /// The screen is currently down.
     Unloaded,
-    #[allow(missing_docs)]
+    /// The screen is waiting for cleanup to finish.
+    LoadQueued,
+    /// The screen is running any custom load systems.
     Loading,
-    #[allow(missing_docs)]
+    /// The screen is fully loaded and ready to execute its main systems.
     Ready,
-    #[allow(missing_docs)]
+    /// The screen is running any custom unload systems.
     Unloading,
+    /// For internal use. Cleaning up screen-scoped entities.
+    Cleanup,
 }
 
 mod system_params {
@@ -471,6 +497,10 @@ mod system_params {
         pub fn finish_unloading(&mut self) {
             let tick = self.change_tick;
             self.data.finish_unloading(tick);
+        }
+        pub(crate) fn finish_cleanup(&mut self) {
+            let tick = self.change_tick;
+            self.data.finish_cleanup(tick);
         }
         #[allow(missing_docs)]
         pub fn data(&self) -> &ScreenInfo {
@@ -670,6 +700,22 @@ mod helpers {
     /// See [OnScreenLoad]
     pub fn on_screen_load<S: Screen>() -> impl ScheduleLabel {
         OnScreenLoad(TypeId::of::<S>())
+    }
+
+    /// Label of a schedule which fires when the screen has begun its cleanup schedule.
+    /// Try to avoid spawning anything during this schedule.
+    #[derive(ScheduleLabel, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+    pub struct OnScreenCleanup(pub TypeId);
+    /// See [OnScreenCleanup]
+    pub fn on_screen_cleanup<S: Screen>() -> impl ScheduleLabel {
+        OnScreenCleanup(TypeId::of::<S>())
+    }
+    /// Label of a schedule which fires when the screen is waiting to load.
+    #[derive(ScheduleLabel, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+    pub struct OnScreenLoadQueued(pub TypeId);
+    /// See [OnScreenLoadQueued]
+    pub fn on_screen_load_queued<S: Screen>() -> impl ScheduleLabel {
+        OnScreenLoadQueued(TypeId::of::<S>())
     }
 
     /// Label of a schedule which fires when the screen has finished loading.
