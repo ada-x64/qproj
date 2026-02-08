@@ -6,7 +6,6 @@ mod console;
 mod gizmos;
 
 pub mod prelude {
-    pub use super::console::prelude::*;
     pub use super::gizmos::prelude::*;
 }
 
