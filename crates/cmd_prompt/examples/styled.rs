@@ -18,7 +18,7 @@ pub fn main() {
                     ..Default::default()
                 },
                 children![
-                    Console,
+                    Console::default(),
                     ConsolePrompt("<=================>\n=>".into()),
                     ConsoleUiSettings {
                         font_color: tailwind::AMBER_700.into(),

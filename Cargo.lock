@@ -4861,6 +4861,7 @@ dependencies = [
  "cosmic-text 0.16.0",
  "q_test_harness",
  "regex",
+ "serde",
  "shlex",
  "smallvec",
  "smol_str",

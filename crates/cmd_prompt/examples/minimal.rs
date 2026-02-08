@@ -1,6 +1,6 @@
 use bevy::prelude::*;
+use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 use q_cmd_prompt::prelude::*;
-// use bevy_inspector_egui::{bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 
 pub fn main() {
     let mut app = App::new();
@@ -11,8 +11,8 @@ pub fn main() {
         }),
         ..Default::default()
     }));
-    // app.add_plugins(EguiPlugin::default());
-    // app.add_plugins(WorldInspectorPlugin::default());
+    app.add_plugins(EguiPlugin::default());
+    app.add_plugins(WorldInspectorPlugin::default());
     app.add_plugins(ConsolePlugin);
     app.add_systems(Startup, |mut commands: Commands| {
         commands.spawn(Camera2d);
@@ -22,7 +22,7 @@ pub fn main() {
                 height: Val::Vh(100.),
                 ..Default::default()
             },
-            children![Console],
+            children![Console::default()],
         ));
     });
     app.run();

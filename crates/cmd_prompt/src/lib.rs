@@ -1,4 +1,5 @@
 mod actions;
+mod assets;
 mod commands;
 mod systems;
 #[cfg(test)]
@@ -8,6 +9,7 @@ mod ui;
 pub mod prelude {
     pub use super::ConsolePlugin;
     pub use super::actions::prelude::*;
+    pub use super::assets::*;
     pub use super::commands::prelude::*;
     pub use super::systems::*;
     pub use super::ui::prelude::*;
@@ -26,6 +28,7 @@ impl Plugin for ConsolePlugin {
             crate::ui::plugin,
             crate::commands::plugin,
             crate::actions::plugin,
+            crate::assets::plugin,
         ));
         app.add_systems(
             PostUpdate,

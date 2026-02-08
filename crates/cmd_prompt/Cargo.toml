@@ -18,6 +18,7 @@ strum = { version = "0.27.2", features = ["derive"] }
 thiserror = "2.0.17"
 tiny_bail = "0.7.0"
 variadics_please = "1.1.0"
+serde = { version = "1.0.228", features = ["derive"] }
 
 [features]
 dylib= ["bevy/dynamic_linking", "dep:bevy_dylib"]

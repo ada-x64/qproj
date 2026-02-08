@@ -28,6 +28,6 @@ pub fn plugin(app: &mut App) {
 }
 
 fn setup(mut commands: Commands, mut focus: ResMut<InputFocus>) {
-    let id = commands.spawn(Console).id();
+    let id = commands.spawn(Console::new(None, None)).id();
     focus.0 = Some(id);
 }

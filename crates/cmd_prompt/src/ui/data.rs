@@ -63,10 +63,6 @@ impl Default for ConsolePrompt {
     }
 }
 
-// TODO: Console history should be a file.
-#[derive(Component, Debug, Reflect, Clone, Default, Deref, DerefMut)]
-pub struct ConsoleHistory(Vec<String>);
-
 #[derive(Component, Debug, Reflect, Clone)]
 #[component(immutable, on_insert=Self::on_insert)]
 #[require(Node)]

@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use bevy::{
+    asset::io::embedded::GetAssetServer,
     ecs::{lifecycle::HookContext, world::DeferredWorld},
     input_focus::InputFocus,
 };
@@ -12,16 +13,47 @@ use bevy::{
     ConsoleBuffer,
     ConsoleBufferFlags,
     ConsolePrompt,
-    ConsoleHistory,
     ConsoleInputText,
     TextFont
 )]
 #[component(on_add=Self::on_add)]
-pub struct Console;
+pub struct Console {
+    /// Path to the history file. If unset, will not serialize.
+    history_path: Option<String>,
+    /// Asset ID of the console history.
+    history: Handle<ConsoleHistory>,
+    /// Path to the environment variables file. If unset, will not serialize.
+    vars_path: Option<String>,
+    /// Asset ID of the environment variables asset.
+    vars: Handle<ConsoleEnvVars>,
+}
 impl Console {
+    pub fn new(history_path: Option<String>, vars_path: Option<String>) -> Self {
+        Self {
+            history_path,
+            vars_path,
+            history: Handle::default(),
+            vars: Handle::default(),
+        }
+    }
     pub(crate) fn on_add<'w>(mut world: DeferredWorld<'w>, ctx: HookContext) {
+        // load assets
+        let this = world.get::<Console>(ctx.entity).unwrap();
+        let server = world.get_asset_server();
+        let history = if let Some(path) = this.history_path.as_ref() {
+            server.load::<ConsoleHistory>(path)
+        } else {
+            server.add(ConsoleHistory::default())
+        };
+        let vars = if let Some(path) = this.vars_path.as_ref() {
+            server.load::<ConsoleEnvVars>(path)
+        } else {
+            server.add(ConsoleEnvVars::default())
+        };
         let bundle = (
             Name::new("Console"),
+            ConsoleHistoryHandle(history),
+            ConsoleEnvVarsHandle(vars),
             Node {
                 display: Display::Flex,
                 flex_direction: FlexDirection::ColumnReverse,
