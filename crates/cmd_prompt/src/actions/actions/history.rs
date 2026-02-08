@@ -4,7 +4,8 @@ use crate::prelude::*;
 
 pub fn set_from_history(
     input: In<ConsoleActionSystemInput>,
-    mut q_console: Query<(&mut ConsoleInputText, &ConsoleHistory)>,
+    mut q_console: Query<(&mut ConsoleInputText, &ConsoleHistoryHandle)>,
+    mut assets: ResMut<Assets<ConsoleHistory>>,
     mut history_idx: Local<usize>,
     mut filtered_history: Local<Option<Vec<usize>>>,
     mut original_value: Local<Option<String>>,
@@ -26,7 +27,10 @@ pub fn set_from_history(
         _ => {}
     }
     if matches!(key, Key::ArrowUp | Key::ArrowDown) {
-        let (mut input_text, history) = q_console.get_mut(input.console_id).unwrap();
+        let (mut input_text, handle) = q_console.get_mut(input.console_id).unwrap();
+        let history = assets
+            .get_mut(handle.id())
+            .expect("History asset should exist");
         if filtered_history.is_none() {
             *original_value = Some(std::mem::take(&mut input_text.text));
             let f = history
@@ -127,11 +131,24 @@ mod test {
             );
         }
         app.add_step(3, |world: &mut World| {
-            let console_history = world.query::<&ConsoleHistory>().single_mut(world).unwrap();
-            assert_eq!(
-                **console_history,
-                vec!["0".to_string(), "1".to_string(), "2".to_string()]
-            );
+            let handle = world
+                .query::<&ConsoleHistoryHandle>()
+                .single_mut(world)
+                .cloned()
+                .unwrap();
+            world.resource_scope::<Assets<ConsoleHistory>, _>(|world, assets| {
+                if let Some(history) = assets.get(handle.id()) {
+                    let expected = vec!["0".to_string(), "1".to_string(), "2".to_string()];
+                    if **history != expected {
+                        error!("History did not match.");
+                        error!(?history);
+                        world.write_message(AppExit::error());
+                    }
+                } else {
+                    error!("Failed to get history");
+                    world.write_message(AppExit::error());
+                }
+            });
             world.write_message(key_input(
                 KeyCode::ArrowUp,
                 Key::ArrowUp,

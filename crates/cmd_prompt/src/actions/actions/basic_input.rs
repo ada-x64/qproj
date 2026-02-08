@@ -73,11 +73,18 @@ pub fn submit(
     mut query: Query<(
         &mut ConsoleBuffer,
         &mut ConsoleInputText,
-        &mut ConsoleHistory,
+        &ConsoleHistoryHandle,
     )>,
+    mut assets: ResMut<Assets<ConsoleHistory>>,
     mut commands: Commands,
 ) {
-    if let Ok((mut buffer, mut input_text, mut history)) = query.get_mut(input.console_id) {
+    if let Ok((mut buffer, mut input_text, history_handle)) = query.get_mut(input.console_id) {
+        let history = assets.get_mut(history_handle.id());
+        if history.is_none() {
+            error!("Failed to get console history!");
+            return;
+        }
+        let history = history.unwrap();
         buffer.write("\n").unwrap();
         if let Some(event) = SubmitEvent::new(input.console_id, input_text.text.clone()) {
             commands.trigger(event);
