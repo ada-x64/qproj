@@ -1,7 +1,10 @@
 use std::any::TypeId;
 
 pub use crate::prelude::*;
-use bevy::{ecs::system::ScheduleSystem, platform::collections::HashMap};
+use bevy::{
+    ecs::system::{ScheduleSystem, SystemIdMarker},
+    platform::collections::HashMap,
+};
 use strum::IntoEnumIterator;
 
 #[allow(missing_docs)]
@@ -140,6 +143,7 @@ where
         app.add_observer(on_switch_screen::<S>);
         app.add_observer(on_finish_loading::<S>);
         app.add_observer(on_finish_unloading::<S>);
+        app.add_systems(on_screen_cleanup::<S>(), clean_up_scoped_entities::<S>);
 
         // scope systems
         for (kind, schedule) in self.schedules.into_iter() {
@@ -159,7 +163,7 @@ where
                 ScreenSchedule::OnUnload => {
                     let label = schedule.label();
                     app.add_systems(on_screen_unload::<S>(), move |mut commands: Commands| {
-                        commands.run_schedule(label)
+                        commands.run_schedule(label);
                     });
                 }
                 ScreenSchedule::OnUnloaded => {
@@ -178,16 +182,25 @@ where
         // Lifecycle
         #[cfg(debug_assertions)]
         {
-            app.add_systems(on_screen_load::<S>(), || debug!("Loading {:?}", S::name()));
-            app.add_systems(on_screen_ready::<S>(), || debug!("Ready {:?}", S::name()));
+            app.add_systems(on_screen_load_queued::<S>(), || {
+                debug!("LoadQueued {:?}", S::name())
+            });
+            app.add_systems(on_screen_load::<S>(), || {
+                debug!("   Loading {:?}", S::name())
+            });
+            app.add_systems(on_screen_ready::<S>(), || {
+                debug!("     Ready {:?}", S::name())
+            });
             app.add_systems(on_screen_unload::<S>(), || {
-                debug!("Unloading {:?}", S::name())
+                debug!(" Unloading {:?}", S::name())
+            });
+            app.add_systems(on_screen_cleanup::<S>(), || {
+                debug!("   Cleanup {:?}", S::name())
             });
             app.add_systems(on_screen_unloaded::<S>(), || {
-                debug!("Unloaded {:?}", S::name())
+                debug!("  Unloaded {:?}", S::name())
             });
         }
-        app.add_systems(on_screen_unloaded::<S>(), clean_up_scoped_entities::<S>);
         debug!("Built {} (id={:?})", S::name(), id);
     }
 }
@@ -224,13 +237,22 @@ fn clean_up_scoped_entities<S: Screen>(
             )>,
         ),
     >,
-    top_levels: Query<Entity, (Or<(With<Observer>, With<Window>)>, Without<ChildOf>)>,
+    top_levels: Query<
+        Entity,
+        (
+            Or<(With<Observer>, With<Window>, With<SystemIdMarker>)>, // there are probably others i'm missing
+            Without<ChildOf>,
+        ),
+    >,
 ) {
     screen_scoped
         .iter()
         .filter(|c| !top_levels.iter().contains(c))
         .for_each(|e| {
-            commands.entity(e).detach_all_children().despawn();
+            if let Ok(mut cmds) = commands.get_entity(e) {
+                cmds.clear(); // removes all relationship components
+                cmds.despawn();
+            }
         });
-    screen_data.unload();
+    screen_data.finish_cleanup();
 }

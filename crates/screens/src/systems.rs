@@ -22,7 +22,7 @@ fn handle_switch_msg(
     for (key, value) in registry.iter_mut().enumerate() {
         if let Some(data) = value {
             if key == *msg_key.0 {
-                data.load(tick.this_run());
+                data.queue_load(tick.this_run());
             } else {
                 data.unload(tick.this_run());
             }
@@ -60,6 +60,13 @@ pub(crate) fn on_finish_unloading<S: Screen>(
 }
 
 fn run_schedules(mut data: ResMut<ScreenData>, mut commands: Commands, tick: SystemChangeTick) {
+    let all_clear = data.iter().filter_map(|info| info.as_ref()).all(|info| {
+        matches!(
+            info.state(),
+            ScreenState::Unloaded | ScreenState::LoadQueued
+        )
+    });
+
     for info in data.iter_mut().filter_map(|info| info.as_mut()) {
         match info.state() {
             ScreenState::Unloaded => {
@@ -72,6 +79,16 @@ fn run_schedules(mut data: ResMut<ScreenData>, mut commands: Commands, tick: Sys
                     commands.run_schedule(OnScreenUnloaded(info.type_id()));
                     info.needs_update = false;
                     info.changed_at = tick.this_run();
+                }
+            }
+            ScreenState::LoadQueued => {
+                if info.needs_update {
+                    commands.run_schedule(OnScreenLoadQueued(info.type_id()));
+                    info.needs_update = false;
+                    info.changed_at = tick.this_run();
+                }
+                if all_clear {
+                    info.load(tick.this_run());
                 }
             }
             ScreenState::Loading => {
@@ -113,6 +130,13 @@ fn run_schedules(mut data: ResMut<ScreenData>, mut commands: Commands, tick: Sys
                     info.changed_at = tick.this_run();
                 }
             }
+            ScreenState::Cleanup => {
+                if info.needs_update {
+                    commands.run_schedule(OnScreenCleanup(info.type_id()));
+                    info.needs_update = false;
+                    info.changed_at = tick.this_run();
+                }
+            }
         }
     }
 }
@@ -145,7 +169,7 @@ pub(crate) fn initial_screen(
     screens: Screens,
 ) {
     if let Some(initial_screen) = (*initial_screen).as_ref() {
-        let info = screens.get_by_name(initial_screen).unwrap();
+        let info = r!(screens.get_by_name(initial_screen));
         commands.write_message(SwitchToScreenMsg(info.screen_id()));
     }
 }

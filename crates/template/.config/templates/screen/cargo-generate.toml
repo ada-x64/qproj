@@ -1,5 +1,0 @@
-[placeholders]
-name = {type="string", prompt="Screen name?", default="screen"}
-assets = {type="bool", prompt="Require assets?" }
-settings = {type="bool", prompt="Require settings?" }
-strategy = {type="string", prompt="Loading strategy?", choices=["Blocking", "NonBlocking"] }

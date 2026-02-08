@@ -53,7 +53,12 @@ macro_rules! impl_test_fns {
     }
 }
 
-gen_test_fns!(on_screen_load, on_screen_ready, on_screen_unloaded);
+gen_test_fns!(
+    on_screen_load,
+    on_screen_ready,
+    on_screen_unloaded,
+    on_screen_cleanup
+);
 
 macro_rules! progress_by {
     ($name:ident) => {
@@ -115,18 +120,6 @@ impl Screen for LifecycleScreen {
                             commands.write_message(AppExit::error());
                         }
                     },
-                    |r: Res<LifecycleStatus>, r2: Res<TestRes>, mut commands: Commands| {
-                        let ok = r.ok() && r2.ok();
-                        if ok {
-                            info!("OK!");
-                            commands.write_message(AppExit::Success);
-                        } else {
-                            error!("Did not reach all expected points.");
-                            error!(?r);
-                            error!(?r2);
-                            commands.write_message(AppExit::error());
-                        }
-                    },
                 )
                     .chain(),
             );
@@ -141,6 +134,27 @@ fn lifecycle() {
     app.register_screen::<EmptyScreen>();
     app.init_resource::<LifecycleStatus>();
     app.init_resource::<TestRes>();
-    impl_test_fns!(app, on_screen_load, on_screen_ready, on_screen_unloaded);
+    impl_test_fns!(
+        app,
+        on_screen_load,
+        on_screen_ready,
+        on_screen_unloaded,
+        on_screen_cleanup
+    );
+    app.add_systems(
+        on_screen_ready::<EmptyScreen>(),
+        |r: Res<LifecycleStatus>, r2: Res<TestRes>, mut commands: Commands| {
+            let ok = r.ok() && r2.ok();
+            if ok {
+                info!("OK!");
+                commands.write_message(AppExit::Success);
+            } else {
+                error!("Did not reach all expected points.");
+                error!(?r);
+                error!(?r2);
+                commands.write_message(AppExit::error());
+            }
+        },
+    );
     assert!(app.run().is_success());
 }

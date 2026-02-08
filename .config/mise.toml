@@ -1,5 +1,3 @@
-experimental_monorepo_root = true
-
 [env]
 _.source = ".config/env.sh"
 
