@@ -11,12 +11,12 @@ mod assets_impl {
 
     /// Environment variables for this console. Saved as '.env' files on disk.
     /// Follows conventional '.env' format.
-    #[derive(Asset, Default, Component, Debug, Deref, DerefMut, Reflect, Clone)]
+    #[derive(Asset, Default, Component, Debug, Deref, DerefMut, Reflect, Clone, PartialEq)]
     pub struct ConsoleEnvVars(pub HashMap<String, String>);
 
     /// Command history of this [Console]. Saved as '.history' files on disk.
     /// Simple line-separated list of executed commands.
-    #[derive(Default, Asset, Debug, Deref, DerefMut, Reflect, Clone)]
+    #[derive(Default, Asset, Debug, Deref, DerefMut, Reflect, Clone, PartialEq)]
     pub struct ConsoleHistory(pub Vec<String>);
 }
 pub use assets_impl::*;
@@ -174,7 +174,10 @@ mod loaders {
             let mut buf = String::new();
             reader.read_to_string(&mut buf).await?;
             // todo: not memory efficient
-            let vec = buf.split('\n').map(|s| s.to_owned()).collect::<Vec<_>>();
+            let vec = buf
+                .split('\n')
+                .filter_map(|s| (!s.is_empty()).then_some(s.to_owned()))
+                .collect::<Vec<_>>();
             Ok(ConsoleHistory(vec))
         }
 
@@ -198,4 +201,104 @@ pub fn plugin(app: &mut App) {
         PreUpdate,
         ConsoleAssetHandle::<ConsoleHistory>::check_assets,
     );
+}
+
+#[cfg(test)]
+mod test {
+    use bevy::asset::AssetLoadFailedEvent;
+
+    use super::*;
+
+    fn test_asset_load<T: Asset + Default + PartialEq, M>(
+        path: String,
+        callback: impl IntoSystem<In<AssetId<T>>, (), M> + 'static,
+    ) {
+        let mut app = App::new();
+        app.add_plugins(crate::test_harness::plugin);
+        let callback = app.register_system(callback);
+        app.add_systems(Startup, move |mut commands: Commands| {
+            info!("spawning...");
+            commands.spawn(ConsoleAssetHandle::<T>::new(path.to_string()));
+        });
+        app.add_systems(
+            Update,
+            |mut commands: Commands,
+             mut reader: MessageReader<AssetLoadFailedEvent<T>>,
+             this: Query<&ConsoleAssetHandle<T>>| {
+                info!("reading fail msgs...");
+                let this = this.single().unwrap();
+                for msg in reader.read() {
+                    if this.handle().id() == msg.id
+                        && let AssetLoadError::AssetReaderError(asset_reader_error) = &msg.error
+                    {
+                        error!(?asset_reader_error);
+                        commands.write_message(AppExit::error());
+                    }
+                }
+            },
+        );
+        app.add_systems(
+            Update,
+            move |mut reader: MessageReader<AssetEvent<T>>,
+                  this: Query<&ConsoleAssetHandle<T>>,
+                  assets: Res<Assets<T>>,
+                  mut commands: Commands| {
+                info!("reading event msgs...");
+                let this = this.single().unwrap();
+                for msg in reader.read() {
+                    debug!(?msg);
+                    if let AssetEvent::LoadedWithDependencies { id } = msg
+                        && this.handle().id() == *id
+                    {
+                        let handle = this.handle();
+                        if let Some(asset) = assets.get(handle)
+                            && *asset != T::default()
+                        {
+                            commands.run_system_with(callback, *id);
+                        }
+                    }
+                }
+            },
+        );
+        assert!(app.run().is_success())
+    }
+
+    #[test]
+    fn test_env_var_load() {
+        test_asset_load(
+            "console.env".to_string(),
+            |input: In<AssetId<ConsoleEnvVars>>,
+             assets: Res<Assets<ConsoleEnvVars>>,
+             mut commands: Commands| {
+                let asset = assets.get(*input).unwrap();
+                info!(?asset);
+                let mut ok = true;
+                ok = ok && asset.get("FOO") == Some(&"BAR".to_string());
+                ok = ok && asset.get("HI") == Some(&"HELLO".to_string());
+                if ok {
+                    commands.write_message(AppExit::Success);
+                } else {
+                    commands.write_message(AppExit::error());
+                }
+            },
+        );
+    }
+    #[test]
+    fn test_history_load() {
+        test_asset_load(
+            "console.history".to_string(),
+            |input: In<AssetId<ConsoleHistory>>,
+             assets: Res<Assets<ConsoleHistory>>,
+             mut commands: Commands| {
+                let asset = assets.get(*input).unwrap();
+                info!(?asset);
+                let ok = asset.0 == ["1", "2", "3", "4", "5"];
+                if ok {
+                    commands.write_message(AppExit::Success);
+                } else {
+                    commands.write_message(AppExit::error());
+                }
+            },
+        );
+    }
 }

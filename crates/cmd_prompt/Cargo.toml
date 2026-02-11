@@ -6,7 +6,6 @@ edition = "2024"
 [dependencies]
 bevy = '0.18.0'
 bevy-inspector-egui = "0.36.0"
-q_test_harness = {path = "../test_harness"}
 bevy_dylib={optional=true, version="0.18.0"}
 clap = { version = "4.5.53", features = ["derive"] }
 cosmic-text = "0.16.0"
@@ -19,6 +18,9 @@ thiserror = "2.0.17"
 tiny_bail = "0.7.0"
 variadics_please = "1.1.0"
 serde = { version = "1.0.228", features = ["derive"] }
+
+[dev-dependencies]
+q_test_harness = {path = "../test_harness", version="^0.1"}
 
 [features]
 dylib= ["bevy/dynamic_linking", "dep:bevy_dylib"]

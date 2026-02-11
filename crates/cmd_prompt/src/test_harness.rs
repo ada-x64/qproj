@@ -1,6 +1,6 @@
 use bevy::{
-    image::TextureAtlasPlugin, input::InputPlugin, input_focus::InputFocus,
-    render::texture::TexturePlugin, text::TextPlugin, ui::UiPlugin,
+    image::TextureAtlasPlugin, input::InputPlugin, render::texture::TexturePlugin,
+    text::TextPlugin, ui::UiPlugin,
 };
 use q_test_harness::{TestRunnerPlugin, TestRunnerTimeout};
 
@@ -9,7 +9,6 @@ use crate::prelude::*;
 pub fn plugin(app: &mut App) {
     app.add_plugins((
         TestRunnerPlugin::default(),
-        ConsolePlugin,
         DefaultPickingPlugins,
         WindowPlugin {
             primary_window: None,
@@ -22,12 +21,7 @@ pub fn plugin(app: &mut App) {
         TextureAtlasPlugin,
         ImagePlugin::default(),
         TexturePlugin,
+        ConsolePlugin,
     ));
-    app.add_systems(Startup, setup);
     app.insert_resource(TestRunnerTimeout(1.));
-}
-
-fn setup(mut commands: Commands, mut focus: ResMut<InputFocus>) {
-    let id = commands.spawn(Console).id();
-    focus.0 = Some(id);
 }

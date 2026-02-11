@@ -72,6 +72,7 @@ mod test {
     use bevy::input::ButtonState;
     use bevy::input::keyboard::Key;
     use bevy::input::keyboard::KeyboardInput;
+    use bevy::input_focus::InputFocus;
     use q_test_harness::prelude::*;
 
     fn key_input(key_code: KeyCode, logical_key: Key, state: ButtonState) -> KeyboardInput {
@@ -104,6 +105,13 @@ mod test {
     fn test_history() {
         let mut app = App::new();
         app.add_plugins(test_harness::plugin);
+        app.add_systems(
+            Startup,
+            |mut commands: Commands, mut focus: ResMut<InputFocus>| {
+                let id = commands.spawn(Console).id();
+                focus.0 = Some(id);
+            },
+        );
         for step in 0..3 {
             app.add_step(
                 step,
