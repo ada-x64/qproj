@@ -1,4 +1,4 @@
-use bevy::input::keyboard::Key;
+use bevy::{asset::AsAssetId, input::keyboard::Key};
 
 use crate::prelude::*;
 
@@ -73,13 +73,13 @@ pub fn submit(
     mut query: Query<(
         &mut ConsoleBuffer,
         &mut ConsoleInputText,
-        &ConsoleHistoryHandle,
+        &ConsoleAssetHandle<ConsoleHistory>,
     )>,
     mut assets: ResMut<Assets<ConsoleHistory>>,
     mut commands: Commands,
 ) {
     if let Ok((mut buffer, mut input_text, history_handle)) = query.get_mut(input.console_id) {
-        let history = assets.get_mut(history_handle.id());
+        let history = assets.get_mut(history_handle.as_asset_id());
         if history.is_none() {
             error!("Failed to get console history!");
             return;

@@ -1,95 +1,201 @@
 use bevy::{
-    asset::{AssetLoader, AsyncReadExt},
+    asset::{AssetLoadError, AssetLoader, AsyncReadExt, io::embedded::GetAssetServer},
+    ecs::{component::Mutable, lifecycle::HookContext, world::DeferredWorld},
     platform::collections::HashMap,
 };
 
 use crate::prelude::*;
 
-/// Environment variables for this console. Saved as '.env' files on disk.
-#[derive(Asset, Default, Component, Debug, Deref, DerefMut, Reflect)]
-pub struct ConsoleEnvVars(HashMap<String, String>);
+mod assets_impl {
+    use super::*;
 
-/// Wrapper for the [Handle] of the [ConsoleEnvVarsAsset] for this [Console]
-#[derive(Component, Debug, Deref, DerefMut, Reflect)]
-pub struct ConsoleEnvVarsHandle(pub Handle<ConsoleEnvVars>);
+    /// Environment variables for this console. Saved as '.env' files on disk.
+    /// Follows conventional '.env' format.
+    #[derive(Asset, Default, Component, Debug, Deref, DerefMut, Reflect, Clone)]
+    pub struct ConsoleEnvVars(pub HashMap<String, String>);
 
-/// Loader for the [ConsoleEnvVarsAsset]
-#[derive(Reflect, Default, Debug)]
-pub struct ConsoleEnvVarsLoader;
-impl AssetLoader for ConsoleEnvVarsLoader {
-    type Asset = ConsoleEnvVars;
-    type Settings = ();
-    type Error = BevyError;
+    /// Command history of this [Console]. Saved as '.history' files on disk.
+    /// Simple line-separated list of executed commands.
+    #[derive(Default, Asset, Debug, Deref, DerefMut, Reflect, Clone)]
+    pub struct ConsoleHistory(pub Vec<String>);
+}
+pub use assets_impl::*;
 
-    async fn load(
-        &self,
-        reader: &mut dyn bevy::asset::io::Reader,
-        _settings: &(),
-        load_context: &mut bevy::asset::LoadContext<'_>,
-    ) -> Result<Self::Asset, Self::Error> {
-        let mut buf = String::new();
-        reader.read_to_string(&mut buf).await?;
-        let map = buf
-            .split('\n')
-            .filter_map(|s| {
-                let mut split = s.split('=').map(|s| s.to_string()).collect::<Vec<_>>();
-                if split.len() == 2 {
-                    Some((std::mem::take(&mut split[0]), std::mem::take(&mut split[1])))
+mod wrappers {
+    use bevy::asset::{AsAssetId, AssetLoadFailedEvent};
+
+    use super::*;
+
+    /// A handle to some asset. In particular, this is used with [ConsoleEnvVars] and [ConsoleHistory]
+    #[derive(Component, Debug, Reflect, Default, Clone)]
+    #[component(on_insert=Self::on_insert)]
+    pub struct ConsoleAssetHandle<A: Asset + Default> {
+        path: Option<String>,
+        handle: Handle<A>,
+    }
+    impl<A: Asset + Default> ConsoleAssetHandle<A> {
+        pub fn new(path: String) -> Self {
+            Self {
+                path: Some(path),
+                handle: Handle::default(),
+            }
+        }
+
+        pub fn from_handle(handle: Handle<A>) -> Self {
+            Self { path: None, handle }
+        }
+
+        pub fn path(&self) -> Option<&String> {
+            self.path.as_ref()
+        }
+
+        pub fn handle(&self) -> &Handle<A> {
+            &self.handle
+        }
+
+        fn on_insert(mut world: DeferredWorld, ctx: HookContext) {
+            let handle = {
+                let server = world.get_asset_server();
+                let this = world.get::<Self>(ctx.entity).unwrap();
+                if let Some(path) = this.path() {
+                    server.load(path.clone())
                 } else {
-                    warn!(
-                        "Got invalid line while reading {}:\n'{}'",
-                        load_context.path(),
-                        s
-                    );
-                    None
+                    server.add(A::default())
                 }
-            })
-            .collect::<HashMap<_, _>>();
-        Ok(ConsoleEnvVars(map))
+            };
+            let mut this = world.get_mut::<Self>(ctx.entity).unwrap();
+            this.handle = handle;
+        }
+    }
+    impl<A: Asset + Default> AutoCreateAsset for ConsoleAssetHandle<A> {
+        type Target = A;
+        fn set_handle(&mut self, handle: Handle<A>) {
+            self.handle = handle
+        }
+        fn id(&self) -> AssetId<Self::Target> {
+            self.handle.id()
+        }
+    }
+    impl<A: Asset + Default> AsAssetId for ConsoleAssetHandle<A> {
+        type Asset = A;
+        fn as_asset_id(&self) -> AssetId<A> {
+            self.handle.id()
+        }
     }
 
-    fn extensions(&self) -> &[&str] {
-        &["env"]
+    /// This trait will automatically create an asset on disk if it does not exist at load time.
+    pub trait AutoCreateAsset: Component<Mutability = Mutable> + Sized {
+        type Target: Asset + Default;
+
+        fn set_handle(&mut self, handle: Handle<Self::Target>);
+        fn id(&self) -> AssetId<Self::Target>;
+
+        fn check_assets(
+            mut reader: MessageReader<AssetLoadFailedEvent<Self::Target>>,
+            mut these: Query<&mut Self>,
+            server: Res<AssetServer>,
+        ) {
+            for val in reader.read() {
+                if let AssetLoadError::AssetReaderError(_) = val.error {
+                    // TODO: try writing an empty version to the path.
+                    warn!(
+                        "Failed to load path {:?}
+    NOTE: Eventually, this will result in the asset being automatically created on disk or in the server.
+    However, this relies on the AssetSaver struct, which is slated to release in Bevy 0.19.
+    For now, the asset is added with its default value, but _not_ saved to disk.", val.path
+                    );
+                    if let Some(mut this) = these.iter_mut().find(|this| this.id() == val.id) {
+                        this.set_handle(server.add(Self::Target::default()));
+                    }
+                }
+            }
+        }
     }
 }
+pub use wrappers::*;
 
-/// Command history of this [Console].
-#[derive(Default, Asset, Debug, Deref, DerefMut, Reflect)]
-pub struct ConsoleHistory(Vec<String>);
+mod loaders {
+    use super::*;
 
-/// Wrapper around the [Handle] for the [ConsoleHistoryAsset] for this [Console]
-#[derive(Component, Debug, Deref, DerefMut, Reflect, Clone)]
-pub struct ConsoleHistoryHandle(pub Handle<ConsoleHistory>);
+    /// Loader for [ConsoleEnvVars]
+    #[derive(Reflect, Default, Debug)]
+    pub struct ConsoleEnvVarsLoader;
+    impl AssetLoader for ConsoleEnvVarsLoader {
+        type Asset = ConsoleEnvVars;
+        type Settings = ();
+        type Error = BevyError;
 
-/// Loader for the [ConsoleHistoryAsset]
-#[derive(Reflect, Default, Debug)]
-pub struct ConsoleHistoryLoader;
-impl AssetLoader for ConsoleHistoryLoader {
-    type Asset = ConsoleHistory;
-    type Settings = ();
-    type Error = BevyError;
+        async fn load(
+            &self,
+            reader: &mut dyn bevy::asset::io::Reader,
+            _settings: &(),
+            load_context: &mut bevy::asset::LoadContext<'_>,
+        ) -> Result<Self::Asset, Self::Error> {
+            let mut buf = String::new();
+            reader.read_to_string(&mut buf).await?;
+            let map = buf
+                .split('\n')
+                .filter_map(|s| {
+                    let mut split = s.split('=').map(|s| s.to_string()).collect::<Vec<_>>();
+                    if split.len() == 2 {
+                        Some((std::mem::take(&mut split[0]), std::mem::take(&mut split[1])))
+                    } else {
+                        warn!(
+                            "Got invalid line while reading {}:\n'{}'",
+                            load_context.path(),
+                            s
+                        );
+                        None
+                    }
+                })
+                .collect::<HashMap<_, _>>();
+            Ok(ConsoleEnvVars(map))
+        }
 
-    async fn load(
-        &self,
-        reader: &mut dyn bevy::asset::io::Reader,
-        _settings: &(),
-        _load_context: &mut bevy::asset::LoadContext<'_>,
-    ) -> Result<Self::Asset, Self::Error> {
-        let mut buf = String::new();
-        reader.read_to_string(&mut buf).await?;
-        // todo: not memory efficient
-        let vec = buf.split('\n').map(|s| s.to_owned()).collect::<Vec<_>>();
-        Ok(ConsoleHistory(vec))
+        fn extensions(&self) -> &[&str] {
+            &["env"]
+        }
     }
 
-    fn extensions(&self) -> &[&str] {
-        &["hist"]
+    /// Loader for [ConsoleHistory]
+    #[derive(Reflect, Default, Debug)]
+    pub struct ConsoleHistoryLoader;
+    impl AssetLoader for ConsoleHistoryLoader {
+        type Asset = ConsoleHistory;
+        type Settings = ();
+        type Error = BevyError;
+
+        async fn load(
+            &self,
+            reader: &mut dyn bevy::asset::io::Reader,
+            _settings: &(),
+            _load_context: &mut bevy::asset::LoadContext<'_>,
+        ) -> Result<Self::Asset, Self::Error> {
+            let mut buf = String::new();
+            reader.read_to_string(&mut buf).await?;
+            // todo: not memory efficient
+            let vec = buf.split('\n').map(|s| s.to_owned()).collect::<Vec<_>>();
+            Ok(ConsoleHistory(vec))
+        }
+
+        fn extensions(&self) -> &[&str] {
+            &["hist"]
+        }
     }
 }
+pub use loaders::*;
 
 pub fn plugin(app: &mut App) {
     app.register_asset_loader(ConsoleHistoryLoader);
     app.init_asset::<ConsoleHistory>();
     app.register_asset_loader(ConsoleEnvVarsLoader);
     app.init_asset::<ConsoleEnvVars>();
+    app.add_systems(
+        PreUpdate,
+        ConsoleAssetHandle::<ConsoleEnvVars>::check_assets,
+    );
+    app.add_systems(
+        PreUpdate,
+        ConsoleAssetHandle::<ConsoleHistory>::check_assets,
+    );
 }
