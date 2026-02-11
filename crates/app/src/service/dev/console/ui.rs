@@ -87,8 +87,10 @@ pub fn plugin(app: &mut App) {
                 children![(
                     Name::new("Console"),
                     Visibility::Hidden,
+                    ConsolePrompt("\n\n> ".into()),
                     Console,
-                    ConsolePrompt("\n\n> ".into())
+                    ConsoleAssetHandle::<ConsoleHistory>::new("dev/console.history".to_string()),
+                    ConsoleAssetHandle::<ConsoleEnvVars>::new("dev/console.env".to_string()),
                 )],
             )],
         ));

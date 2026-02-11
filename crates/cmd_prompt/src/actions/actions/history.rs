@@ -4,7 +4,7 @@ use crate::prelude::*;
 
 pub fn set_from_history(
     input: In<ConsoleActionSystemInput>,
-    mut q_console: Query<(&mut ConsoleInputText, &ConsoleHistoryHandle)>,
+    mut q_console: Query<(&mut ConsoleInputText, &ConsoleAssetHandle<ConsoleHistory>)>,
     mut assets: ResMut<Assets<ConsoleHistory>>,
     mut history_idx: Local<usize>,
     mut filtered_history: Local<Option<Vec<usize>>>,
@@ -132,7 +132,7 @@ mod test {
         }
         app.add_step(3, |world: &mut World| {
             let handle = world
-                .query::<&ConsoleHistoryHandle>()
+                .query::<&ConsoleAssetHandle<ConsoleHistory>>()
                 .single_mut(world)
                 .cloned()
                 .unwrap();
