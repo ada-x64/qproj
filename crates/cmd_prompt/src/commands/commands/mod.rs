@@ -2,6 +2,7 @@ use crate::prelude::*;
 
 mod clear;
 mod echo;
+mod set;
 mod show;
 
 pub mod prelude {
@@ -9,5 +10,5 @@ pub mod prelude {
 }
 
 pub fn plugin(app: &mut App) {
-    app.add_plugins((show::plugin, echo::plugin, clear::plugin));
+    app.add_plugins((show::plugin, echo::plugin, clear::plugin, set::plugin));
 }
