@@ -70,22 +70,21 @@ pub fn write_char(
 
 pub fn submit(
     input: In<ConsoleActionSystemInput>,
-    mut query: Query<(
-        &mut ConsoleBuffer,
-        &mut ConsoleInputText,
-        &ConsoleAssetHandle<ConsoleHistory>,
-    )>,
+    mut query: Query<(&mut ConsoleInputText, &ConsoleAssetHandle<ConsoleHistory>)>,
     mut assets: ResMut<Assets<ConsoleHistory>>,
     mut commands: Commands,
 ) {
-    if let Ok((mut buffer, mut input_text, history_handle)) = query.get_mut(input.console_id) {
+    if let Ok((mut input_text, history_handle)) = query.get_mut(input.console_id) {
         let history = assets.get_mut(history_handle.as_asset_id());
         if history.is_none() {
             error!("Failed to get console history!");
             return;
         }
         let history = history.unwrap();
-        buffer.write("\n").unwrap();
+        commands.write_message(ConsoleWriteMsg {
+            message: "\n".to_string(),
+            console_id: input.console_id,
+        });
         if let Some(event) = SubmitEvent::new(input.console_id, input_text.text.clone()) {
             commands.trigger(event);
         } else {
