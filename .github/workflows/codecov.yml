@@ -55,7 +55,7 @@ jobs:
       - uses: taiki-e/install-action@cargo-llvm-cov
       - uses: taiki-e/install-action@nextest
       - name: Collect coverage data
-        run: cargo llvm-cov nextest -p ${{ matrix.package }} --lcov --output-path report.lcov
+        run: cargo llvm-cov nextest --manifest-path=./workspace/Cargo.toml -p ${{ matrix.package }} --lcov --output-path report.lcov
 
       - name: Upload to coveralls
         uses: coverallsapp/github-action@v2.3.6

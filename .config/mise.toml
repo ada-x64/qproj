@@ -30,7 +30,7 @@ alias = "deny"
 tools = { "cargo:cargo-deny" = "latest" }
 description = "Check dependencies with cargo-deny"
 run = """
-cargo deny --workspace \
+cargo deny --workspace --manifest-path=./workspace/Cargo.toml \
     -L error \
     check advisories bans sources \
     --hide-inclusion-graph
@@ -47,7 +47,7 @@ run = """
 #!/bin/bash
 RUSTC_WRAPPER=""
 if [[ $usage_pkg != "''" ]]; then PKG="-p $usage_pkg"; fi
-bevy_lint --all-features --target-dir=target/bevy_lint $FIX
+bevy_lint --manifest-path=./workspace/Cargo.toml --all-features --target-dir=target/bevy_lint $FIX
 """
 
 [tasks.clippy]
@@ -59,7 +59,7 @@ usage = """
 run = """
 FIX=${usage_fix:+--fix}
 if [[ $usage_pkg != "''" ]]; then PKG="-p $usage_pkg"; fi
-cargo --color=always clippy --all-features --target-dir=target/clippy $FIX $PKG
+cargo --color=always clippy --manifest-path=./workspace/Cargo.toml --all-features --target-dir=target/clippy $FIX $PKG
 """
 
 [tasks.check]
@@ -112,7 +112,7 @@ usage = """
     arg "[rest]" default="r --workspace" help="Passed directly to `cargo nextest`"
 """
 run = """
-cargo nextest ${usage_rest}
+cargo nextest --manifest-path=./workspace/Cargo.toml ${usage_rest}
 """
 
 [tasks.coverage]
@@ -122,7 +122,7 @@ usage = """
     arg "[rest]" default="--html --open"
 """
 run = """
-RUSTFLAGS=-Zcodegen-backend=llvm cargo llvm-cov nextest --html --open
+RUSTFLAGS=-Zcodegen-backend=llvm cargo llvm-cov nextest --html --open --manifest-path=./workspace/Cargo.toml
 """
 
 # LOCAL #######################################################################
@@ -134,7 +134,7 @@ usage = """
     arg "[args]" help="Args passed to cargo build. Run `cargo build --help` for more info." var=#true
 """
 run = """
-cargo build ${usage_args}
+cargo build --manifest-path=./workspace/Cargo.toml ${usage_args}
 """
 
 [tasks.play]
@@ -144,5 +144,5 @@ usage = """
     arg "[args]" help="Args passed to cargo run. Run `cargo run --help` for more info." var=#true
 """
 run = """
-cargo run ${usage_args}
+cargo run --manifest-path=./workspace/Cargo.toml ${usage_args}
 """
