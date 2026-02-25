@@ -4859,6 +4859,7 @@ dependencies = [
  "bevy_dylib",
  "clap",
  "cosmic-text 0.16.0",
+ "itertools 0.14.0",
  "q_test_harness",
  "regex",
  "serde",
