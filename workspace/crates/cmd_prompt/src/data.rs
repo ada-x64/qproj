@@ -163,27 +163,5 @@ pub mod events {
         /// Jump to the last line. Sets scroll value to 0.
         JumpToBottom,
     }
-    impl TerminalMessageKind {
-        /// Priorty in which messages should be handled. Typically buffer
-        /// changes go first, then visual changes are applied.
-        /// Lower priority means it goes first.
-        pub fn priority(&self) -> usize {
-            match self {
-                TerminalMessageKind::Writeln(_) => 0,
-                TerminalMessageKind::Scroll(_) | TerminalMessageKind::JumpToBottom => 90,
-                TerminalMessageKind::Reflow => 100,
-            }
-        }
-    }
-    impl PartialOrd for TerminalMessageKind {
-        fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-            Some(self.cmp(other))
-        }
-    }
-    impl Ord for TerminalMessageKind {
-        fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-            self.priority().cmp(&other.priority())
-        }
-    }
 }
 pub use events::*;
