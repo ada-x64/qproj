@@ -1,5 +1,3 @@
-use itertools::Itertools;
-
 use crate::prelude::*;
 
 pub fn handle_messages(mut messages: MessageReader<TerminalMessage>, mut commands: Commands) {
@@ -9,88 +7,97 @@ pub fn handle_messages(mut messages: MessageReader<TerminalMessage>, mut command
         debug!(?msg);
         match &msg.kind {
             TerminalMessageKind::Reflow => {
-                to_reflow.push(msg.target);
+                if !to_reflow.contains(&msg.target) {
+                    to_reflow.push(msg.target);
+                }
             }
             TerminalMessageKind::Writeln(string) => {
                 commands.run_system_cached_with(writeln, (msg.target, string.clone()));
             }
             TerminalMessageKind::Scroll(direction) => {
                 commands.run_system_cached_with(scroll, (msg.target, *direction));
-                to_reflow.push(msg.target);
             }
             TerminalMessageKind::JumpToBottom => {
                 commands.run_system_cached_with(jump_to_bottom, msg.target);
-                to_reflow.push(msg.target);
             }
         }
     }
-    for target in to_reflow.into_iter().unique() {
+    for target in to_reflow.into_iter() {
         commands.run_system_cached_with(reflow, target);
     }
     messages.clear();
 }
 
-// TODO: This completely replaces the data every time, but
-// that's not efficient. we should only replace the items that are not
-// already correctly populated. -- but is that worthwhile for the small
-// screen space this will take up?
+/// Takes a TerminalLine and returns a vec of newly spawned TerminalRows.
+fn flow_line(
+    commands: &mut Commands,
+    line_id: Entity,
+    text: &str,
+    term_id: Entity,
+    num_cols: usize,
+) -> Vec<Entity> {
+    let mut res = vec![];
+    let mut offset = 0;
+    while offset < text.len() {
+        let new_row = TerminalRow::new(line_id, offset, term_id);
+        let id = commands.spawn(new_row).id();
+        res.push(id);
+        offset += num_cols;
+    }
+    res
+}
+
+/// Reflows the entire underlying buffer.
 fn reflow(
-    target: In<Entity>,
-    terminfo: Query<(
-        &TerminalLines,
-        Ref<TerminalRows>,
-        Ref<TerminalCols>,
-        Ref<TerminalScrollPos>,
-    )>,
+    term_id: In<Entity>,
+    terminfo: Query<(&TerminalLines, &TerminalCols)>,
     lines_q: Query<&TerminalLine>,
     mut commands: Commands,
 ) {
     trace!("Reflow");
-    let (line_reltarget, rows, cols, scroll_pos) = r!(terminfo.get(*target));
-    let mut new_rows = vec![];
-    let mut line_idx = **scroll_pos;
-    let mut temp = vec![];
-    while new_rows.len() < **rows {
-        if let Some(line_id) = line_reltarget.get(line_idx)
-            && let Ok(line) = lines_q.get(*line_id)
-        {
-            let mut offset = 0;
-            while new_rows.len() < **rows && offset < line.len() {
-                let new_row = TerminalRow::new(*line_id, offset, *target);
-                let id = commands.spawn(new_row).id();
-                temp.push(id);
-                offset += **cols;
-            }
-            temp.reverse();
-            new_rows.append(&mut temp);
-        } else {
-            let id = commands.spawn(TerminalRow::empty(*target)).id();
-            new_rows.push(id);
-        }
-        line_idx += 1;
-    }
-    new_rows.reverse();
+    let (line_reltarget, cols) = r!(terminfo.get(*term_id));
+    // todo: batch process this in parallel
+    let new_rows = line_reltarget
+        .iter()
+        .filter_map(|line_id| {
+            let line = r!(lines_q.get(line_id));
+            Some(flow_line(&mut commands, line_id, line, *term_id, **cols))
+        })
+        .flatten()
+        .collect::<Vec<Entity>>();
+
     commands
-        .entity(*target)
+        .entity(*term_id)
         .replace_related::<TerminalRow>(&new_rows);
 }
 
-fn writeln(In((target, line)): In<(Entity, String)>, mut commands: Commands) {
+fn writeln(
+    In((term_id, text)): In<(Entity, String)>,
+    mut commands: Commands,
+    q_cols: Query<&TerminalCols>,
+) {
     trace!("writeline");
-    let child = commands.spawn(TerminalLine::new(line, target)).id();
+    let num_cols = r!(q_cols.get(term_id));
+    let new_line_id = commands
+        .spawn(TerminalLine::new(text.clone(), term_id))
+        .id();
+    let new_rows = flow_line(&mut commands, new_line_id, &text, term_id, **num_cols);
     commands
-        .entity(target)
-        .add_one_related::<TerminalLine>(child);
+        .entity(term_id)
+        .add_one_related::<TerminalLine>(new_line_id);
+    commands
+        .entity(term_id)
+        .add_related::<TerminalRow>(&new_rows);
 }
 
 fn scroll(
-    In((target, val)): In<(Entity, isize)>,
+    In((term_id, val)): In<(Entity, isize)>,
     scroll: Query<&TerminalScrollPos>,
     mut commands: Commands,
 ) {
-    let prev = r!(scroll.get(target));
+    let prev = r!(scroll.get(term_id));
     commands
-        .entity(target)
+        .entity(term_id)
         .insert(TerminalScrollPos(prev.saturating_add_signed(val)));
 }
 
@@ -117,19 +124,6 @@ fn test_reflow() {
         commands.write_message(TerminalMessage::reflow(term));
         commands.set_state(Step(1));
     });
-    app.add_step(
-        1,
-        (move |mut commands: Commands, q_term: Query<(&TerminalLayout, &TerminalRows)>| {
-            let (layout, num_rows) = q_term.get(term).unwrap();
-            info!("Assert row length.");
-            if layout.len() != **num_rows {
-                error!(?layout, ?num_rows);
-                commands.write_message(AppExit::error());
-            }
-            commands.set_state(Step(2));
-        })
-        .after(handle_messages),
-    );
     // TODO: This test will need updated when supporting rich text.
     let get_rows = |layout: &TerminalLayout,
                     rows: Query<&TerminalRow>,
@@ -155,20 +149,14 @@ fn test_reflow() {
             .collect::<Vec<String>>()
     };
     let expected = vec![
-        "",
-        "",
-        "",
-        "",
-        "",
-        "nor i",
-        "not me tho",
         "this line has m",
         "ore than 15 cha",
         "racters",
+        "not me tho",
+        "nor i",
     ];
-    let e = expected.clone();
     app.add_step(
-        2,
+        1,
         (move |mut commands: Commands,
                q_term: Query<(&TerminalLayout, &TerminalCols)>,
                rows: Query<&TerminalRow>,
@@ -176,54 +164,12 @@ fn test_reflow() {
             let (layout, num_cols) = q_term.get(term).unwrap();
             let rows = get_rows(layout, rows, lines, **num_cols);
             info!("Assert layout.");
-            if rows != e {
-                error!(?rows, ?e);
-                commands.write_message(AppExit::error());
-            }
-            commands.write_message(TerminalMessage::scroll(term, 3));
-            commands.set_state(Step(3));
-        })
-        .after(handle_messages),
-    );
-    let mut e = expected.clone();
-    app.add_step(
-        3,
-        (move |mut commands: Commands,
-               q_term: Query<(&TerminalLayout, &TerminalCols)>,
-               rows: Query<&TerminalRow>,
-               lines: Query<&TerminalLine>| {
-            {
-                info!("Assert scrolled layout");
-                let (layout, num_cols) = q_term.get(term).unwrap();
-                let rows = get_rows(layout, rows, lines, **num_cols);
-                for _ in 0..3 {
-                    e.pop();
-                    e.insert(0, "");
-                }
-                if rows != e {
-                    error!(?rows, ?e);
-                    commands.write_message(AppExit::error());
-                }
-                commands.write_message(TerminalMessage::jump_to_bottom(term));
-                commands.set_state(Step(4));
-            }
-        })
-        .after(handle_messages),
-    );
-    app.add_step(
-        4,
-        (move |mut commands: Commands,
-               q_term: Query<(&TerminalLayout, &TerminalCols)>,
-               rows: Query<&TerminalRow>,
-               lines: Query<&TerminalLine>| {
-            info!("Assert scrolled layout");
-            let (layout, num_cols) = q_term.get(term).unwrap();
-            let rows = get_rows(layout, rows, lines, **num_cols);
             if rows != expected {
                 error!(?rows, ?expected);
                 commands.write_message(AppExit::error());
+            } else {
+                commands.write_message(AppExit::Success);
             }
-            commands.write_message(TerminalMessage::jump_to_bottom(term));
         })
         .after(handle_messages),
     );

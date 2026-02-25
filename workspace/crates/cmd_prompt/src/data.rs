@@ -111,15 +111,8 @@ mod components {
 
     /// Scroll position, in lines. 0 means you're at the bottom.
     #[derive(Component, Debug, Reflect, PartialEq, Eq, Hash, Clone, Copy, Deref, Default)]
-    #[component(immutable, on_insert = Self::on_insert)]
+    #[component(immutable)]
     pub struct TerminalScrollPos(pub usize);
-    impl TerminalScrollPos {
-        fn on_insert(mut world: DeferredWorld, ctx: HookContext) {
-            world
-                .commands()
-                .write_message(TerminalMessage::reflow(ctx.entity));
-        }
-    }
 }
 pub use components::*;
 
