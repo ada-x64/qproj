@@ -2,51 +2,18 @@ use crate::prelude::*;
 
 mod components {
     use super::*;
-    use bevy::ecs::{lifecycle::HookContext, world::DeferredWorld};
 
-    /// A simple marker component for the command prompt.
-    /// Requires all the necessary components for the underlying implementation.
-    /// Internally points to all the [`TerminalWindow`]s which display its content.
+    /// Marker component / entry point for spawning the underlying terminal
+    /// buffer.
     #[derive(Component, Default, Reflect)]
-    #[require(
-        TermWidth,
-        TermHeight,
-        TerminalLines,
-        TerminalLayout,
-        TerminalWindowList
-    )]
+    #[require(TerminalLines, TerminalWindowList)]
     pub struct Terminal;
 
-    /// Tracks which [`TerminalWindow`] entities are displayed by this node's terminal.
+    /// Tracks which [`TerminalWindow`] entities are displayed by this node's
+    /// terminal.
     #[derive(Component, Default, Reflect, Deref, Debug)]
     #[relationship_target(relationship = TerminalWindow)]
     pub struct TerminalWindowList(Vec<Entity>);
-
-    /// The number of columns in the terminal.
-    #[derive(Component, Default, Deref, Debug)]
-    #[component(immutable, on_insert=Self::on_insert)]
-    pub struct TermWidth(pub usize);
-    impl TermWidth {
-        fn on_insert(mut world: DeferredWorld, ctx: HookContext) {
-            // Re-wrap the terminal text.
-            world
-                .commands()
-                .write_message(TerminalMessage::reflow(ctx.entity));
-        }
-    }
-
-    /// The number of rows in the terminal.
-    #[derive(Component, Default, Deref, Debug)]
-    #[component(immutable, on_insert=Self::on_insert)]
-    pub struct TermHeight(pub usize);
-    impl TermHeight {
-        fn on_insert(mut world: DeferredWorld, ctx: HookContext) {
-            // Insert/remove LineRefs as appropriate.
-            world
-                .commands()
-                .write_message(TerminalMessage::reflow(ctx.entity));
-        }
-    }
 
     /// This entity represents the underlying text buffer. It contains
     /// references to [`TerminalLine`] entities.
@@ -54,7 +21,8 @@ mod components {
     #[relationship_target(relationship=TerminalLine)]
     pub struct TerminalLines(Vec<Entity>);
 
-    /// A single, newline-delimited logical line.
+    /// A single, newline-delimited logical line. Does _not_ include the
+    /// trailing newline.
     #[derive(Component, Deref, DerefMut, Debug, Reflect, PartialEq, Eq, Hash, Clone)]
     #[component(immutable)]
     #[relationship(relationship_target=TerminalLines)]
@@ -72,6 +40,93 @@ mod components {
             }
         }
     }
+}
+pub use components::*;
+
+mod events {
+    use super::*;
+    #[derive(Debug, Message, Reflect, PartialEq, Eq, Hash)]
+    pub struct TerminalMessage {
+        /// Represents an entity containing a [`TerminalWindow`]. Any
+        /// modifications aimed at the buffer will modify the related
+        /// [`Terminal`]'s [`TerminalLine`] list.
+        pub window_id: Entity,
+        pub kind: TerminalMessageKind,
+    }
+    impl TerminalMessage {
+        pub fn new(window_id: Entity, kind: TerminalMessageKind) -> Self {
+            Self { window_id, kind }
+        }
+        pub fn reflow(window_id: Entity) -> Self {
+            Self::new(window_id, TerminalMessageKind::Reflow)
+        }
+        pub fn writeln(window_id: Entity, line: impl ToString) -> Self {
+            Self::new(window_id, TerminalMessageKind::Writeln(line.to_string()))
+        }
+        pub fn scroll(window_id: Entity, direction: isize) -> Self {
+            Self::new(window_id, TerminalMessageKind::Scroll(direction))
+        }
+        pub fn jump_to_bottom(window_id: Entity) -> Self {
+            Self::new(window_id, TerminalMessageKind::JumpToBottom)
+        }
+    }
+    #[derive(Debug, Reflect, PartialEq, Eq, Hash)]
+    pub enum TerminalMessageKind {
+        /// Reflow the terminal. Modifes LineRefs.
+        Reflow,
+        // TODO: Should be a TerminalLineBundle, i.e., should allow adding
+        // textspan children. Perhaps this takes reference to an entity, so the
+        // caller (e.g. the commands impl) has control over converting from raw
+        // text to the final hierarchy.
+        /// Write a line to the "buffer"
+        Writeln(String),
+        /// Scroll in the given direction. A scroll position of 0 means you are
+        /// at the last line.
+        Scroll(isize),
+        /// Jump to the last line. Sets scroll value to 0.
+        JumpToBottom,
+    }
+}
+pub use events::*;
+
+mod display {
+    use bevy::ecs::{lifecycle::HookContext, world::DeferredWorld};
+
+    use super::*;
+
+    /// A terminal display. Will spawn a new [`Node`] sized to the parent
+    /// container and populate the hierarchy with [`TextSpan`] components according
+    /// to the target entity's properties.
+    #[derive(Component, Reflect)]
+    #[require(
+        Node {
+            overflow: Overflow::clip(),
+            ..Default::default()
+        },
+        Text,
+        TextLayout {
+            justify: Justify::Left,
+            linebreak: LineBreak::NoWrap
+        },
+        TerminalScrollPos,
+        TerminalCharWidth,
+        TermWidth,
+        TermHeight,
+        TerminalLayout,
+    )]
+    #[component(immutable)]
+    #[relationship(relationship_target = TerminalWindowList)]
+    pub struct TerminalWindow(pub Entity);
+
+    /// Scroll position, in lines. 0 means you're at the bottom.
+    #[derive(Component, Debug, Reflect, PartialEq, Eq, Hash, Clone, Copy, Deref, Default)]
+    #[component(immutable)]
+    pub struct TerminalScrollPos(pub usize);
+
+    /// Width of a character cell in pixels, determined by measuring the width of a space.
+    #[derive(Component, Debug, Reflect, PartialEq, Eq, Hash, Clone, Copy, Deref, Default)]
+    #[component(immutable)]
+    pub struct TerminalCharWidth(pub u32);
 
     /// The terminal's layout grid. Contains references to [`TerminalRow`]
     /// entities. This entity represents the fully laid-out text buffer
@@ -110,79 +165,41 @@ mod components {
             }
         }
     }
-}
-pub use components::*;
 
-mod events {
-    use super::*;
-    #[derive(Debug, Message, Reflect, PartialEq, Eq, Hash)]
-    pub struct TerminalMessage {
-        pub target: Entity,
-        pub kind: TerminalMessageKind,
-    }
-    impl TerminalMessage {
-        pub fn new(target: Entity, kind: TerminalMessageKind) -> Self {
-            Self { target, kind }
-        }
-        pub fn reflow(target: Entity) -> Self {
-            Self::new(target, TerminalMessageKind::Reflow)
-        }
-        pub fn writeln(target: Entity, line: impl ToString) -> Self {
-            Self::new(target, TerminalMessageKind::Writeln(line.to_string()))
-        }
-        pub fn scroll(target: Entity, direction: isize) -> Self {
-            Self::new(target, TerminalMessageKind::Scroll(direction))
-        }
-        pub fn jump_to_bottom(target: Entity) -> Self {
-            Self::new(target, TerminalMessageKind::JumpToBottom)
+    /// The number of columns in the terminal.
+    #[derive(Component, Default, Deref, Debug)]
+    #[component(immutable, on_insert=Self::on_insert)]
+    pub struct TermWidth(pub usize);
+    impl TermWidth {
+        fn on_insert(mut world: DeferredWorld, ctx: HookContext) {
+            // Re-wrap the terminal text.
+            if let Some(this) = world.get::<Self>(ctx.entity)
+                && this.0 == 0
+            {
+                warn!("TermWidth set to 0");
+            }
+            world
+                .commands()
+                .write_message(TerminalMessage::reflow(ctx.entity));
         }
     }
-    #[derive(Debug, Reflect, PartialEq, Eq, Hash)]
-    pub enum TerminalMessageKind {
-        /// Reflow the terminal. Modifes LineRefs.
-        Reflow,
-        // TODO: Should be a TerminalLineBundle, i.e., should allow adding
-        // textspan children. Perhaps this takes reference to an entity, so the
-        // caller (e.g. the commands impl) has control over converting from raw
-        // text to the final hierarchy.
-        /// Write a line to the "buffer"
-        Writeln(String),
-        /// Scroll in the given direction. A scroll position of 0 means you are
-        /// at the last line.
-        Scroll(isize),
-        /// Jump to the last line. Sets scroll value to 0.
-        JumpToBottom,
+
+    /// The number of rows in the terminal.
+    #[derive(Component, Default, Deref, Debug)]
+    #[component(immutable, on_insert=Self::on_insert)]
+    pub struct TermHeight(pub usize);
+    impl TermHeight {
+        fn on_insert(mut world: DeferredWorld, ctx: HookContext) {
+            // Insert/remove LineRefs as appropriate.
+            if let Some(this) = world.get::<Self>(ctx.entity)
+                && this.0 == 0
+            {
+                warn!("TermHeight set to 0");
+            }
+            world
+                .commands()
+                .write_message(TerminalMessage::reflow(ctx.entity));
+        }
     }
-}
-pub use events::*;
-
-mod display {
-    use super::*;
-
-    /// A terminal display. Will spawn a new [`Node`] sized to the parent
-    /// container and populate the hierarchy with [`TextSpan`] components according
-    /// to the target entity's properties.
-    #[derive(Component, Reflect)]
-    #[require(
-        Node {
-            overflow: Overflow::clip(),
-            ..Default::default()
-        },
-        Text,
-        TextLayout {
-            justify: Justify::Left,
-            linebreak: LineBreak::NoWrap
-        },
-        TerminalScrollPos,
-        TerminalCharWidth,
-    )]
-    #[component(immutable)]
-    #[relationship(relationship_target = TerminalWindowList)]
-    pub struct TerminalWindow(pub Entity);
-
-    /// Scroll position, in lines. 0 means you're at the bottom.
-    #[derive(Component, Debug, Reflect, PartialEq, Eq, Hash, Clone, Copy, Deref, Default)]
-    #[component(immutable)]
-    pub struct TerminalScrollPos(pub usize);
 }
 pub use display::*;

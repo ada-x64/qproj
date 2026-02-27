@@ -17,11 +17,14 @@ use crate::prelude::*;
 // }
 
 pub fn resize(
-    q: Query<(&TerminalWindow, &ComputedNode, &TextFont, &LineHeight), Changed<ComputedNode>>,
+    q: Query<
+        (Entity, &ComputedNode, &TextFont, &LineHeight),
+        (Changed<ComputedNode>, With<TerminalWindow>),
+    >,
     mut commands: Commands,
 ) {
     trace!("resize");
-    for (window, node, font, line_height) in q.iter() {
+    for (window_id, node, font, line_height) in q.iter() {
         // TODO: Calculate monospace character width
         let character_width = font.font_size;
         let size = node.size();
@@ -31,8 +34,8 @@ pub fn resize(
         };
         let width = (size.x / character_width).floor() as usize;
         let height = (size.y / line_height).floor() as usize;
-        commands.entity(window.0).insert(TermWidth(width));
-        commands.entity(window.0).insert(TermHeight(height));
+        commands.entity(window_id).insert(TermWidth(width));
+        commands.entity(window_id).insert(TermHeight(height));
         debug!("Got node size: {size:?}");
         debug!("Set new term size to {width} x {height}");
     }
@@ -41,10 +44,14 @@ pub fn resize(
 pub fn update_layout(
     q: Query<
         (
+            Entity,
             &TermHeight,
             &TermWidth,
             &TerminalLayout,
-            &TerminalWindowList,
+            &TerminalScrollPos,
+            &LineHeight,
+            &TextFont,
+            &TextColor,
         ),
         (
             Or<(
@@ -52,50 +59,43 @@ pub fn update_layout(
                 Changed<TermWidth>,
                 Changed<TerminalLayout>,
             )>,
-            With<Terminal>,
+            With<TerminalWindow>,
         ),
     >,
     q_lines: Query<&TerminalLine>,
     q_rows: Query<&TerminalRow>,
-    q_windows: Query<
-        (&TerminalScrollPos, &LineHeight, &TextFont, &TextColor),
-        With<TerminalWindow>,
-    >,
     mut commands: Commands,
 ) {
     trace!("update layout");
-    for (num_rows, num_cols, layout, window_list) in q {
-        window_list.iter().for_each(|window| {
-            let (scroll_pos, line_height, font, color) = r!(q_windows.get(window));
-            let new_children = layout
-                .iter()
-                .rev()
-                .skip(**scroll_pos)
-                .take(**num_rows)
-                .filter_map(|id| {
-                    let row = r!(q_rows.get(id));
-                    let line = r!(q_lines.get(r!(row.line)));
-                    let textval = line
-                        .chars()
-                        .skip(row.offset)
-                        .take(**num_cols)
-                        .collect::<String>();
-                    Some(
-                        commands
-                            .spawn((
-                                *line_height,
-                                *color,
-                                font.clone(),
-                                TextSpan::new(textval + "\n"),
-                            ))
-                            .id(),
-                    )
-                })
-                .rev()
-                .collect::<Vec<_>>();
-            commands.entity(window).despawn_children();
-            commands.entity(window).add_children(&new_children);
-        });
+    for (window_id, num_rows, num_cols, layout, scroll_pos, line_height, font, color) in q {
+        let new_children = layout
+            .iter()
+            .rev()
+            .skip(**scroll_pos)
+            .take(**num_rows)
+            .filter_map(|id| {
+                let row = r!(q_rows.get(id));
+                let line = r!(q_lines.get(r!(row.line)));
+                let textval = line
+                    .chars()
+                    .skip(row.offset)
+                    .take(**num_cols)
+                    .collect::<String>();
+                Some(
+                    commands
+                        .spawn((
+                            *line_height,
+                            *color,
+                            font.clone(),
+                            TextSpan::new(textval + "\n"),
+                        ))
+                        .id(),
+                )
+            })
+            .rev()
+            .collect::<Vec<_>>();
+        commands.entity(window_id).despawn_children();
+        commands.entity(window_id).add_children(&new_children);
     }
 }
 

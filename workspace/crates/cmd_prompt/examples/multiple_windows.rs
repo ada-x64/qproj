@@ -22,56 +22,41 @@ fn main() {
         commands.spawn(Camera2d);
         let term_id = commands.spawn(Terminal).id();
 
-        commands.spawn((
-            Node {
+        let children = (0..4)
+            .map(|i| {
+                let (foreground, background) = match i {
+                    0 | 3 => (Color::BLACK, Color::WHITE),
+                    _ => (Color::WHITE, Color::BLACK),
+                };
+                commands
+                    .spawn((
+                        TextFont {
+                            font_size: 12. + i as f32 * 4.,
+                            ..Default::default()
+                        },
+                        BackgroundColor(background),
+                        TextColor(foreground),
+                        TerminalWindow(term_id),
+                    ))
+                    .id()
+            })
+            .collect::<Vec<_>>();
+
+        commands
+            .spawn((Node {
                 display: Display::Grid,
                 grid_template_columns: vec![RepeatedGridTrack::percent(2, 50.)],
                 grid_template_rows: vec![RepeatedGridTrack::percent(2, 50.)],
                 width: vw(100),
                 height: vh(100),
                 ..Default::default()
-            },
-            children![
-                (
-                    TextFont {
-                        font_size: 12.,
-                        ..Default::default()
-                    },
-                    BackgroundColor(Color::BLACK),
-                    TextColor(Color::WHITE),
-                    TerminalWindow(term_id),
-                ),
-                (
-                    TextFont {
-                        font_size: 16.,
-                        ..Default::default()
-                    },
-                    BackgroundColor(Color::WHITE),
-                    TextColor(Color::BLACK),
-                    TerminalWindow(term_id),
-                ),
-                (
-                    TextFont {
-                        font_size: 20.,
-                        ..Default::default()
-                    },
-                    BackgroundColor(Color::WHITE),
-                    TextColor(Color::BLACK),
-                    TerminalWindow(term_id),
-                ),
-                (
-                    TextFont {
-                        font_size: 24.,
-                        ..Default::default()
-                    },
-                    BackgroundColor(Color::BLACK),
-                    TextColor(Color::WHITE),
-                    TerminalWindow(term_id),
-                ),
-            ],
-        ));
+            },))
+            .add_children(&children);
+
         for i in 0..100 {
-            commands.write_message(TerminalMessage::writeln(term_id, i));
+            // Although I'm only writing to the first child, they'll _all_ receive the same info,
+            // because they are displaying the same `Terminal` entity
+            commands.write_message(TerminalMessage::writeln(children[0], i));
         }
     });
     app.run();

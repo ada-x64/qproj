@@ -21,19 +21,19 @@ fn main() {
     app.add_systems(Startup, |mut commands: Commands| {
         commands.spawn(Camera2d);
         let term_id = commands.spawn(Terminal).id();
-        commands.spawn((
+        let window_id = commands.spawn((
             TerminalWindow(term_id),
             Node {
                 width: percent(100),
                 height: percent(100),
                 ..Default::default()
             },
-        ));
+        )).id();
         for i in 0..100 {
-            commands.write_message(TerminalMessage::writeln(term_id, i));
+            commands.write_message(TerminalMessage::writeln(window_id, i));
         }
         commands
-            .write_message(TerminalMessage::writeln(term_id, "This is a really long line! It should be wrapping. Just checking :) How are you doing today? I'm doing pretty good myself."));
+            .write_message(TerminalMessage::writeln(window_id, "This is a really long line! It should be wrapping. Just checking :) How are you doing today? I'm doing pretty good myself."));
     });
     app.run();
 }

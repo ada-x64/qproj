@@ -6,18 +6,18 @@ pub fn handle_messages(mut messages: MessageReader<TerminalMessage>, mut command
     for msg in messages.read() {
         match &msg.kind {
             TerminalMessageKind::Reflow => {
-                if !to_reflow.contains(&msg.target) {
-                    to_reflow.push(msg.target);
+                if !to_reflow.contains(&msg.window_id) {
+                    to_reflow.push(msg.window_id);
                 }
             }
             TerminalMessageKind::Writeln(string) => {
-                commands.run_system_cached_with(writeln, (msg.target, string.clone()));
+                commands.run_system_cached_with(writeln, (msg.window_id, string.clone()));
             }
             TerminalMessageKind::Scroll(direction) => {
-                commands.run_system_cached_with(scroll, (msg.target, *direction));
+                commands.run_system_cached_with(scroll, (msg.window_id, *direction));
             }
             TerminalMessageKind::JumpToBottom => {
-                commands.run_system_cached_with(jump_to_bottom, msg.target);
+                commands.run_system_cached_with(jump_to_bottom, msg.window_id);
             }
         }
     }
@@ -37,7 +37,6 @@ fn flow_line(
 ) -> Vec<Entity> {
     trace!("flow line");
     if num_cols == 0 {
-        warn!("Term width set to 0! Bailing");
         return vec![];
     }
     let mut res = vec![];
@@ -53,39 +52,49 @@ fn flow_line(
 
 /// Reflows the entire underlying buffer.
 fn reflow(
-    term_id: In<Entity>,
-    terminfo: Query<(&TerminalLines, &TermWidth)>,
+    window_id: In<Entity>,
+    term_width: Query<&TermWidth, With<TerminalWindow>>,
+    terminfo: Query<(&TerminalWindowList, &TerminalLines), With<Terminal>>,
     lines_q: Query<&TerminalLine>,
     mut commands: Commands,
 ) {
     trace!("Reflow");
-    let (line_reltarget, cols) = r!(terminfo.get(*term_id));
+    debug!(?window_id);
+    let cols = r!(term_width.get(*window_id));
+    let lines_reltarget = terminfo
+        .iter()
+        .find_map(|(list, lines)| list.contains(&window_id).then_some(lines));
+    let lines_reltarget = r!(lines_reltarget);
     if **cols == 0 {
-        warn!("Column width not set! Aborting terminal reflow.");
         return;
     }
-    debug!("despawning terminal rows");
     commands
-        .entity(*term_id)
+        .entity(*window_id)
         .despawn_related::<TerminalLayout>();
     // todo: batch process this in parallel
-    line_reltarget.iter().for_each(|line_id| {
+    lines_reltarget.iter().for_each(|line_id| {
         let line = r!(lines_q.get(line_id));
-        flow_line(&mut commands, line_id, line, *term_id, **cols);
+        flow_line(&mut commands, line_id, line, *window_id, **cols);
     })
 }
 
 fn writeln(
-    In((term_id, text)): In<(Entity, String)>,
+    In((window_id, text)): In<(Entity, String)>,
     mut commands: Commands,
     q_cols: Query<&TermWidth>,
+    q_terms: Query<(Entity, &TerminalWindowList)>,
 ) {
     trace!("writeline");
-    let num_cols = r!(q_cols.get(term_id));
+    debug!(?window_id);
+    let num_cols = r!(q_cols.get(window_id));
+    let term_id = q_terms
+        .iter()
+        .find_map(|(entity, list)| list.contains(&window_id).then_some(entity));
+    let term_id = r!(term_id);
     let new_line_id = commands
         .spawn(TerminalLine::new(term_id, text.clone()))
         .id();
-    flow_line(&mut commands, new_line_id, &text, term_id, **num_cols);
+    flow_line(&mut commands, new_line_id, &text, window_id, **num_cols);
 }
 
 fn scroll(
