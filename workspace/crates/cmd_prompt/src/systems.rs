@@ -16,7 +16,6 @@ use crate::prelude::*;
 //     todo!()
 // }
 
-// TODO: This messes up in headless tests because the node size is always set to 0x0
 pub fn resize(
     q: Query<(&TerminalWindow, &ComputedNode, &TextFont, &LineHeight), Changed<ComputedNode>>,
     mut commands: Commands,
@@ -52,20 +51,22 @@ pub fn update_layout(
                 Changed<TermHeight>,
                 Changed<TermWidth>,
                 Changed<TerminalLayout>,
-                Changed<TerminalLines>,
             )>,
             With<Terminal>,
         ),
     >,
     q_lines: Query<&TerminalLine>,
     q_rows: Query<&TerminalRow>,
-    q_windows: Query<(&TerminalScrollPos, &LineHeight, &TextFont), With<TerminalWindow>>,
+    q_windows: Query<
+        (&TerminalScrollPos, &LineHeight, &TextFont, &TextColor),
+        With<TerminalWindow>,
+    >,
     mut commands: Commands,
 ) {
     trace!("update layout");
     for (num_rows, num_cols, layout, window_list) in q {
         window_list.iter().for_each(|window| {
-            let (scroll_pos, line_height, font) = r!(q_windows.get(window));
+            let (scroll_pos, line_height, font, color) = r!(q_windows.get(window));
             let new_children = layout
                 .iter()
                 .rev()
@@ -81,7 +82,12 @@ pub fn update_layout(
                         .collect::<String>();
                     Some(
                         commands
-                            .spawn((*line_height, font.clone(), TextSpan::new(textval + "\n")))
+                            .spawn((
+                                *line_height,
+                                *color,
+                                font.clone(),
+                                TextSpan::new(textval + "\n"),
+                            ))
                             .id(),
                     )
                 })
