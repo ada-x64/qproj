@@ -166,8 +166,6 @@ mod display {
     #[require(
         Node {
             overflow: Overflow::clip(),
-            width: percent(100),
-            height: percent(100),
             ..Default::default()
         },
         Text,

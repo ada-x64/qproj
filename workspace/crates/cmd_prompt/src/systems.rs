@@ -6,13 +6,13 @@ use crate::prelude::*;
 // Whenever the text font changes, we should get the computed text block for
 // a display:hidden text node which contains only a single " " character.
 // This way we avoid directly measuring the font.
-pub fn measure_cwidth(
-    q: Query<&TextFont, (With<TerminalWindow>, Changed<TextFont>)>,
-    mut commands: Commands,
-    fonts: Res<Assets<Font>>,
-) {
-    todo!()
-}
+// pub fn measure_cwidth(
+//     q: Query<&TextFont, (With<TerminalWindow>, Changed<TextFont>)>,
+//     mut commands: Commands,
+//     fonts: Res<Assets<Font>>,
+// ) {
+//     todo!()
+// }
 
 // TODO: This messes up in headless tests because the node size is always set to 0x0
 pub fn resize(
@@ -24,19 +24,23 @@ pub fn resize(
         // TODO: Calculate monospace character width
         let character_width = font.font_size;
         let size = node.size();
-        let width = (size.x / character_width).ceil() as usize;
-        let height = (size.y / font.font_size).ceil() as usize;
+        let width = (size.x / character_width).floor() as usize;
+        let height = (size.y / font.font_size).floor() as usize;
         commands.entity(window.0).insert(TermWidth(width));
         commands.entity(window.0).insert(TermHeight(height));
         debug!("Got node size: {size:?}");
         debug!("Set new term size to {width} x {height}");
-        commands.write_message(AppExit::error()); // TEMP
     }
 }
 
 pub fn update_layout(
     q: Query<
-        (&TermHeight, &TerminalLayout, &TerminalWindowList),
+        (
+            &TermHeight,
+            &TermWidth,
+            &TerminalLayout,
+            &TerminalWindowList,
+        ),
         (
             Or<(
                 Changed<TermHeight>,
@@ -53,7 +57,7 @@ pub fn update_layout(
     mut commands: Commands,
 ) {
     trace!("update layout");
-    for (num_rows, layout, window_list) in q {
+    for (num_rows, num_cols, layout, window_list) in q {
         window_list.iter().for_each(|window| {
             let scroll_pos = r!(q_windows.get(window));
             let new_children = layout
@@ -64,12 +68,17 @@ pub fn update_layout(
                 .filter_map(|id| {
                     let row = r!(q_rows.get(id));
                     let line = r!(q_lines.get(r!(row.line)));
-                    Some(commands.spawn(TextSpan::new((**line).clone())).id())
+                    let textval = line
+                        .chars()
+                        .skip(row.offset)
+                        .take(**num_cols)
+                        .collect::<String>();
+                    Some(commands.spawn(TextSpan::new(textval + "\n")).id())
                 })
                 .rev()
                 .collect::<Vec<_>>();
             commands.entity(window).despawn_children();
-            commands.entity(window).replace_children(&new_children);
+            commands.entity(window).add_children(&new_children);
         });
     }
 }
@@ -79,17 +88,15 @@ fn test_text_nodes() {
     let mut app = App::new();
     app.add_plugins(test_harness);
     app.add_step(0, |mut commands: Commands| {
-        let term_id = commands
-            .spawn((Terminal, TermWidth(100), TermHeight(10)))
-            .id();
+        let term_id = commands.spawn(Terminal).id();
         commands.spawn((
-            Node {
-                width: px(100),
-                height: px(100),
-                ..Default::default()
-            },
             TextFont {
                 font_size: 10.,
+                ..Default::default()
+            },
+            Node {
+                width: px(100),
+                height: px(50),
                 ..Default::default()
             },
             TerminalWindow(term_id),
@@ -133,8 +140,9 @@ fn test_text_nodes() {
                 .take(**num_rows)
                 .collect::<Vec<_>>();
             lines.reverse();
-            info!(?spans, ?lines);
-            if spans == lines {
+            let expected = (85..=89).map(|i| i.to_string()).collect::<Vec<String>>();
+            info!(?spans, ?lines, ?expected);
+            if spans == lines && spans == expected {
                 commands.write_message(AppExit::Success);
             } else {
                 commands.write_message(AppExit::error());

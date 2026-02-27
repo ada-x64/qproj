@@ -1,4 +1,4 @@
-use bevy::ui::{self, ui_layout_system};
+use bevy::ui::ui_layout_system;
 
 use crate::prelude::*;
 
@@ -14,7 +14,8 @@ impl Plugin for TerminalPlugin {
         app.add_message::<TerminalMessage>();
         app.add_systems(
             PostUpdate,
-            (handle_messages, update_layout)
+            (resize, handle_messages, update_layout)
+                .after(ui_layout_system)
                 .chain()
                 .in_set(TerminalSystems),
         );
