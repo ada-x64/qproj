@@ -112,7 +112,8 @@ usage = """
     arg "[rest]" default="r --workspace" help="Passed directly to `cargo nextest`"
 """
 run = """
-cargo nextest --manifest-path=./workspace/Cargo.toml ${usage_rest}
+set -ex
+cargo nextest --config-file=./.config/nextest.toml --manifest-path=./workspace/Cargo.toml ${usage_rest}
 """
 
 [tasks.coverage]
