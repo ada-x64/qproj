@@ -1,177 +1,146 @@
 use crate::prelude::*;
 
-pub fn handle_messages(mut messages: MessageReader<TerminalMessage>, mut commands: Commands) {
-    trace!("handle message");
-    let mut to_reflow = vec![];
-    for msg in messages.read() {
-        debug!(?msg);
-        match &msg.kind {
-            TerminalMessageKind::Reflow => {
-                if !to_reflow.contains(&msg.target) {
-                    to_reflow.push(msg.target);
-                }
-            }
-            TerminalMessageKind::Writeln(string) => {
-                commands.run_system_cached_with(writeln, (msg.target, string.clone()));
-            }
-            TerminalMessageKind::Scroll(direction) => {
-                commands.run_system_cached_with(scroll, (msg.target, *direction));
-            }
-            TerminalMessageKind::JumpToBottom => {
-                commands.run_system_cached_with(jump_to_bottom, msg.target);
-            }
-        }
-    }
-    for target in to_reflow.into_iter() {
-        commands.run_system_cached_with(reflow, target);
-    }
-    messages.clear();
+// How to do this?
+// TextPipeline measures the text nodes automatically and does not expose
+// a way to directly measure a string of text.
+// Whenever the text font changes, we should get the computed text block for
+// a display:hidden text node which contains only a single " " character.
+// This way we avoid directly measuring the font.
+pub fn measure_cwidth(
+    q: Query<&TextFont, (With<TerminalWindow>, Changed<TextFont>)>,
+    mut commands: Commands,
+    fonts: Res<Assets<Font>>,
+) {
+    todo!()
 }
 
-/// Takes a TerminalLine and returns a vec of newly spawned TerminalRows.
-fn flow_line(
-    commands: &mut Commands,
-    line_id: Entity,
-    text: &str,
-    term_id: Entity,
-    num_cols: usize,
-) -> Vec<Entity> {
-    let mut res = vec![];
-    let mut offset = 0;
-    while offset < text.len() {
-        let new_row = TerminalRow::new(line_id, offset, term_id);
-        let id = commands.spawn(new_row).id();
-        res.push(id);
-        offset += num_cols;
-    }
-    res
-}
-
-/// Reflows the entire underlying buffer.
-fn reflow(
-    term_id: In<Entity>,
-    terminfo: Query<(&TerminalLines, &TerminalCols)>,
-    lines_q: Query<&TerminalLine>,
+// TODO: This messes up in headless tests because the node size is always set to 0x0
+pub fn resize(
+    q: Query<(&TerminalWindow, &ComputedNode, &TextFont), Changed<ComputedNode>>,
     mut commands: Commands,
 ) {
-    trace!("Reflow");
-    let (line_reltarget, cols) = r!(terminfo.get(*term_id));
-    // todo: batch process this in parallel
-    let new_rows = line_reltarget
-        .iter()
-        .filter_map(|line_id| {
-            let line = r!(lines_q.get(line_id));
-            Some(flow_line(&mut commands, line_id, line, *term_id, **cols))
-        })
-        .flatten()
-        .collect::<Vec<Entity>>();
-
-    commands
-        .entity(*term_id)
-        .replace_related::<TerminalRow>(&new_rows);
+    trace!("resize");
+    for (window, node, font) in q.iter() {
+        // TODO: Calculate monospace character width
+        let character_width = font.font_size;
+        let size = node.size();
+        let width = (size.x / character_width).ceil() as usize;
+        let height = (size.y / font.font_size).ceil() as usize;
+        commands.entity(window.0).insert(TermWidth(width));
+        commands.entity(window.0).insert(TermHeight(height));
+        debug!("Got node size: {size:?}");
+        debug!("Set new term size to {width} x {height}");
+        commands.write_message(AppExit::error()); // TEMP
+    }
 }
 
-fn writeln(
-    In((term_id, text)): In<(Entity, String)>,
-    mut commands: Commands,
-    q_cols: Query<&TerminalCols>,
-) {
-    trace!("writeline");
-    let num_cols = r!(q_cols.get(term_id));
-    let new_line_id = commands
-        .spawn(TerminalLine::new(text.clone(), term_id))
-        .id();
-    let new_rows = flow_line(&mut commands, new_line_id, &text, term_id, **num_cols);
-    commands
-        .entity(term_id)
-        .add_one_related::<TerminalLine>(new_line_id);
-    commands
-        .entity(term_id)
-        .add_related::<TerminalRow>(&new_rows);
-}
-
-fn scroll(
-    In((term_id, val)): In<(Entity, isize)>,
-    scroll: Query<&TerminalScrollPos>,
+pub fn update_layout(
+    q: Query<
+        (&TermHeight, &TerminalLayout, &TerminalWindowList),
+        (
+            Or<(
+                Changed<TermHeight>,
+                Changed<TermWidth>,
+                Changed<TerminalLayout>,
+                Changed<TerminalLines>,
+            )>,
+            With<Terminal>,
+        ),
+    >,
+    q_lines: Query<&TerminalLine>,
+    q_rows: Query<&TerminalRow>,
+    q_windows: Query<&TerminalScrollPos, With<TerminalWindow>>,
     mut commands: Commands,
 ) {
-    let prev = r!(scroll.get(term_id));
-    commands
-        .entity(term_id)
-        .insert(TerminalScrollPos(prev.saturating_add_signed(val)));
-}
-
-fn jump_to_bottom(In(target): In<Entity>, mut commands: Commands) {
-    commands.entity(target).insert(TerminalScrollPos(0));
+    trace!("update layout");
+    for (num_rows, layout, window_list) in q {
+        window_list.iter().for_each(|window| {
+            let scroll_pos = r!(q_windows.get(window));
+            let new_children = layout
+                .iter()
+                .rev()
+                .skip(**scroll_pos)
+                .take(**num_rows)
+                .filter_map(|id| {
+                    let row = r!(q_rows.get(id));
+                    let line = r!(q_lines.get(r!(row.line)));
+                    Some(commands.spawn(TextSpan::new((**line).clone())).id())
+                })
+                .rev()
+                .collect::<Vec<_>>();
+            commands.entity(window).despawn_children();
+            commands.entity(window).replace_children(&new_children);
+        });
+    }
 }
 
 #[test]
-fn test_reflow() {
+fn test_text_nodes() {
     let mut app = App::new();
-    app.add_plugins((TestRunnerPlugin::default(), CommandPromptPlugin));
-    let term = app
-        .world_mut()
-        .spawn((Terminal, TerminalRows(10), TerminalCols(15)))
-        .id();
-
-    app.add_step(0, move |mut commands: Commands| {
-        commands.write_message(TerminalMessage::writeln(
-            term,
-            "this line has more than 15 characters",
+    app.add_plugins(test_harness);
+    app.add_step(0, |mut commands: Commands| {
+        let term_id = commands
+            .spawn((Terminal, TermWidth(100), TermHeight(10)))
+            .id();
+        commands.spawn((
+            Node {
+                width: px(100),
+                height: px(100),
+                ..Default::default()
+            },
+            TextFont {
+                font_size: 10.,
+                ..Default::default()
+            },
+            TerminalWindow(term_id),
+            TerminalScrollPos(10),
         ));
-        commands.write_message(TerminalMessage::writeln(term, "not me tho"));
-        commands.write_message(TerminalMessage::writeln(term, "nor i"));
-        commands.write_message(TerminalMessage::reflow(term));
+        for i in 0..100 {
+            commands.write_message(TerminalMessage::writeln(term_id, i.to_string()));
+        }
         commands.set_state(Step(1));
     });
-    // TODO: This test will need updated when supporting rich text.
-    let get_rows = |layout: &TerminalLayout,
-                    rows: Query<&TerminalRow>,
-                    lines: Query<&TerminalLine>,
-                    num_cols: usize| {
-        layout
-            .iter()
-            .filter_map(|row_id| {
-                let row = rows.get(row_id.entity()).ok()?;
-                row.line
-                    .map(|id| {
-                        lines
-                            .get(id)
-                            .unwrap()
-                            .value
-                            .chars()
-                            .skip(row.offset)
-                            .take(num_cols)
-                            .collect::<String>()
-                    })
-                    .or(Some(String::new()))
-            })
-            .collect::<Vec<String>>()
-    };
-    let expected = vec![
-        "this line has m",
-        "ore than 15 cha",
-        "racters",
-        "not me tho",
-        "nor i",
-    ];
     app.add_step(
         1,
-        (move |mut commands: Commands,
-               q_term: Query<(&TerminalLayout, &TerminalCols)>,
-               rows: Query<&TerminalRow>,
-               lines: Query<&TerminalLine>| {
-            let (layout, num_cols) = q_term.get(term).unwrap();
-            let rows = get_rows(layout, rows, lines, **num_cols);
-            info!("Assert layout.");
-            if rows != expected {
-                error!(?rows, ?expected);
+        (|mut commands: Commands,
+          window: Query<(&Children, &TerminalWindow, &TerminalScrollPos)>,
+          terminal: Query<(&TerminalLayout, &TermHeight), With<Terminal>>,
+          text_spans: Query<&TextSpan>,
+          rows: Query<&TerminalRow>,
+          lines: Query<&TerminalLine>| {
+            let window = window.single();
+            if window.is_err() {
+                error!("TerminalWindow with Children not found!");
                 commands.write_message(AppExit::error());
-            } else {
+                return;
+            }
+            let (children, window, scroll_pos) = window.unwrap();
+            let spans = children
+                .iter()
+                .filter_map(|child_id| Some(r!(text_spans.get(child_id)).0.clone()))
+                .collect::<Vec<_>>();
+            let (layout, num_rows) = r!(terminal.get(window.0));
+            let mut lines = layout
+                .iter()
+                .filter_map(|row_id| {
+                    let row = r!(rows.get(row_id));
+                    let line_id = r!(row.line);
+                    let line = r!(lines.get(line_id));
+                    Some(line.value.clone())
+                })
+                .rev()
+                .skip(**scroll_pos)
+                .take(**num_rows)
+                .collect::<Vec<_>>();
+            lines.reverse();
+            info!(?spans, ?lines);
+            if spans == lines {
                 commands.write_message(AppExit::Success);
+            } else {
+                commands.write_message(AppExit::error());
             }
         })
-        .after(handle_messages),
+        .after(TerminalSystems),
     );
-    assert!(app.run().is_success())
+    assert!(app.run().is_success());
 }

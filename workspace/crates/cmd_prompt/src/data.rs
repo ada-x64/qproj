@@ -1,33 +1,32 @@
 use crate::prelude::*;
 
 mod components {
+    use super::*;
     use bevy::ecs::{lifecycle::HookContext, world::DeferredWorld};
 
-    use super::*;
     /// A simple marker component for the command prompt.
-    #[derive(Component, Default)]
+    /// Requires all the necessary components for the underlying implementation.
+    /// Internally points to all the [`TerminalWindow`]s which display its content.
+    #[derive(Component, Default, Reflect)]
     #[require(
-        TerminalCols,
-        TerminalRows,
+        TermWidth,
+        TermHeight,
         TerminalLines,
         TerminalLayout,
-        TerminalScrollPos
+        TerminalWindowList
     )]
-    #[component(on_add=Self::on_add)]
     pub struct Terminal;
-    impl Terminal {
-        fn on_add(mut world: DeferredWorld, ctx: HookContext) {
-            world
-                .commands()
-                .write_message(TerminalMessage::reflow(ctx.entity));
-        }
-    }
+
+    /// Tracks which [`TerminalWindow`] entities are displayed by this node's terminal.
+    #[derive(Component, Default, Reflect, Deref, Debug)]
+    #[relationship_target(relationship = TerminalWindow)]
+    pub struct TerminalWindowList(Vec<Entity>);
 
     /// The number of columns in the terminal.
     #[derive(Component, Default, Deref, Debug)]
     #[component(immutable, on_insert=Self::on_insert)]
-    pub struct TerminalCols(pub usize);
-    impl TerminalCols {
+    pub struct TermWidth(pub usize);
+    impl TermWidth {
         fn on_insert(mut world: DeferredWorld, ctx: HookContext) {
             // Re-wrap the terminal text.
             world
@@ -39,8 +38,8 @@ mod components {
     /// The number of rows in the terminal.
     #[derive(Component, Default, Deref, Debug)]
     #[component(immutable, on_insert=Self::on_insert)]
-    pub struct TerminalRows(pub usize);
-    impl TerminalRows {
+    pub struct TermHeight(pub usize);
+    impl TermHeight {
         fn on_insert(mut world: DeferredWorld, ctx: HookContext) {
             // Insert/remove LineRefs as appropriate.
             world
@@ -49,9 +48,10 @@ mod components {
         }
     }
 
-    /// Relationship target for [`TerminalLine`]s.
+    /// This entity represents the underlying text buffer. It contains
+    /// references to [`TerminalLine`] entities.
     #[derive(Component, Default, Deref, Debug)]
-    #[relationship_target(relationship=TerminalLine, linked_spawn)]
+    #[relationship_target(relationship=TerminalLine)]
     pub struct TerminalLines(Vec<Entity>);
 
     /// A single, newline-delimited logical line.
@@ -65,17 +65,19 @@ mod components {
         target: Entity,
     }
     impl TerminalLine {
-        pub fn new(value: String, relationship_target: Entity) -> Self {
+        pub fn new(terminal_id: Entity, value: String) -> Self {
             Self {
                 value,
-                target: relationship_target,
+                target: terminal_id,
             }
         }
     }
 
-    /// Relationship target for [`LineRef`]s.
+    /// The terminal's layout grid. Contains references to [`TerminalRow`]
+    /// entities. This entity represents the fully laid-out text buffer
+    /// corresponding to the target terminal's [`TerminalLines`] entity.
     #[derive(Component, Default, Deref, Debug)]
-    #[relationship_target(relationship=TerminalRow, linked_spawn)]
+    #[relationship_target(relationship=TerminalRow)]
     pub struct TerminalLayout(Vec<Entity>);
 
     /// A reference to a logical line with a character offset into its full text value.
@@ -90,33 +92,28 @@ mod components {
         pub offset: usize,
         /// Relationship target
         #[relationship]
-        parent: Entity,
+        term_id: Entity,
     }
     impl TerminalRow {
-        pub fn empty(parent: Entity) -> Self {
+        pub fn empty(term_id: Entity) -> Self {
             Self {
                 line: None,
                 offset: 0,
-                parent,
+                term_id,
             }
         }
-        pub fn new(line: Entity, offset: usize, parent: Entity) -> Self {
+        pub fn new(term_id: Entity, line: Entity, offset: usize) -> Self {
             Self {
                 line: Some(line),
                 offset,
-                parent,
+                term_id,
             }
         }
     }
-
-    /// Scroll position, in lines. 0 means you're at the bottom.
-    #[derive(Component, Debug, Reflect, PartialEq, Eq, Hash, Clone, Copy, Deref, Default)]
-    #[component(immutable)]
-    pub struct TerminalScrollPos(pub usize);
 }
 pub use components::*;
 
-pub mod events {
+mod events {
     use super::*;
     #[derive(Debug, Message, Reflect, PartialEq, Eq, Hash)]
     pub struct TerminalMessage {
@@ -158,3 +155,36 @@ pub mod events {
     }
 }
 pub use events::*;
+
+mod display {
+    use super::*;
+
+    /// A terminal display. Will spawn a new [`Node`] sized to the parent
+    /// container and populate the hierarchy with [`TextSpan`] components according
+    /// to the target entity's properties.
+    #[derive(Component, Reflect)]
+    #[require(
+        Node {
+            overflow: Overflow::clip(),
+            width: percent(100),
+            height: percent(100),
+            ..Default::default()
+        },
+        Text,
+        TextLayout {
+            justify: Justify::Left,
+            linebreak: LineBreak::NoWrap
+        },
+        TerminalScrollPos,
+        TerminalCharWidth,
+    )]
+    #[component(immutable)]
+    #[relationship(relationship_target = TerminalWindowList)]
+    pub struct TerminalWindow(pub Entity);
+
+    /// Scroll position, in lines. 0 means you're at the bottom.
+    #[derive(Component, Debug, Reflect, PartialEq, Eq, Hash, Clone, Copy, Deref, Default)]
+    #[component(immutable)]
+    pub struct TerminalScrollPos(pub usize);
+}
+pub use display::*;
