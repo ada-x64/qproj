@@ -105,21 +105,23 @@ fn test_text_nodes() {
     app.add_plugins(test_harness);
     app.add_step(0, |mut commands: Commands| {
         let term_id = commands.spawn(Terminal).id();
-        commands.spawn((
-            TextFont {
-                font_size: 10.,
-                ..Default::default()
-            },
-            Node {
-                width: px(100),
-                height: px(50),
-                ..Default::default()
-            },
-            TerminalWindow(term_id),
-            TerminalScrollPos(10),
-        ));
+        let term_window_id = commands
+            .spawn((
+                TextFont {
+                    font_size: 10.,
+                    ..Default::default()
+                },
+                Node {
+                    width: px(100),
+                    height: px(50),
+                    ..Default::default()
+                },
+                TerminalWindow(term_id),
+                TerminalScrollPos(10),
+            ))
+            .id();
         for i in 0..100 {
-            commands.write_message(TerminalMessage::writeln(term_id, i.to_string()));
+            commands.write_message(TerminalMessage::writeln(term_window_id, i.to_string()));
         }
         commands.set_state(Step(1));
     });

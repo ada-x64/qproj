@@ -116,19 +116,31 @@ fn jump_to_bottom(In(target): In<Entity>, mut commands: Commands) {
 fn test_reflow() {
     let mut app = App::new();
     app.add_plugins(test_harness);
-    let term = app
+    let term = app.world_mut().spawn(Terminal).id();
+    let term_window = app
         .world_mut()
-        .spawn((Terminal, TermHeight(10), TermWidth(15)))
+        .spawn((
+            TerminalWindow(term),
+            Node {
+                width: px(150),
+                height: px(500),
+                ..Default::default()
+            },
+            TextFont {
+                font_size: 10.,
+                ..Default::default()
+            },
+        ))
         .id();
 
     app.add_step(0, move |mut commands: Commands| {
         commands.write_message(TerminalMessage::writeln(
-            term,
+            term_window,
             "this line has more than 15 characters",
         ));
-        commands.write_message(TerminalMessage::writeln(term, "not me tho"));
-        commands.write_message(TerminalMessage::writeln(term, "nor i"));
-        commands.write_message(TerminalMessage::reflow(term));
+        commands.write_message(TerminalMessage::writeln(term_window, "not me tho"));
+        commands.write_message(TerminalMessage::writeln(term_window, "nor i"));
+        commands.write_message(TerminalMessage::reflow(term_window));
         commands.set_state(Step(1));
     });
     // TODO: This test will need updated when supporting rich text.

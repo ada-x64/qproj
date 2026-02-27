@@ -3,6 +3,7 @@ use crate::prelude::*;
 mod components {
     use super::*;
 
+    // TODO: Add a limit to the number of stored lines.
     /// Marker component / entry point for spawning the underlying terminal
     /// buffer.
     #[derive(Component, Default, Reflect)]
@@ -45,6 +46,8 @@ pub use components::*;
 
 mod events {
     use super::*;
+    // TODO: Since this is type-erased, we could accept either a terminal window or a terminal buffer id here.
+    // That way we can write to buffers without necessarily having a window.
     #[derive(Debug, Message, Reflect, PartialEq, Eq, Hash)]
     pub struct TerminalMessage {
         /// Represents an entity containing a [`TerminalWindow`]. Any
