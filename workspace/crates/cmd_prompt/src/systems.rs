@@ -1,3 +1,5 @@
+use bevy::text::LineHeight;
+
 use crate::prelude::*;
 
 // How to do this?
@@ -16,16 +18,20 @@ use crate::prelude::*;
 
 // TODO: This messes up in headless tests because the node size is always set to 0x0
 pub fn resize(
-    q: Query<(&TerminalWindow, &ComputedNode, &TextFont), Changed<ComputedNode>>,
+    q: Query<(&TerminalWindow, &ComputedNode, &TextFont, &LineHeight), Changed<ComputedNode>>,
     mut commands: Commands,
 ) {
     trace!("resize");
-    for (window, node, font) in q.iter() {
+    for (window, node, font, line_height) in q.iter() {
         // TODO: Calculate monospace character width
         let character_width = font.font_size;
         let size = node.size();
+        let line_height = match line_height {
+            LineHeight::Px(px) => *px,
+            LineHeight::RelativeToFont(rel) => rel * font.font_size,
+        };
         let width = (size.x / character_width).floor() as usize;
-        let height = (size.y / font.font_size).floor() as usize;
+        let height = (size.y / line_height).floor() as usize;
         commands.entity(window.0).insert(TermWidth(width));
         commands.entity(window.0).insert(TermHeight(height));
         debug!("Got node size: {size:?}");
@@ -53,13 +59,13 @@ pub fn update_layout(
     >,
     q_lines: Query<&TerminalLine>,
     q_rows: Query<&TerminalRow>,
-    q_windows: Query<&TerminalScrollPos, With<TerminalWindow>>,
+    q_windows: Query<(&TerminalScrollPos, &LineHeight, &TextFont), With<TerminalWindow>>,
     mut commands: Commands,
 ) {
     trace!("update layout");
     for (num_rows, num_cols, layout, window_list) in q {
         window_list.iter().for_each(|window| {
-            let scroll_pos = r!(q_windows.get(window));
+            let (scroll_pos, line_height, font) = r!(q_windows.get(window));
             let new_children = layout
                 .iter()
                 .rev()
@@ -73,7 +79,11 @@ pub fn update_layout(
                         .skip(row.offset)
                         .take(**num_cols)
                         .collect::<String>();
-                    Some(commands.spawn(TextSpan::new(textval + "\n")).id())
+                    Some(
+                        commands
+                            .spawn((*line_height, font.clone(), TextSpan::new(textval + "\n")))
+                            .id(),
+                    )
                 })
                 .rev()
                 .collect::<Vec<_>>();
