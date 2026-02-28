@@ -98,14 +98,15 @@ fn writeln(
 }
 
 fn scroll(
-    In((term_id, val)): In<(Entity, isize)>,
-    scroll: Query<&TerminalScrollPos>,
+    In((window_id, val)): In<(Entity, isize)>,
+    q: Query<(&TerminalScrollPos, &TerminalLayout, &Children)>,
     mut commands: Commands,
 ) {
-    let prev = r!(scroll.get(term_id));
-    commands
-        .entity(term_id)
-        .insert(TerminalScrollPos(prev.saturating_add_signed(val)));
+    let (prev, rows, children) = r!(q.get(window_id));
+    commands.entity(window_id).insert(TerminalScrollPos(
+        prev.saturating_add_signed(val)
+            .clamp(0, rows.len() - children.len()),
+    ));
 }
 
 fn jump_to_bottom(In(target): In<Entity>, mut commands: Commands) {
@@ -190,7 +191,7 @@ fn test_reflow() {
                 commands.write_message(AppExit::Success);
             }
         })
-        .after(TerminalSystems),
+        .after(TerminalSystems::PostMutation),
     );
     assert!(app.run().is_success())
 }

@@ -93,7 +93,10 @@ mod events {
 pub use events::*;
 
 mod display {
-    use bevy::ecs::{lifecycle::HookContext, world::DeferredWorld};
+    use bevy::{
+        ecs::{lifecycle::HookContext, world::DeferredWorld},
+        picking::hover::Hovered,
+    };
 
     use super::*;
 
@@ -116,6 +119,7 @@ mod display {
         TermWidth,
         TermHeight,
         TerminalLayout,
+        Hovered,
     )]
     #[component(immutable)]
     #[relationship(relationship_target = TerminalWindowList)]

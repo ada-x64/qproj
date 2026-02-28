@@ -3,8 +3,12 @@ use bevy::ui::ui_layout_system;
 use crate::prelude::*;
 
 /// [`SystemSet`] for all terminal-related systems.
-#[derive(SystemSet, Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct TerminalSystems;
+#[derive(SystemSet, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum TerminalSystems {
+    PreMutation,
+    Mutation,
+    PostMutation,
+}
 
 /// The primary plugin for q_term
 #[derive(Default, Debug)]
@@ -14,10 +18,26 @@ impl Plugin for TerminalPlugin {
         app.add_message::<TerminalMessage>();
         app.add_systems(
             PostUpdate,
-            (resize, handle_messages, update_layout)
+            (resize, scroll).in_set(TerminalSystems::PreMutation),
+        );
+        app.add_systems(
+            PostUpdate,
+            (handle_messages, update_layout)
                 .after(ui_layout_system)
                 .chain()
-                .in_set(TerminalSystems),
+                .in_set(TerminalSystems::Mutation),
+        );
+        app.configure_sets(
+            PostUpdate,
+            TerminalSystems::PreMutation.before(TerminalSystems::Mutation),
+        );
+        app.configure_sets(
+            PostUpdate,
+            TerminalSystems::Mutation.before(TerminalSystems::PostMutation),
+        );
+        app.configure_sets(
+            PostUpdate,
+            TerminalSystems::PostMutation.after(TerminalSystems::Mutation),
         );
     }
 }

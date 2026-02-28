@@ -1,4 +1,8 @@
-use bevy::text::LineHeight;
+use bevy::{
+    input::mouse::{AccumulatedMouseScroll, MouseScrollUnit},
+    picking::hover::Hovered,
+    text::LineHeight,
+};
 
 use crate::prelude::*;
 
@@ -58,6 +62,7 @@ pub fn update_layout(
                 Changed<TermHeight>,
                 Changed<TermWidth>,
                 Changed<TerminalLayout>,
+                Changed<TerminalScrollPos>,
             )>,
             With<TerminalWindow>,
         ),
@@ -96,6 +101,30 @@ pub fn update_layout(
             .collect::<Vec<_>>();
         commands.entity(window_id).despawn_children();
         commands.entity(window_id).add_children(&new_children);
+    }
+}
+
+pub fn scroll(
+    q: Query<(Entity, &Hovered, &LineHeight, &TextFont), With<TerminalWindow>>,
+    scroll: Res<AccumulatedMouseScroll>,
+    mut commands: Commands,
+) {
+    if scroll.delta.y == 0. {
+        return;
+    }
+    let iter = q.iter().filter(|(_, hovered, ..)| hovered.0);
+    for (entity, _, line_height, text_font) in iter {
+        let delta = match scroll.unit {
+            MouseScrollUnit::Line => scroll.delta.y,
+            MouseScrollUnit::Pixel => {
+                let line_height = match line_height {
+                    LineHeight::Px(line_height) => *line_height,
+                    LineHeight::RelativeToFont(rel) => rel * text_font.font_size,
+                };
+                line_height / scroll.delta.y
+            }
+        };
+        commands.write_message(TerminalMessage::scroll(entity, delta as isize));
     }
 }
 
@@ -166,7 +195,7 @@ fn test_text_nodes() {
                 commands.write_message(AppExit::error());
             }
         })
-        .after(TerminalSystems),
+        .after(TerminalSystems::PostMutation),
     );
     assert!(app.run().is_success());
 }

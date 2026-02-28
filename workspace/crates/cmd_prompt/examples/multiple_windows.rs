@@ -37,6 +37,10 @@ fn main() {
                         BackgroundColor(background),
                         TextColor(foreground),
                         TerminalWindow(term_id),
+                        Node {
+                            width: percent(100),
+                            ..Default::default()
+                        },
                     ))
                     .id()
             })
