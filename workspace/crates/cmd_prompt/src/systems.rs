@@ -20,23 +20,54 @@ use crate::prelude::*;
 //     todo!()
 // }
 
+/// Propogates font changes from the TerminalWindow to the targeted TerminalCharWidth entity.
+pub fn update_font(
+    q1: Query<(&TextFont, &TerminalCharWidthTarget), Changed<TextFont>>,
+    q2: Query<Entity, With<TerminalCharWidth>>,
+    mut commands: Commands,
+) {
+    for (font, target) in q1 {
+        let entity = c!(q2.get(target.target()));
+        commands.entity(entity).insert(font.clone());
+    }
+}
+/// Measure the character width of the monospace font by using a detached,
+/// invisible Node containing a single Text(" ")
+pub fn update_char_width(
+    q: Query<(Entity, &ComputedNode, &TerminalCharWidth), Changed<ComputedNode>>,
+    mut commands: Commands,
+) {
+    for (entity, node, cw) in q {
+        commands.entity(entity).insert(TerminalCharWidth {
+            value: node.size().x,
+            ..*cw
+        });
+    }
+}
+
 pub fn resize(
     q: Query<
-        (Entity, &ComputedNode, &TextFont, &LineHeight),
+        (
+            Entity,
+            &ComputedNode,
+            &TextFont,
+            &LineHeight,
+            &TerminalCharWidthTarget,
+        ),
         (Changed<ComputedNode>, With<TerminalWindow>),
     >,
+    q2: Query<&TerminalCharWidth>,
     mut commands: Commands,
 ) {
     trace!("resize");
-    for (window_id, node, font, line_height) in q.iter() {
-        // TODO: Calculate monospace character width
-        let character_width = font.font_size;
+    for (window_id, node, font, line_height, cw_target) in q.iter() {
+        let cw = c!(q2.get(cw_target.entity()));
         let size = node.size();
         let line_height = match line_height {
             LineHeight::Px(px) => *px,
             LineHeight::RelativeToFont(rel) => rel * font.font_size,
         };
-        let width = (size.x / character_width).floor() as usize;
+        let width = (size.x / cw.value).floor() as usize;
         let height = (size.y / line_height).floor() as usize;
         commands.entity(window_id).insert(TermWidth(width));
         commands.entity(window_id).insert(TermHeight(height));

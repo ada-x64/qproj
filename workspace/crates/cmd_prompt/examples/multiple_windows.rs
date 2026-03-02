@@ -1,6 +1,8 @@
 use bevy::{prelude::*, window::WindowResolution};
 use q_cmd_prompt::prelude::*;
 
+const LOREM_IPSUM: &str = "Incidunt qui quas aut. Fugit aut laudantium omnis qui adipisci. Fuga recusandae sint ipsam. Reiciendis sint delectus labore quam sapiente doloremque. Repellendus laudantium et et rerum ut sed.";
+
 fn main() {
     let mut app = App::new();
     app.add_plugins((
@@ -62,6 +64,9 @@ fn main() {
             // because they are displaying the same `Terminal` entity
             commands.write_message(TerminalMessage::writeln(children[0], i));
         }
+        let long_string = ["."].repeat(256).join("");
+        commands.write_message(TerminalMessage::writeln(children[0], long_string));
+        commands.write_message(TerminalMessage::writeln(children[0], LOREM_IPSUM));
     });
     app.run();
 }

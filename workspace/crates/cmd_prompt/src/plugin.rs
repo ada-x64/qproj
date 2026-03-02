@@ -18,7 +18,9 @@ impl Plugin for TerminalPlugin {
         app.add_message::<TerminalMessage>();
         app.add_systems(
             PostUpdate,
-            (resize, scroll).in_set(TerminalSystems::PreMutation),
+            (update_font, update_char_width, resize, scroll)
+                .chain()
+                .in_set(TerminalSystems::PreMutation),
         );
         app.add_systems(
             PostUpdate,

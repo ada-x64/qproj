@@ -115,15 +115,33 @@ mod display {
             linebreak: LineBreak::NoWrap
         },
         TerminalScrollPos,
-        TerminalCharWidth,
         TermWidth,
         TermHeight,
         TerminalLayout,
         Hovered,
     )]
-    #[component(immutable)]
+    #[component(immutable, on_add=Self::on_add)]
     #[relationship(relationship_target = TerminalWindowList)]
     pub struct TerminalWindow(pub Entity);
+    impl TerminalWindow {
+        /// Spawn [`TerminalCharWidth`] et al
+        pub fn on_add(mut world: DeferredWorld, ctx: HookContext) {
+            let mut cmds = world.commands();
+            let id = cmds
+                .spawn((
+                    TerminalCharWidth {
+                        target: ctx.entity,
+                        value: 0.,
+                    },
+                    Node::default(),
+                    Visibility::Hidden,
+                    Text::new(" "),
+                ))
+                .id();
+            cmds.entity(ctx.entity)
+                .add_one_related::<TerminalCharWidth>(id);
+        }
+    }
 
     /// Scroll position, in lines. 0 means you're at the bottom.
     #[derive(Component, Debug, Reflect, PartialEq, Eq, Hash, Clone, Copy, Deref, Default)]
@@ -131,9 +149,23 @@ mod display {
     pub struct TerminalScrollPos(pub usize);
 
     /// Width of a character cell in pixels, determined by measuring the width of a space.
-    #[derive(Component, Debug, Reflect, PartialEq, Eq, Hash, Clone, Copy, Deref, Default)]
+    #[derive(Component, Debug, Reflect, PartialEq, Clone, Copy)]
     #[component(immutable)]
-    pub struct TerminalCharWidth(pub u32);
+    #[relationship(relationship_target=TerminalCharWidthTarget)]
+    pub struct TerminalCharWidth {
+        #[relationship]
+        pub target: Entity,
+        pub value: f32,
+    }
+
+    #[derive(Component, Debug, Reflect, PartialEq, Eq, Hash, Clone, Copy, Deref)]
+    #[relationship_target(relationship=TerminalCharWidth, linked_spawn)]
+    pub struct TerminalCharWidthTarget(Entity);
+    impl TerminalCharWidthTarget {
+        pub fn target(&self) -> Entity {
+            self.0
+        }
+    }
 
     /// The terminal's layout grid. Contains references to [`TerminalRow`]
     /// entities. This entity represents the fully laid-out text buffer
