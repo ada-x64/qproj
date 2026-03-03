@@ -59,7 +59,6 @@ fn reflow(
     mut commands: Commands,
 ) {
     trace!("Reflow");
-    debug!(?window_id);
     let cols = r!(term_width.get(*window_id));
     let lines_reltarget = terminfo
         .iter()
@@ -85,7 +84,6 @@ fn writeln(
     q_terms: Query<(Entity, &TerminalWindowList)>,
 ) {
     trace!("writeline");
-    debug!(?window_id);
     let num_cols = r!(q_cols.get(window_id));
     let term_id = q_terms
         .iter()

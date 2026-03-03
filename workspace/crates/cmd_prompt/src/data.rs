@@ -95,7 +95,8 @@ pub use events::*;
 mod display {
     use bevy::{
         ecs::{lifecycle::HookContext, world::DeferredWorld},
-        picking::hover::Hovered,
+        picking::hover::{DirectlyHovered, Hovered},
+        text::LineHeight,
     };
 
     use super::*;
@@ -109,7 +110,6 @@ mod display {
             overflow: Overflow::clip(),
             ..Default::default()
         },
-        Text,
         TextLayout {
             justify: Justify::Left,
             linebreak: LineBreak::NoWrap
@@ -118,7 +118,11 @@ mod display {
         TermWidth,
         TermHeight,
         TerminalLayout,
-        Hovered,
+        Pickable,
+        // Requires text metadata to propogate to its children
+        TextColor,
+        TextFont,
+        LineHeight,
     )]
     #[component(immutable, on_add=Self::on_add)]
     #[relationship(relationship_target = TerminalWindowList)]
@@ -126,20 +130,15 @@ mod display {
     impl TerminalWindow {
         /// Spawn [`TerminalCharWidth`] et al
         pub fn on_add(mut world: DeferredWorld, ctx: HookContext) {
-            let mut cmds = world.commands();
-            let id = cmds
-                .spawn((
-                    TerminalCharWidth {
-                        target: ctx.entity,
-                        value: 0.,
-                    },
-                    Node::default(),
-                    Visibility::Hidden,
-                    Text::new(" "),
-                ))
-                .id();
-            cmds.entity(ctx.entity)
-                .add_one_related::<TerminalCharWidth>(id);
+            let mut commands = world.commands();
+            let id = commands.spawn(TerminalCharWidth::new(ctx.entity, 0.)).id();
+            commands
+                .entity(ctx.entity)
+                .add_one_related::<TerminalCharWidth>(id)
+                .observe(scroll_terminal_window)
+                .observe(|event: On<Pointer<Over>>| {
+                    debug!(?event);
+                });
         }
     }
 
@@ -151,11 +150,25 @@ mod display {
     /// Width of a character cell in pixels, determined by measuring the width of a space.
     #[derive(Component, Debug, Reflect, PartialEq, Clone, Copy)]
     #[component(immutable)]
+    #[require(Node::default(), Pickable::IGNORE, Visibility::Hidden, Text::new(" "))]
     #[relationship(relationship_target=TerminalCharWidthTarget)]
     pub struct TerminalCharWidth {
         #[relationship]
-        pub target: Entity,
-        pub value: f32,
+        target: Entity,
+        value: f32,
+    }
+    impl TerminalCharWidth {
+        pub fn new(target: Entity, value: f32) -> Self {
+            Self { target, value }
+        }
+
+        pub fn value(&self) -> f32 {
+            self.value
+        }
+
+        pub fn target(&self) -> Entity {
+            self.target
+        }
     }
 
     #[derive(Component, Debug, Reflect, PartialEq, Eq, Hash, Clone, Copy, Deref)]
@@ -170,9 +183,21 @@ mod display {
     /// The terminal's layout grid. Contains references to [`TerminalRow`]
     /// entities. This entity represents the fully laid-out text buffer
     /// corresponding to the target terminal's [`TerminalLines`] entity.
-    #[derive(Component, Default, Deref, Debug)]
+    #[derive(Component, Default, Deref, Debug, Reflect)]
     #[relationship_target(relationship=TerminalRow)]
+    #[component(on_add = Self::on_add)]
     pub struct TerminalLayout(Vec<Entity>);
+    impl TerminalLayout {
+        fn on_add(mut world: DeferredWorld, ctx: HookContext) {
+            let child_node = world.commands().spawn(TerminalTextWrapper).id();
+            world.commands().entity(ctx.entity).add_child(child_node);
+        }
+    }
+    /// A marker component for the [`TerminalLayout`] entity's child component,
+    /// which contains the automatically created [`TextSpan`] children;
+    #[derive(Component, Default, Debug, Reflect)]
+    #[require(Node, Text, DirectlyHovered, Pickable)]
+    pub struct TerminalTextWrapper;
 
     /// A reference to a logical line with a character offset into its full text value.
     #[derive(Component, Debug, Reflect, PartialEq, Eq, Hash, Clone, Copy)]
@@ -211,12 +236,6 @@ mod display {
     pub struct TermWidth(pub usize);
     impl TermWidth {
         fn on_insert(mut world: DeferredWorld, ctx: HookContext) {
-            // Re-wrap the terminal text.
-            if let Some(this) = world.get::<Self>(ctx.entity)
-                && this.0 == 0
-            {
-                warn!("TermWidth set to 0");
-            }
             world
                 .commands()
                 .write_message(TerminalMessage::reflow(ctx.entity));
@@ -229,12 +248,6 @@ mod display {
     pub struct TermHeight(pub usize);
     impl TermHeight {
         fn on_insert(mut world: DeferredWorld, ctx: HookContext) {
-            // Insert/remove LineRefs as appropriate.
-            if let Some(this) = world.get::<Self>(ctx.entity)
-                && this.0 == 0
-            {
-                warn!("TermHeight set to 0");
-            }
             world
                 .commands()
                 .write_message(TerminalMessage::reflow(ctx.entity));
