@@ -1,23 +1,55 @@
 use crate::prelude::*;
 
-pub fn handle_messages(mut messages: MessageReader<TerminalMessage>, mut commands: Commands) {
-    trace!("handle message");
+pub fn handle_terminal_messages(
+    mut messages: MessageReader<TerminalMessage>,
+    mut commands: Commands,
+    q_windows: Query<&TerminalWindowList, With<Terminal>>,
+    q_cols: Query<&TermWidth, With<TerminalWindow>>,
+) {
+    trace!("handle terminal message");
+    for msg in messages.read() {
+        match &msg.kind {
+            TerminalMessageKind::Writeln(spawners) => {
+                let (line_id, len) =
+                    VirtualTextSpanSpawner::spawn(spawners, msg.target, &mut commands);
+                if let Ok(list) = q_windows.get(msg.target) {
+                    for window_id in list.iter() {
+                        let num_cols = c!(q_cols.get(window_id));
+                        flow_line(&mut commands, window_id, line_id, len, **num_cols);
+                    }
+                }
+            }
+        }
+    }
+    messages.clear();
+}
+
+pub fn handle_window_messages(
+    mut messages: MessageReader<TerminalWindowMessage>,
+    mut commands: Commands,
+    q_window: Query<&TerminalWindow>,
+) {
+    trace!("handle window message");
     let mut to_reflow = vec![];
     for msg in messages.read() {
         match &msg.kind {
-            TerminalMessageKind::Reflow => {
-                if !to_reflow.contains(&msg.window_id) {
-                    to_reflow.push(msg.window_id);
+            TerminalWindowMsgKind::Reflow => {
+                if !to_reflow.contains(&msg.target) {
+                    to_reflow.push(msg.target);
                 }
             }
-            TerminalMessageKind::Writeln(string) => {
-                commands.run_system_cached_with(writeln, (msg.window_id, string.clone()));
+            TerminalWindowMsgKind::Scroll(dir) => {
+                commands.run_system_cached_with(scroll, (msg.target, *dir));
             }
-            TerminalMessageKind::Scroll(direction) => {
-                commands.run_system_cached_with(scroll, (msg.window_id, *direction));
+            TerminalWindowMsgKind::JumpToBottom => {
+                commands.run_system_cached_with(jump_to_bottom, msg.target);
             }
-            TerminalMessageKind::JumpToBottom => {
-                commands.run_system_cached_with(jump_to_bottom, msg.window_id);
+            TerminalWindowMsgKind::Terminal(tmsg) => {
+                warn_once!(
+                    "Using TerminalWindowMsgKind::Terminal results in a frame delay and extra memory allocations to clone the message data. Try directly sending a TerminalWindowMessage instead."
+                );
+                let window = c!(q_window.get(msg.target));
+                commands.write_message(TerminalMessage::new(window.0, (*tmsg).clone()));
             }
         }
     }
@@ -30,9 +62,9 @@ pub fn handle_messages(mut messages: MessageReader<TerminalMessage>, mut command
 /// Takes a TerminalLine and returns a vec of newly spawned TerminalRows.
 fn flow_line(
     commands: &mut Commands,
+    window_id: Entity,
     line_id: Entity,
-    text: &str,
-    term_id: Entity,
+    line_len: usize,
     num_cols: usize,
 ) -> Vec<Entity> {
     trace!("flow line");
@@ -41,8 +73,8 @@ fn flow_line(
     }
     let mut res = vec![];
     let mut offset = 0;
-    while offset < text.len() {
-        let new_row = TerminalRow::new(term_id, line_id, offset);
+    while offset < line_len {
+        let new_row = TerminalRow::new(window_id, line_id, offset);
         let id = commands.spawn(new_row).id();
         res.push(id);
         offset += num_cols;
@@ -73,26 +105,8 @@ fn reflow(
     // todo: batch process this in parallel
     lines_reltarget.iter().for_each(|line_id| {
         let line = r!(lines_q.get(line_id));
-        flow_line(&mut commands, line_id, line, *window_id, **cols);
+        flow_line(&mut commands, *window_id, line_id, line.len(), **cols);
     })
-}
-
-fn writeln(
-    In((window_id, text)): In<(Entity, String)>,
-    mut commands: Commands,
-    q_cols: Query<&TermWidth>,
-    q_terms: Query<(Entity, &TerminalWindowList)>,
-) {
-    trace!("writeline");
-    let num_cols = r!(q_cols.get(window_id));
-    let term_id = q_terms
-        .iter()
-        .find_map(|(entity, list)| list.contains(&window_id).then_some(entity));
-    let term_id = r!(term_id);
-    let new_line_id = commands
-        .spawn(TerminalLine::new(term_id, text.clone()))
-        .id();
-    flow_line(&mut commands, new_line_id, &text, window_id, **num_cols);
 }
 
 fn scroll(
@@ -103,7 +117,7 @@ fn scroll(
     let (prev, rows, children) = r!(q.get(window_id));
     commands.entity(window_id).insert(TerminalScrollPos(
         prev.saturating_add_signed(val)
-            .clamp(0, rows.len() - children.len()),
+            .clamp(0, rows.len().saturating_sub(children.len())),
     ));
 }
 
@@ -137,9 +151,9 @@ fn test_reflow() {
             term_window,
             "this line has more than 15 characters",
         ));
-        commands.write_message(TerminalMessage::writeln(term_window, "not me tho"));
-        commands.write_message(TerminalMessage::writeln(term_window, "nor i"));
-        commands.write_message(TerminalMessage::reflow(term_window));
+        commands.write_message(TerminalMessage::writeln(term, "not me tho"));
+        commands.write_message(TerminalMessage::writeln(term, "nor i"));
+        commands.write_message(TerminalWindowMessage::reflow(term_window));
         commands.set_state(Step(1));
     });
     // TODO: This test will need updated when supporting rich text.

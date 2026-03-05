@@ -163,7 +163,10 @@ pub(crate) fn scroll_terminal_window(
             line_height / trigger.y
         }
     };
-    commands.write_message(TerminalMessage::scroll(trigger.entity, delta as isize));
+    commands.write_message(TerminalWindowMessage::scroll(
+        trigger.entity,
+        delta as isize,
+    ));
 }
 
 #[test]

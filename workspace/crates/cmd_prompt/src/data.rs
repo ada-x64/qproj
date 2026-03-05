@@ -18,7 +18,7 @@ mod components {
 
     /// This entity represents the underlying text buffer. It contains
     /// references to [`TerminalLine`] entities.
-    #[derive(Component, Default, Deref, Debug)]
+    #[derive(Component, Default, Deref, Debug, Reflect)]
     #[relationship_target(relationship=TerminalLine)]
     pub struct TerminalLines(Vec<Entity>);
 
@@ -41,53 +41,226 @@ mod components {
             }
         }
     }
+
+    /// Marker component for an entity which acts as a virtual [`TextSpan`] for
+    /// the underlying [`TerminalLine`]. This component's range will be used to create
+    /// [`TextSpan`] child entities for the [`TerminalRow`] container entities.
+    ///
+    /// ### Can I set the font style?
+    /// Bold, italic, underlined, etc. would
+    /// require setting the font ID without modifying the font size. We _could_
+    /// allow users to pass a font ID, but there is no guarantee that the user
+    /// would occupy that slot with a true font variant. In order to assure
+    /// safety, we would need to register font variants _before_ allowing the
+    /// user to set them, which is outside the scope of this crate.
+    #[derive(Component, Debug, Reflect, PartialEq)]
+    pub struct VirtualTextSpan {
+        pub start: usize,
+        pub end: usize,
+        pub color: Option<Color>,
+        pub background_color: Option<Color>,
+    }
+    impl VirtualTextSpan {
+        pub fn spawn_textspan(self, text: &str, commands: &mut Commands) -> Entity {
+            let color = self.color.map(TextColor).unwrap_or_default();
+            let bg = self
+                .background_color
+                .map(TextBackgroundColor)
+                .unwrap_or_default();
+            commands
+                .spawn((TextSpan(text[self.start..self.end].to_string()), color, bg))
+                .id()
+        }
+    }
+
+    /// This struct hold all the necessary data to spawn a terminal text span in
+    /// a convenient format. In order to facilitate text wrapping,
+    /// [`TerminalLine`] data must contain the entire string, while the text
+    /// spans must be separate. This struct is designed to help with the API
+    /// by making virtual text spans easier to author.
+    #[derive(Debug, PartialEq, Reflect, Clone)]
+    pub struct VirtualTextSpanSpawner {
+        pub text: String,
+        pub color: Option<Color>,
+        pub background_color: Option<Color>,
+    }
+    impl VirtualTextSpanSpawner {
+        pub fn new(text: impl ToString) -> Self {
+            Self {
+                text: text.to_string(),
+                color: None,
+                background_color: None,
+            }
+        }
+        pub fn with_color(self, color: impl Into<Color>) -> Self {
+            Self {
+                color: Some(color.into()),
+                ..self
+            }
+        }
+        pub fn with_background_color(self, color: impl Into<Color>) -> Self {
+            Self {
+                background_color: Some(color.into()),
+                ..self
+            }
+        }
+        /// Adds a [`TerminalLine`] and the corresponding [`VirtualTextSpans`] to the given target entity.
+        /// Returns the [`Entity`] ID of the spawned [`TerminalLine`] and its corresponding string length.
+        pub(crate) fn spawn(
+            spans: &[VirtualTextSpanSpawner],
+            target: Entity,
+            commands: &mut Commands,
+        ) -> (Entity, usize) {
+            let (text, children) =
+                spans
+                    .iter()
+                    .fold((String::new(), vec![]), |(text, ids), span| {
+                        let start = text.len();
+                        let end = start + span.text.len();
+                        let child = commands
+                            .spawn(VirtualTextSpan {
+                                start,
+                                end,
+                                color: span.color,
+                                background_color: span.background_color,
+                            })
+                            .id();
+                        (
+                            text + &span.text,
+                            [ids, vec![child]].into_iter().flatten().collect::<Vec<_>>(),
+                        )
+                    });
+            let len = text.len();
+            let line_id = commands
+                .spawn(TerminalLine::new(target, text))
+                .add_children(&children)
+                .id();
+            commands
+                .entity(target)
+                .add_one_related::<TerminalLine>(line_id);
+            (line_id, len)
+        }
+    }
+
+    /// Convenience macro for creating vec of [`VirtualTextSpanSpawner`]s.
+    #[macro_export]
+    macro_rules! term_writeln {
+        ($($value:tt),*) => {
+             vec![$(term_writeln!(@expr_parse $value)),*]
+        };
+        (@expr_parse $string:literal) => {
+            VirtualTextSpanSpawner::new($string)
+        };
+        (@expr_parse $string:ident) => {
+            VirtualTextSpanSpawner::new($string)
+        };
+        (@expr_parse ($string:literal $(, background=$bg:expr)? $(, color=$color:expr)?)) => {
+            term_writeln!(@rich_expr $string, $($bg)?, $($color)?)
+        };
+        (@expr_parse ($string:literal $(, color=$color:expr)?) $(, background=$bg:expr)? ) => {
+            term_writeln!(@rich_expr $string, $($bg)?, $($color)?)
+        };
+        (@expr_parse ($string:ident $(, background=$bg:expr)? $(, color=$color:expr)?)) => {
+            term_writeln!(@rich_expr $string, $($bg)?, $($color)?)
+        };
+        (@expr_parse ($string:ident $(, color=$color:expr)?) $(, background=$bg:expr)? ) => {
+            term_writeln!(@rich_expr $string, $($bg)?, $($color)?)
+        };
+        (@rich_expr $string:literal, $($bg:expr)?, $($color:expr)?) => {
+            VirtualTextSpanSpawner::new($string)$(.with_color($color))?$(.with_background_color($bg))?
+        };
+        (@rich_expr $string:ident, $($bg:expr)?, $($color:expr)?) => {
+            VirtualTextSpanSpawner::new($string)$(.with_color($color))?$(.with_background_color($bg))?
+        };
+    }
+    #[test]
+    fn test_writeln_macro() {
+        use bevy::color::palettes::css;
+        let msg = term_writeln!(
+            "This is some ",
+            ("fancy", background = css::RED, color = css::WHITE),
+            (" text!", color = css::BLACK)
+        );
+        let expected = vec![
+            VirtualTextSpanSpawner::new("This is some "),
+            VirtualTextSpanSpawner::new("fancy")
+                .with_background_color(css::RED)
+                .with_color(css::WHITE),
+            VirtualTextSpanSpawner::new(" text!").with_color(css::BLACK),
+        ];
+        assert_eq!(msg, expected);
+    }
 }
 pub use components::*;
 
 mod events {
     use super::*;
-    // TODO: Since this is type-erased, we could accept either a terminal window or a terminal buffer id here.
-    // That way we can write to buffers without necessarily having a window.
-    #[derive(Debug, Message, Reflect, PartialEq, Eq, Hash)]
+    #[derive(Debug, Message, Reflect)]
     pub struct TerminalMessage {
-        /// Represents an entity containing a [`TerminalWindow`]. Any
-        /// modifications aimed at the buffer will modify the related
-        /// [`Terminal`]'s [`TerminalLine`] list.
-        pub window_id: Entity,
+        /// Represents an entity containing a [`Terminal`]. Any modifications
+        /// aimed at the buffer will modify the related [`Terminal`]'s
+        /// [`TerminalLine`] list.
+        pub target: Entity,
         pub kind: TerminalMessageKind,
     }
     impl TerminalMessage {
         pub fn new(window_id: Entity, kind: TerminalMessageKind) -> Self {
-            Self { window_id, kind }
+            Self {
+                target: window_id,
+                kind,
+            }
         }
-        pub fn reflow(window_id: Entity) -> Self {
-            Self::new(window_id, TerminalMessageKind::Reflow)
-        }
+        /// Writes a simple line to the buffer. For rich text support, see [Self::writeln_rich]
         pub fn writeln(window_id: Entity, line: impl ToString) -> Self {
-            Self::new(window_id, TerminalMessageKind::Writeln(line.to_string()))
+            let line = line.to_string();
+            Self::new(window_id, TerminalMessageKind::Writeln(term_writeln!(line)))
         }
-        pub fn scroll(window_id: Entity, direction: isize) -> Self {
-            Self::new(window_id, TerminalMessageKind::Scroll(direction))
-        }
-        pub fn jump_to_bottom(window_id: Entity) -> Self {
-            Self::new(window_id, TerminalMessageKind::JumpToBottom)
+        /// Writes a rich line of text to the terminal See [`VirtualTextSpan`],
+        /// [`term_writeln!`], and [`VirtualTextSpanSpawner`] for more
+        /// information.
+        pub fn writeln_rich(window_id: Entity, spans: Vec<VirtualTextSpanSpawner>) -> Self {
+            Self::new(window_id, TerminalMessageKind::Writeln(spans))
         }
     }
-    #[derive(Debug, Reflect, PartialEq, Eq, Hash)]
+    #[derive(Debug, Reflect, Clone)]
     pub enum TerminalMessageKind {
+        /// Write a line to the "buffer"
+        Writeln(Vec<VirtualTextSpanSpawner>),
+    }
+
+    #[derive(Debug, Message, Reflect)]
+    pub struct TerminalWindowMessage {
+        pub target: Entity,
+        pub kind: TerminalWindowMsgKind,
+    }
+    #[derive(Debug, Reflect)]
+    pub enum TerminalWindowMsgKind {
         /// Reflow the terminal. Modifes LineRefs.
         Reflow,
-        // TODO: Should be a TerminalLineBundle, i.e., should allow adding
-        // textspan children. Perhaps this takes reference to an entity, so the
-        // caller (e.g. the commands impl) has control over converting from raw
-        // text to the final hierarchy.
-        /// Write a line to the "buffer"
-        Writeln(String),
         /// Scroll in the given direction. A scroll position of 0 means you are
         /// at the last line.
         Scroll(isize),
         /// Jump to the last line. Sets scroll value to 0.
         JumpToBottom,
+        /// Modifications to the underlying terminal
+        Terminal(TerminalMessageKind),
+    }
+    impl TerminalWindowMessage {
+        pub fn new(window_id: Entity, kind: TerminalWindowMsgKind) -> Self {
+            Self {
+                target: window_id,
+                kind,
+            }
+        }
+        pub fn scroll(window_id: Entity, direction: isize) -> Self {
+            Self::new(window_id, TerminalWindowMsgKind::Scroll(direction))
+        }
+        pub fn jump_to_bottom(window_id: Entity) -> Self {
+            Self::new(window_id, TerminalWindowMsgKind::JumpToBottom)
+        }
+        pub fn reflow(window_id: Entity) -> Self {
+            Self::new(window_id, TerminalWindowMsgKind::Reflow)
+        }
     }
 }
 pub use events::*;
@@ -95,7 +268,7 @@ pub use events::*;
 mod display {
     use bevy::{
         ecs::{lifecycle::HookContext, world::DeferredWorld},
-        picking::hover::{DirectlyHovered, Hovered},
+        picking::hover::DirectlyHovered,
         text::LineHeight,
     };
 
@@ -238,7 +411,7 @@ mod display {
         fn on_insert(mut world: DeferredWorld, ctx: HookContext) {
             world
                 .commands()
-                .write_message(TerminalMessage::reflow(ctx.entity));
+                .write_message(TerminalWindowMessage::reflow(ctx.entity));
         }
     }
 
@@ -250,7 +423,7 @@ mod display {
         fn on_insert(mut world: DeferredWorld, ctx: HookContext) {
             world
                 .commands()
-                .write_message(TerminalMessage::reflow(ctx.entity));
+                .write_message(TerminalWindowMessage::reflow(ctx.entity));
         }
     }
 }
