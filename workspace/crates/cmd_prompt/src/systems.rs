@@ -80,7 +80,7 @@ pub fn resize(
     }
 }
 
-#[derive(QueryData)]
+#[derive(QueryData, Debug)]
 pub struct LayoutQueryData<'a> {
     window_id: Entity,
     term_width: &'a TermWidth,
@@ -106,7 +106,8 @@ pub fn update_layout(
             With<TerminalWindow>,
         ),
     >,
-    q_lines: Query<&TerminalLine>,
+    q_lines: Query<(&TerminalLine, &Children)>,
+    q_vspans: Query<&VirtualTextSpan>,
     q_rows: Query<&TerminalRow>,
     q_wrapper: Query<Entity, With<TerminalTextWrapper>>,
     mut commands: Commands,
@@ -121,26 +122,45 @@ pub fn update_layout(
             .skip(**data.scroll_pos)
             .take(**data.term_height)
             .filter_map(|id| {
+                debug!(?id);
                 let row = r!(q_rows.get(id));
-                let line = r!(q_lines.get(r!(row.line)));
+                let (line, vspans) = r!(q_lines.get(r!(row.line)));
                 let textval = line
                     .chars()
                     .skip(row.offset)
                     .take(**data.term_width)
                     .collect::<String>();
-                Some(
-                    commands
-                        .spawn((
-                            *data.line_height,
-                            *data.color,
-                            data.font.clone(),
-                            TextSpan::new(textval + "\n"),
-                        ))
-                        .id(),
-                )
+                let ret = vspans
+                    .iter()
+                    .filter_map(|child| q_vspans.get(child).ok())
+                    .enumerate()
+                    .fold(vec![], |mut accum, (i, vspan)| {
+                        let color = vspan.color.unwrap_or(**data.color);
+                        let mut text = textval
+                            .chars()
+                            .skip(vspan.start)
+                            .take(vspan.range)
+                            .collect::<String>();
+
+                        if i == vspans.len() - 1 {
+                            text += "\n";
+                        }
+                        let id = commands
+                            .spawn((TextSpan(text), TextColor(color), data.font.clone()))
+                            .id();
+
+                        if let Some(bg) = vspan.background_color {
+                            commands.entity(id).insert(TextBackgroundColor(bg));
+                        }
+                        accum.push(id);
+                        accum
+                    });
+                debug!(?ret);
+                Some(ret)
             })
             .rev()
-            .collect::<Vec<_>>();
+            .flatten()
+            .collect::<Vec<Entity>>();
         commands.entity(wrapper_id).despawn_children();
         commands.entity(wrapper_id).add_children(&new_children);
     }

@@ -56,21 +56,9 @@ mod components {
     #[derive(Component, Debug, Reflect, PartialEq)]
     pub struct VirtualTextSpan {
         pub start: usize,
-        pub end: usize,
+        pub range: usize,
         pub color: Option<Color>,
         pub background_color: Option<Color>,
-    }
-    impl VirtualTextSpan {
-        pub fn spawn_textspan(self, text: &str, commands: &mut Commands) -> Entity {
-            let color = self.color.map(TextColor).unwrap_or_default();
-            let bg = self
-                .background_color
-                .map(TextBackgroundColor)
-                .unwrap_or_default();
-            commands
-                .spawn((TextSpan(text[self.start..self.end].to_string()), color, bg))
-                .id()
-        }
     }
 
     /// This struct hold all the necessary data to spawn a terminal text span in
@@ -116,11 +104,11 @@ mod components {
                     .iter()
                     .fold((String::new(), vec![]), |(text, ids), span| {
                         let start = text.len();
-                        let end = start + span.text.len();
+                        let range = span.text.len();
                         let child = commands
                             .spawn(VirtualTextSpan {
                                 start,
-                                end,
+                                range,
                                 color: span.color,
                                 background_color: span.background_color,
                             })
@@ -143,6 +131,24 @@ mod components {
     }
 
     /// Convenience macro for creating vec of [`VirtualTextSpanSpawner`]s.
+    ///
+    /// ### Example
+    /// ```rust
+    /// # use bevy::color::palettes::css;
+    /// let msg = term_writeln!(
+    ///     "This is some ",
+    ///     ("fancy", background = css::RED, color = css::WHITE),
+    ///     (" text!", color = css::BLACK)
+    /// );
+    /// let expected = vec![
+    ///     VirtualTextSpanSpawner::new("This is some "),
+    ///     VirtualTextSpanSpawner::new("fancy")
+    ///         .with_background_color(css::RED)
+    ///         .with_color(css::WHITE),
+    ///     VirtualTextSpanSpawner::new(" text!").with_color(css::BLACK),
+    /// ];
+    /// assert_eq!(msg, expected);
+    /// ```
     #[macro_export]
     macro_rules! term_writeln {
         ($($value:tt),*) => {
@@ -173,23 +179,6 @@ mod components {
             VirtualTextSpanSpawner::new($string)$(.with_color($color))?$(.with_background_color($bg))?
         };
     }
-    #[test]
-    fn test_writeln_macro() {
-        use bevy::color::palettes::css;
-        let msg = term_writeln!(
-            "This is some ",
-            ("fancy", background = css::RED, color = css::WHITE),
-            (" text!", color = css::BLACK)
-        );
-        let expected = vec![
-            VirtualTextSpanSpawner::new("This is some "),
-            VirtualTextSpanSpawner::new("fancy")
-                .with_background_color(css::RED)
-                .with_color(css::WHITE),
-            VirtualTextSpanSpawner::new(" text!").with_color(css::BLACK),
-        ];
-        assert_eq!(msg, expected);
-    }
 }
 pub use components::*;
 
@@ -203,6 +192,8 @@ mod events {
         pub target: Entity,
         pub kind: TerminalMessageKind,
     }
+    // TODO: Support full ANSI escape i.e. cursor movement and rewrite.
+    // Requires thinking about cursors at all!
     impl TerminalMessage {
         pub fn new(window_id: Entity, kind: TerminalMessageKind) -> Self {
             Self {
@@ -211,15 +202,15 @@ mod events {
             }
         }
         /// Writes a simple line to the buffer. For rich text support, see [Self::writeln_rich]
-        pub fn writeln(window_id: Entity, line: impl ToString) -> Self {
+        pub fn writeln(term_id: Entity, line: impl ToString) -> Self {
             let line = line.to_string();
-            Self::new(window_id, TerminalMessageKind::Writeln(term_writeln!(line)))
+            Self::new(term_id, TerminalMessageKind::Writeln(term_writeln!(line)))
         }
         /// Writes a rich line of text to the terminal See [`VirtualTextSpan`],
         /// [`term_writeln!`], and [`VirtualTextSpanSpawner`] for more
         /// information.
-        pub fn writeln_rich(window_id: Entity, spans: Vec<VirtualTextSpanSpawner>) -> Self {
-            Self::new(window_id, TerminalMessageKind::Writeln(spans))
+        pub fn writeln_rich(term_id: Entity, spans: Vec<VirtualTextSpanSpawner>) -> Self {
+            Self::new(term_id, TerminalMessageKind::Writeln(spans))
         }
     }
     #[derive(Debug, Reflect, Clone)]

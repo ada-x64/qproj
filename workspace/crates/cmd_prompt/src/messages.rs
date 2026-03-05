@@ -10,13 +10,14 @@ pub fn handle_terminal_messages(
     for msg in messages.read() {
         match &msg.kind {
             TerminalMessageKind::Writeln(spawners) => {
+                // do NOT want to clear if we can't get the window.
+                // try again next frame.
+                let windows = r!(q_windows.get(msg.target));
                 let (line_id, len) =
                     VirtualTextSpanSpawner::spawn(spawners, msg.target, &mut commands);
-                if let Ok(list) = q_windows.get(msg.target) {
-                    for window_id in list.iter() {
-                        let num_cols = c!(q_cols.get(window_id));
-                        flow_line(&mut commands, window_id, line_id, len, **num_cols);
-                    }
+                for window_id in windows.iter() {
+                    let num_cols = c!(q_cols.get(window_id));
+                    flow_line(&mut commands, window_id, line_id, len, **num_cols);
                 }
             }
         }
