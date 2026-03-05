@@ -12,23 +12,25 @@ age = "latest"
 [tasks.play]
 description="Run the application (SSH)"
 usage = """
-    arg "[file]" help="path to executable" default="target/bin/app"
+    arg "[file]" help="path to executable" default="workspace/target/debug/app"
     flag "--example -x <example>" help="run an example"
     flag "--build-args -B <args>" var=#true
     flag "--env -e <env>" help="environment variables"
     flag "--args -a <arguments>" help="command arguments"
-    flag "--assets -A <assets>" help="assets path" default="./assets"
+    flag "--assets -A <assets>" help="assets path" default="./workspace/assets"
 """
 run = """
 #!/bin/bash
+set -e
 if [ -n "$usage_example" ]; then
     EXAMPLE="--example $usage_example"
 fi
 mise build $usage_build_args $EXAMPLE
 if [ -n "$usage_example" ]; then
-    TARGET_PATH="target/debug/examples/$usage_example"
+    TARGET_PATH="./workspace/target/debug/examples/$usage_example"
 else
     TARGET_PATH=$usage_file
 fi
-psync "$TARGET_PATH" -e "${usage_env}" -a "${usage_args}" -A "${usage_assets}"
+set -x
+uvx --from cubething_psync psync "$TARGET_PATH" -e "${usage_env}" -a "${usage_args}" -A "${usage_assets}"
 """
