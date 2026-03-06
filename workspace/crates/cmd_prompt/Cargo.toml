@@ -20,6 +20,7 @@ variadics_please = "1.1.0"
 serde = { version = "1.0.228", features = ["derive"] }
 itertools = "0.14.0"
 anstyle-parse = "1.0.0"
+anstyle = "1.0.13"
 
 [dev-dependencies]
 q_test_harness = {path = "../test_harness", version="^0.1"}

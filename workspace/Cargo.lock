@@ -4863,6 +4863,7 @@ dependencies = [
 name = "q_cmd_prompt"
 version = "0.1.0"
 dependencies = [
+ "anstyle",
  "anstyle-parse 1.0.0",
  "bevy",
  "bevy-inspector-egui",

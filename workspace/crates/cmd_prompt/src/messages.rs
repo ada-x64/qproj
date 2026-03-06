@@ -1,4 +1,5 @@
 use anstyle_parse::Utf8Parser;
+use bevy::color::palettes::css;
 
 use crate::prelude::*;
 
@@ -16,6 +17,12 @@ enum AnsiAction {
         // TODO - Can only support this partially,
         // since we're not directly modifying the displayed grid
     },
+    ResetStyle,
+    ResetColor,
+    ResetBackground,
+    SetColor(Color),
+    SetBackground(Color),
+    Conceal,
 }
 
 /// Select C0/C1 control codes. See
@@ -156,61 +163,78 @@ impl<'a> anstyle_parse::Perform for AnsiPerformer<'a> {
         _ignore: bool,
         action: u8,
     ) {
-        let iter = params.iter();
+        let mut param_iter = params.iter();
         match action {
             action if action == CsiAction::CUU as u8 => {
+                let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
+                    return;
+                };
                 self.actions.push(AnsiAction::SetCursorPos {
-                    // TODO: what's being returned here?
-                    line: self.cursor.line + (iter.next().unwrap_or(0) as usize),
+                    line: self.cursor.line - (*next as usize),
                     char: self.cursor.char,
                 });
             }
             action if action == CsiAction::CUD as u8 => {
+                let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
+                    return;
+                };
                 self.actions.push(AnsiAction::SetCursorPos {
-                    line: self.cursor.line + iter.next().unwrap_or(0) as usize,
+                    line: self.cursor.line + (*next as usize),
                     char: self.cursor.char,
                 });
             }
             action if action == CsiAction::CUF as u8 => {
+                let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
+                    return;
+                };
                 self.actions.push(AnsiAction::SetCursorPos {
                     line: self.cursor.line,
-                    char: self.cursor.char + iter.next().unwrap_or(0) as usize,
+                    char: self.cursor.char + (*next as usize),
                 })
             }
             action if action == CsiAction::CUB as u8 => {
+                let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
+                    return;
+                };
                 self.actions.push(AnsiAction::SetCursorPos {
                     line: self.cursor.line,
-                    char: self.cursor.char - iter.next().unwrap_or(0) as usize,
+                    char: self.cursor.char - (*next as usize),
                 });
             }
             action if action == CsiAction::CNL as u8 => {
+                let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
+                    return;
+                };
                 self.actions.push(AnsiAction::SetCursorPos {
-                    line: self.cursor.line + iter.next().unwrap_or(0) as usize,
+                    line: self.cursor.line + *next as usize,
                     char: 0,
                 });
             }
             action if action == CsiAction::CPL as u8 => {
+                let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
+                    return;
+                };
                 self.actions.push(AnsiAction::SetCursorPos {
-                    line: self.cursor.line - iter.next().unwrap_or(0) as usize,
+                    line: self.cursor.line - (*next as usize),
                     char: 0,
                 });
             }
             action if action == CsiAction::CHA as u8 => {
+                let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
+                    return;
+                };
                 self.actions.push(AnsiAction::SetCursorPos {
                     line: self.cursor.line,
-                    char: iter.next().unwrap_or(0) as usize,
+                    char: *next as usize,
                 });
             }
-            action if action == CsiAction::CUP as u8 => {
+            action if action == CsiAction::CUP as u8 || action == CsiAction::HVP as u8 => {
+                let [line, char, ..] = param_iter.next().unwrap_or(&[0u16]) else {
+                    return;
+                };
                 self.actions.push(AnsiAction::SetCursorPos {
-                    line: iter.next().unwrap_or(0) as usize,
-                    char: iter.next().unwrap_or(0) as usize,
-                });
-            }
-            action if action == CsiAction::HVP as u8 => {
-                self.actions.push(AnsiAction::SetCursorPos {
-                    line: iter.next().unwrap_or(0) as usize,
-                    char: iter.next().unwrap_or(0) as usize,
+                    line: *line as usize,
+                    char: *char as usize,
                 });
             }
             // action if action == CsiAction::ED as u8 => {
@@ -220,7 +244,65 @@ impl<'a> anstyle_parse::Perform for AnsiPerformer<'a> {
             //     self.actions.push(AnsiAction::Erase { mode: iter.next().unwrap_or(0) as usize });
             // }
             action if action == CsiAction::SGR as u8 => {
+                // parse into correct format
                 // TODO: Style stuff with anstyle
+                match param_iter.next() {
+                    Some([0]) => self.actions.push(AnsiAction::ResetStyle),
+                    Some([8]) => self.actions.push(AnsiAction::Conceal),
+                    // palette mode
+                    Some([x])
+                        if (*x >= 30 && *x <= 37)
+                            || (*x >= 40 && *x <= 47)
+                            || (*x >= 90 && *x <= 97)
+                            || (*x >= 100 && *x <= 107) =>
+                    {
+                        let is_dark = x / 10 == 3 || x / 10 == 4;
+                        let is_bg = x / 10 == 4 || x / 10 == 10;
+                        if x % 10 == 9 {
+                            if is_bg {
+                                self.actions.push(AnsiAction::ResetBackground);
+                            } else {
+                                self.actions.push(AnsiAction::ResetColor);
+                            }
+                            return;
+                        }
+                        // todo : TerminalPalette component or resource - per window or global?
+                        let color = match (x % 10, is_dark) {
+                            (0, _) => css::BLACK,
+                            (1, false) => css::RED,
+                            (1, true) => css::DARK_RED,
+                            (2, false) => css::GREEN,
+                            (3, true) => css::DARK_GREEN,
+                            (4, false) => css::LIGHT_YELLOW,
+                            (4, true) => css::YELLOW,
+                            (5, false) => css::MAGENTA,
+                            (5, true) => css::DARK_MAGENTA,
+                            (6, false) => css::LIGHT_CYAN,
+                            (6, true) => css::DARK_CYAN,
+                            (7, false) => css::WHITE,
+                            (7, true) => css::GRAY,
+                            _ => {
+                                unreachable!()
+                            }
+                        };
+                        self.actions.push(AnsiAction::SetColor(color.into()))
+                    }
+                    // 256 color mode
+                    Some([38, 5, n]) => {
+                        info_once!("256 color mode not currently supported.")
+                    }
+                    // 24-bit color
+                    // TODO?: x == 58 for underline styling
+                    Some([x, 2, r, g, b]) if *x == 38 || *x == 48 => {
+                        let color = Color::srgb_u8(*r as u8, *g as u8, *b as u8);
+                        if *x == 38 {
+                            self.actions.push(AnsiAction::SetColor(color));
+                        } else {
+                            self.actions.push(AnsiAction::SetBackground(color));
+                        }
+                    }
+                    _ => {}
+                }
             }
             _ => {}
         }
