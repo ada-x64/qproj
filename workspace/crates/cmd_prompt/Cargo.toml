@@ -19,6 +19,7 @@ tiny_bail = "0.7.0"
 variadics_please = "1.1.0"
 serde = { version = "1.0.228", features = ["derive"] }
 itertools = "0.14.0"
+anstyle-parse = "1.0.0"
 
 [dev-dependencies]
 q_test_harness = {path = "../test_harness", version="^0.1"}

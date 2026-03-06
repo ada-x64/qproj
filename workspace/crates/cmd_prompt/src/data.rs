@@ -3,19 +3,37 @@ use crate::prelude::*;
 mod components {
     use super::*;
 
-    // TODO: Add a limit to the number of stored lines.
     /// Marker component / entry point for spawning the underlying terminal
     /// buffer.
     #[derive(Component, Default, Reflect)]
-    #[require(TerminalLines, TerminalWindowList)]
+    #[require(TerminalLines, WindowList, LineDiscipline, TerminalCursor)]
     pub struct Terminal;
+
+    /// Cursor for the [`Terminal`]. Points at a given byte index into a
+    /// [`TerminalLine`] (nth from end).
+    #[derive(Component, Default, Reflect)]
+    pub struct TerminalCursor {
+        pub line: usize,
+        pub char: usize,
+    }
+
+    #[derive(Component, Default, Reflect)]
+    pub enum LineDiscipline {
+        #[default]
+        Canonical,
+        Raw,
+    }
 
     /// Tracks which [`TerminalWindow`] entities are displayed by this node's
     /// terminal.
     #[derive(Component, Default, Reflect, Deref, Debug)]
     #[relationship_target(relationship = TerminalWindow)]
-    pub struct TerminalWindowList(Vec<Entity>);
+    pub struct WindowList(Vec<Entity>);
 
+    // TODO: Add a limit to the number of stored lines.
+    // This can't currently be a vecdeque due to trait constraints,
+    // so need to add a manual 'maximum' field and do checks on insert
+    // to ensure the vec doesn't overload its capacity.
     /// This entity represents the underlying text buffer. It contains
     /// references to [`TerminalLine`] entities.
     #[derive(Component, Default, Deref, Debug, Reflect)]
@@ -55,8 +73,13 @@ mod components {
     /// user to set them, which is outside the scope of this crate.
     #[derive(Component, Debug, Reflect, PartialEq)]
     pub struct VirtualTextSpan {
-        pub start: usize,
+        /// reference to the line this span is part of
+        pub line: Entity,
+        /// offset in characters
+        pub offset: usize,
+        /// character length of the span
         pub range: usize,
+        // style info
         pub color: Option<Color>,
         pub background_color: Option<Color>,
     }
@@ -289,7 +312,7 @@ mod display {
         LineHeight,
     )]
     #[component(immutable, on_add=Self::on_add)]
-    #[relationship(relationship_target = TerminalWindowList)]
+    #[relationship(relationship_target = WindowList)]
     pub struct TerminalWindow(pub Entity);
     impl TerminalWindow {
         /// Spawn [`TerminalCharWidth`] et al
