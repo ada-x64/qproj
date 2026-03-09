@@ -20,9 +20,7 @@ fn main() {
     ));
     app.add_systems(Startup, |mut commands: Commands| {
         commands.spawn(Camera2d);
-        let term_id = commands.spawn(Terminal).id();
-        let window_id = commands.spawn((
-            TerminalWindow(term_id),
+        let term_id = commands.spawn((Terminal,
             Node {
                 width: percent(100),
                 height: percent(100),
@@ -30,10 +28,10 @@ fn main() {
             },
         )).id();
         for i in 0..100 {
-            commands.write_message(TermMsg::writeln(window_id, i));
+            commands.write_message(TermMsg::write(term_id, format!("{i}\n")));
         }
         commands
-            .write_message(TermMsg::writeln(window_id, "This is a really long line! It should be wrapping. Just checking :) How are you doing today? I'm doing pretty good myself."));
+            .write_message(TermMsg::write(term_id, "This is a really long line! It should be wrapping. Just checking :) How are you doing today? I'm doing pretty good myself.\n"));
     });
     app.run();
 }

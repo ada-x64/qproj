@@ -5,60 +5,63 @@ mod terminfo {
     use bevy::ecs::query::QueryData;
 
     /// Public API and query helpers for the [`Terminal`] entity.
-    #[derive(QueryData)]
-    pub struct TermInfo<'a> {
-        pub terminal_id: Entity,
-        pub line_discipline: &'a LineDiscipline,
-        pub cursor: &'a TerminalCursor,
-        pub(crate) lines: &'a TerminalLines,
-        pub(crate) rows: &'a TerminalLayout,
-        pub num_rows: &'a TermHeight,
-        pub num_cols: &'a TermWidth,
+    #[derive(QueryData, Debug)]
+    pub struct TermInfo {
+        pub id: Entity,
+        pub line_discipline: &'static LineDiscipline,
+        pub cursor: &'static TerminalCursor,
+        pub(crate) lines: &'static TerminalLines,
+        pub(crate) rows: &'static TerminalLayout,
+        pub num_rows: &'static TermHeight,
+        pub num_cols: &'static TermWidth,
+        pub scroll_pos: &'static TerminalScrollPos,
     }
-    impl<'w, 's, 'a> TermInfoItem<'w, 's, 'a> {
-        /// Resize the terminal by replacing the [`TermWidth`] and [`TermHeight`] components.
+    impl<'w, 's> TermInfoItem<'w, 's> {
         #[inline(always)]
-        pub fn resize(&self, commands: &mut Commands, width: usize, height: usize) {
-            commands
-                .entity(self.terminal_id)
-                .insert((TermWidth(width), TermHeight(height)));
-        }
-
-        /// Set the [`LineDiscipline`]. This affects how the terminal sends data
-        /// to the [`TerminalShell`] entity.
-        #[inline(always)]
-        pub fn set_discipline(&self, commands: &mut Commands, discipline: LineDiscipline) {
-            commands.entity(self.terminal_id).insert(discipline);
-        }
-
-        #[inline(always)]
-        pub fn grid_lines<'b>(
+        pub fn grid_lines<'a>(
             &self,
-            q_lines: &'b Query<(Entity, &'b TerminalLine)>,
-        ) -> impl Iterator<Item = (Entity, &'b TerminalLine)> {
+            q_lines: &'a Query<(Entity, &TerminalLine)>,
+        ) -> impl Iterator<Item = (Entity, &'a TerminalLine)> {
             q_lines.iter_many(self.lines.iter())
         }
 
         #[inline(always)]
-        pub fn viewport_rows(
+        pub fn grid<'a>(
             &self,
-            q_lines: &'a Query<&'a TerminalRow>,
+            q_lines: &'a Query<(Entity, &TerminalLine)>,
+            q_spans: &'a Query<(Entity, &VirtualTextSpan)>,
+        ) -> impl Iterator<Item = (Entity, &'a TerminalLine, Vec<(Entity, &'a VirtualTextSpan)>)>
+        {
+            q_lines.iter_many(self.lines.iter()).map(|(line_id, line)| {
+                let spans = q_spans
+                    .iter()
+                    .filter(|(_, span)| span.line == line_id)
+                    .collect::<Vec<_>>();
+                (line_id, line, spans)
+            })
+        }
+
+        #[inline(always)]
+        pub fn viewport_rows<'a>(
+            &self,
+            q_lines: &'a Query<&TerminalRow>,
         ) -> impl Iterator<Item = &'a TerminalRow> {
             q_lines.iter_many(self.rows.iter())
         }
 
-        /// Returns an iterator over _every_ [`VirtualTextSpan`] associated with
-        /// this [`Terminal`] entity.
         #[inline(always)]
-        pub fn virtual_spans(
+        pub fn virtual_spans<'a>(
             &self,
-            q_lines: &'a Query<&'a Children, With<TerminalLine>>,
-            q_spans: &'a Query<&'a VirtualTextSpan>,
+            q_lines: &'a Query<&Children, With<TerminalLine>>,
+            q_spans: &'a Query<&VirtualTextSpan>,
         ) -> impl Iterator<Item = &'a VirtualTextSpan> {
             q_lines
                 .iter_many(self.lines.iter())
-                .map(|children| q_spans.iter_many(children))
-                .flatten()
+                .flat_map(|children| q_spans.iter_many(children))
+        }
+
+        pub fn mutate(&self, commands: &mut Commands, msg: TermMsgKind) {
+            commands.write_message(TermMsg::new(self.id, msg));
         }
     }
 }
@@ -76,7 +79,7 @@ mod components {
 
     /// Cursor for the [`Terminal`]. Points at a given byte index into a
     /// [`TerminalLine`] (nth from end).
-    #[derive(Component, Default, Reflect, Clone, Copy)]
+    #[derive(Component, Default, Reflect, Clone, Copy, Debug)]
     pub struct TerminalCursor {
         pub line: usize,
         pub char: usize,
@@ -85,7 +88,7 @@ mod components {
     /// How the [`Terminal`] sends information to the [`TerminalShell`].
     /// Canonical mode is the default. It sends lines on submit.
     /// Raw mode sends inputs unbuffered. This is useful for TUIs like vim or htop.
-    #[derive(Component, Default, Reflect)]
+    #[derive(Component, Default, Reflect, Debug)]
     #[component(immutable)]
     pub enum LineDiscipline {
         #[default]
@@ -134,7 +137,7 @@ mod components {
     /// would occupy that slot with a true font variant. In order to assure
     /// safety, we would need to register font variants _before_ allowing the
     /// user to set them, which is outside the scope of this crate.
-    #[derive(Component, Debug, Reflect, PartialEq)]
+    #[derive(Component, Debug, Reflect, PartialEq, Clone, Copy)]
     pub struct VirtualTextSpan {
         /// reference to the line this span is part of
         pub line: Entity,
@@ -142,9 +145,22 @@ mod components {
         pub offset: usize,
         /// character length of the span
         pub range: usize,
-        // style info
-        pub color: Option<Color>,
-        pub background_color: Option<Color>,
+        pub style: VspanStyle,
+    }
+
+    /// Text styles for [`VirtualTextSpanSpawner`]s.
+    #[derive(Clone, Copy, Debug, PartialEq, Reflect)]
+    pub struct VspanStyle {
+        pub color: Color,
+        pub background: Color,
+    }
+    impl Default for VspanStyle {
+        fn default() -> Self {
+            Self {
+                color: Color::WHITE,
+                background: Color::BLACK,
+            }
+        }
     }
 
     /// This struct hold all the necessary data to spawn a terminal text span in
@@ -155,65 +171,33 @@ mod components {
     #[derive(Debug, PartialEq, Reflect, Clone)]
     pub struct VirtualTextSpanSpawner {
         pub text: String,
-        pub color: Option<Color>,
-        pub background_color: Option<Color>,
+        pub style: VspanStyle,
     }
     impl VirtualTextSpanSpawner {
         pub fn new(text: impl ToString) -> Self {
             Self {
                 text: text.to_string(),
-                color: None,
-                background_color: None,
+                style: VspanStyle::default(),
             }
         }
         pub fn with_color(self, color: impl Into<Color>) -> Self {
             Self {
-                color: Some(color.into()),
+                style: VspanStyle {
+                    color: color.into(),
+                    ..self.style
+                },
                 ..self
             }
         }
-        pub fn with_background_color(self, color: impl Into<Color>) -> Self {
+        pub fn with_background(self, color: impl Into<Color>) -> Self {
             Self {
-                background_color: Some(color.into()),
+                style: VspanStyle {
+                    background: color.into(),
+                    ..self.style
+                },
                 ..self
             }
         }
-        // /// Adds a [`TerminalLine`] and the corresponding [`VirtualTextSpans`] to the given target entity.
-        // /// Returns the [`Entity`] ID of the spawned [`TerminalLine`] and its corresponding string length.
-        // pub(crate) fn spawn(
-        //     spans: &[VirtualTextSpanSpawner],
-        //     target: Entity,
-        //     commands: &mut Commands,
-        // ) -> (Entity, usize) {
-        //     let (text, children) =
-        //         spans
-        //             .iter()
-        //             .fold((String::new(), vec![]), |(text, ids), span| {
-        //                 let start = text.len();
-        //                 let range = span.text.len();
-        //                 let child = commands
-        //                     .spawn(VirtualTextSpan {
-        //                         start,
-        //                         range,
-        //                         color: span.color,
-        //                         background_color: span.background_color,
-        //                     })
-        //                     .id();
-        //                 (
-        //                     text + &span.text,
-        //                     [ids, vec![child]].into_iter().flatten().collect::<Vec<_>>(),
-        //                 )
-        //             });
-        //     let len = text.len();
-        //     let line_id = commands
-        //         .spawn(TerminalLine::new(target, text))
-        //         .add_children(&children)
-        //         .id();
-        //     commands
-        //         .entity(target)
-        //         .add_one_related::<TerminalLine>(line_id);
-        //     (line_id, len)
-        // }
     }
 
     /// Convenience macro for creating vec of [`VirtualTextSpanSpawner`]s.
@@ -259,10 +243,10 @@ mod components {
             term_writeln!(@rich_expr $string, $($bg)?, $($color)?)
         };
         (@rich_expr $string:literal, $($bg:expr)?, $($color:expr)?) => {
-            VirtualTextSpanSpawner::new($string)$(.with_color($color))?$(.with_background_color($bg))?
+            VirtualTextSpanSpawner::new($string)$(.with_color($color))?$(.with_background($bg))?
         };
         (@rich_expr $string:ident, $($bg:expr)?, $($color:expr)?) => {
-            VirtualTextSpanSpawner::new($string)$(.with_color($color))?$(.with_background_color($bg))?
+            VirtualTextSpanSpawner::new($string)$(.with_color($color))?$(.with_background($bg))?
         };
     }
 }
