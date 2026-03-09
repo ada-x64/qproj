@@ -86,27 +86,31 @@ pub struct Style {
     pub color: Color,
     pub background: Color,
 }
+impl Default for Style {
+    fn default() -> Self {
+        Self {
+            color: Color::WHITE,
+            background: Color::BLACK,
+        }
+    }
+}
 
 /// Parses the passed [`VirtualTextSpanSpawner`], possibly expanding it into multiple
 /// and modifying various [`TerminalLine`]s.
-pub(crate) struct AnsiPerformer<'a> {
-    lines: &'a TerminalLines, // note: VirtualTextSpans are children of TerminalLine entities
-    cursor: &'a mut TerminalCursor,
+pub(crate) struct AnsiPerformer<'w, 's, 'a, 't> {
+    terminfo: &'a TermInfoItem<'w, 's, 't>,
+    cursor: TerminalCursor,
     new_lines: Vec<NewItem<TerminalLine>>,
     new_vspans: Vec<NewItem<VirtualTextSpan>>,
     actions: Vec<AnsiAction>,
     current_style: Style,
     default_style: Style,
 }
-impl<'a> AnsiPerformer<'a> {
-    pub fn new(
-        lines: &'a TerminalLines,
-        cursor: &'a mut TerminalCursor,
-        default_style: Style,
-    ) -> Self {
+impl<'w, 's, 'a, 't> AnsiPerformer<'w, 's, 'a, 't> {
+    pub fn new(terminfo: &'a TermInfoItem<'w, 's, 't>, default_style: Style) -> Self {
         Self {
-            lines,
-            cursor,
+            terminfo,
+            cursor: *terminfo.cursor,
             actions: vec![],
             new_lines: vec![],
             new_vspans: vec![],
@@ -119,16 +123,7 @@ impl<'a> AnsiPerformer<'a> {
     // cursor actions must happen _per viewport so we need to translate from
     // window cursor position to terminal cursor position by accounting for
     // the scroll offset and terminal size
-    pub fn execute(
-        mut self,
-        commands: &mut Commands,
-        terminal: Entity,
-        mut lines: Vec<Entity>,
-        mut spans: Vec<Entity>,
-        // collected results of a query
-        mut q_lines: HashMap<Entity, &TerminalLine>,
-        mut q_spans: HashMap<Entity, &VirtualTextSpan>,
-    ) {
+    pub fn execute(mut self, commands: &mut Commands) {
         // TODO: Iterate through self.actions and perform commands to spawn
         // and modify entities as appropriate
         // Spawn virutal text spans and their corresponding lines.
@@ -179,7 +174,7 @@ impl<'a> AnsiPerformer<'a> {
         }
     }
 }
-impl<'a> anstyle_parse::Perform for AnsiPerformer<'a> {
+impl<'w, 's, 'a, 't> anstyle_parse::Perform for AnsiPerformer<'w, 's, 'a, 't> {
     fn print(&mut self, c: char) {
         self.actions.push(AnsiAction::Write {
             text: c.to_smolstr(),

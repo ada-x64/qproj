@@ -183,10 +183,7 @@ pub(crate) fn scroll_terminal_window(
             line_height / trigger.y
         }
     };
-    commands.write_message(TerminalWindowMessage::scroll(
-        trigger.entity,
-        delta as isize,
-    ));
+    commands.write_message(TermMsg::scroll(trigger.entity, delta as isize));
 }
 
 #[test]
@@ -211,7 +208,7 @@ fn test_text_nodes() {
             ))
             .id();
         for i in 0..100 {
-            commands.write_message(TerminalMessage::writeln(term_window_id, i.to_string()));
+            commands.write_message(TermMsg::writeln(term_window_id, i.to_string()));
         }
         commands.set_state(Step(1));
     });

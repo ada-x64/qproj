@@ -15,8 +15,8 @@ pub enum TerminalSystems {
 pub struct TerminalPlugin;
 impl Plugin for TerminalPlugin {
     fn build(&self, app: &mut App) {
-        app.add_message::<TerminalMessage>();
-        app.add_message::<TerminalWindowMessage>();
+        app.add_message::<TermMsg>();
+        app.add_message::<TermMsg>();
         app.add_systems(
             PostUpdate,
             (update_font, update_char_width, resize)
@@ -25,11 +25,7 @@ impl Plugin for TerminalPlugin {
         );
         app.add_systems(
             PostUpdate,
-            (
-                handle_terminal_messages,
-                handle_window_messages,
-                update_layout,
-            )
+            (handle_messages, update_layout)
                 .after(ui_layout_system)
                 .chain()
                 .in_set(TerminalSystems::Mutation),

@@ -1,34 +1,97 @@
 use crate::prelude::*;
 
+mod terminfo {
+    use super::*;
+    use bevy::ecs::query::QueryData;
+
+    /// Public API and query helpers for the [`Terminal`] entity.
+    #[derive(QueryData)]
+    pub struct TermInfo<'a> {
+        pub terminal_id: Entity,
+        pub line_discipline: &'a LineDiscipline,
+        pub cursor: &'a TerminalCursor,
+        pub(crate) lines: &'a TerminalLines,
+        pub(crate) rows: &'a TerminalLayout,
+        pub num_rows: &'a TermHeight,
+        pub num_cols: &'a TermWidth,
+    }
+    impl<'w, 's, 'a> TermInfoItem<'w, 's, 'a> {
+        /// Resize the terminal by replacing the [`TermWidth`] and [`TermHeight`] components.
+        #[inline(always)]
+        pub fn resize(&self, commands: &mut Commands, width: usize, height: usize) {
+            commands
+                .entity(self.terminal_id)
+                .insert((TermWidth(width), TermHeight(height)));
+        }
+
+        /// Set the [`LineDiscipline`]. This affects how the terminal sends data
+        /// to the [`TerminalShell`] entity.
+        #[inline(always)]
+        pub fn set_discipline(&self, commands: &mut Commands, discipline: LineDiscipline) {
+            commands.entity(self.terminal_id).insert(discipline);
+        }
+
+        #[inline(always)]
+        pub fn grid_lines<'b>(
+            &self,
+            q_lines: &'b Query<(Entity, &'b TerminalLine)>,
+        ) -> impl Iterator<Item = (Entity, &'b TerminalLine)> {
+            q_lines.iter_many(self.lines.iter())
+        }
+
+        #[inline(always)]
+        pub fn viewport_rows(
+            &self,
+            q_lines: &'a Query<&'a TerminalRow>,
+        ) -> impl Iterator<Item = &'a TerminalRow> {
+            q_lines.iter_many(self.rows.iter())
+        }
+
+        /// Returns an iterator over _every_ [`VirtualTextSpan`] associated with
+        /// this [`Terminal`] entity.
+        #[inline(always)]
+        pub fn virtual_spans(
+            &self,
+            q_lines: &'a Query<&'a Children, With<TerminalLine>>,
+            q_spans: &'a Query<&'a VirtualTextSpan>,
+        ) -> impl Iterator<Item = &'a VirtualTextSpan> {
+            q_lines
+                .iter_many(self.lines.iter())
+                .map(|children| q_spans.iter_many(children))
+                .flatten()
+        }
+    }
+}
+pub use terminfo::*;
+
 mod components {
+
     use super::*;
 
     /// Marker component / entry point for spawning the underlying terminal
     /// buffer.
     #[derive(Component, Default, Reflect)]
-    #[require(TerminalLines, WindowList, LineDiscipline, TerminalCursor)]
+    #[require(TerminalLines, TerminalWindow, LineDiscipline, TerminalCursor)]
     pub struct Terminal;
 
     /// Cursor for the [`Terminal`]. Points at a given byte index into a
     /// [`TerminalLine`] (nth from end).
-    #[derive(Component, Default, Reflect)]
+    #[derive(Component, Default, Reflect, Clone, Copy)]
     pub struct TerminalCursor {
         pub line: usize,
         pub char: usize,
     }
 
+    /// How the [`Terminal`] sends information to the [`TerminalShell`].
+    /// Canonical mode is the default. It sends lines on submit.
+    /// Raw mode sends inputs unbuffered. This is useful for TUIs like vim or htop.
     #[derive(Component, Default, Reflect)]
+    #[component(immutable)]
     pub enum LineDiscipline {
         #[default]
         Canonical,
         Raw,
     }
-
-    /// Tracks which [`TerminalWindow`] entities are displayed by this node's
-    /// terminal.
-    #[derive(Component, Default, Reflect, Deref, Debug)]
-    #[relationship_target(relationship = TerminalWindow)]
-    pub struct WindowList(Vec<Entity>);
 
     // TODO: Add a limit to the number of stored lines.
     // This can't currently be a vecdeque due to trait constraints,
@@ -115,42 +178,42 @@ mod components {
                 ..self
             }
         }
-        /// Adds a [`TerminalLine`] and the corresponding [`VirtualTextSpans`] to the given target entity.
-        /// Returns the [`Entity`] ID of the spawned [`TerminalLine`] and its corresponding string length.
-        pub(crate) fn spawn(
-            spans: &[VirtualTextSpanSpawner],
-            target: Entity,
-            commands: &mut Commands,
-        ) -> (Entity, usize) {
-            let (text, children) =
-                spans
-                    .iter()
-                    .fold((String::new(), vec![]), |(text, ids), span| {
-                        let start = text.len();
-                        let range = span.text.len();
-                        let child = commands
-                            .spawn(VirtualTextSpan {
-                                start,
-                                range,
-                                color: span.color,
-                                background_color: span.background_color,
-                            })
-                            .id();
-                        (
-                            text + &span.text,
-                            [ids, vec![child]].into_iter().flatten().collect::<Vec<_>>(),
-                        )
-                    });
-            let len = text.len();
-            let line_id = commands
-                .spawn(TerminalLine::new(target, text))
-                .add_children(&children)
-                .id();
-            commands
-                .entity(target)
-                .add_one_related::<TerminalLine>(line_id);
-            (line_id, len)
-        }
+        // /// Adds a [`TerminalLine`] and the corresponding [`VirtualTextSpans`] to the given target entity.
+        // /// Returns the [`Entity`] ID of the spawned [`TerminalLine`] and its corresponding string length.
+        // pub(crate) fn spawn(
+        //     spans: &[VirtualTextSpanSpawner],
+        //     target: Entity,
+        //     commands: &mut Commands,
+        // ) -> (Entity, usize) {
+        //     let (text, children) =
+        //         spans
+        //             .iter()
+        //             .fold((String::new(), vec![]), |(text, ids), span| {
+        //                 let start = text.len();
+        //                 let range = span.text.len();
+        //                 let child = commands
+        //                     .spawn(VirtualTextSpan {
+        //                         start,
+        //                         range,
+        //                         color: span.color,
+        //                         background_color: span.background_color,
+        //                     })
+        //                     .id();
+        //                 (
+        //                     text + &span.text,
+        //                     [ids, vec![child]].into_iter().flatten().collect::<Vec<_>>(),
+        //                 )
+        //             });
+        //     let len = text.len();
+        //     let line_id = commands
+        //         .spawn(TerminalLine::new(target, text))
+        //         .add_children(&children)
+        //         .id();
+        //     commands
+        //         .entity(target)
+        //         .add_one_related::<TerminalLine>(line_id);
+        //     (line_id, len)
+        // }
     }
 
     /// Convenience macro for creating vec of [`VirtualTextSpanSpawner`]s.
@@ -207,48 +270,15 @@ pub use components::*;
 
 mod events {
     use super::*;
-    #[derive(Debug, Message, Reflect)]
-    pub struct TerminalMessage {
-        /// Represents an entity containing a [`Terminal`]. Any modifications
-        /// aimed at the buffer will modify the related [`Terminal`]'s
-        /// [`TerminalLine`] list.
-        pub target: Entity,
-        pub kind: TerminalMessageKind,
-    }
-    // TODO: Support full ANSI escape i.e. cursor movement and rewrite.
-    // Requires thinking about cursors at all!
-    impl TerminalMessage {
-        pub fn new(window_id: Entity, kind: TerminalMessageKind) -> Self {
-            Self {
-                target: window_id,
-                kind,
-            }
-        }
-        /// Writes a simple line to the buffer. For rich text support, see [Self::writeln_rich]
-        pub fn writeln(term_id: Entity, line: impl ToString) -> Self {
-            let line = line.to_string();
-            Self::new(term_id, TerminalMessageKind::Writeln(term_writeln!(line)))
-        }
-        /// Writes a rich line of text to the terminal See [`VirtualTextSpan`],
-        /// [`term_writeln!`], and [`VirtualTextSpanSpawner`] for more
-        /// information.
-        pub fn writeln_rich(term_id: Entity, spans: Vec<VirtualTextSpanSpawner>) -> Self {
-            Self::new(term_id, TerminalMessageKind::Writeln(spans))
-        }
-    }
-    #[derive(Debug, Reflect, Clone)]
-    pub enum TerminalMessageKind {
-        /// Write a line to the "buffer"
-        Writeln(Vec<VirtualTextSpanSpawner>),
-    }
 
+    /// A mutation to send to the terminal window.
     #[derive(Debug, Message, Reflect)]
-    pub struct TerminalWindowMessage {
+    pub struct TermMsg {
         pub target: Entity,
-        pub kind: TerminalWindowMsgKind,
+        pub kind: TermMsgKind,
     }
     #[derive(Debug, Reflect)]
-    pub enum TerminalWindowMsgKind {
+    pub enum TermMsgKind {
         /// Reflow the terminal. Modifes LineRefs.
         Reflow,
         /// Scroll in the given direction. A scroll position of 0 means you are
@@ -256,24 +286,35 @@ mod events {
         Scroll(isize),
         /// Jump to the last line. Sets scroll value to 0.
         JumpToBottom,
-        /// Modifications to the underlying terminal
-        Terminal(TerminalMessageKind),
+        /// Write charaters to the screen.
+        Write(Vec<VirtualTextSpanSpawner>),
     }
-    impl TerminalWindowMessage {
-        pub fn new(window_id: Entity, kind: TerminalWindowMsgKind) -> Self {
+    impl TermMsg {
+        pub fn new(window_id: Entity, kind: TermMsgKind) -> Self {
             Self {
                 target: window_id,
                 kind,
             }
         }
         pub fn scroll(window_id: Entity, direction: isize) -> Self {
-            Self::new(window_id, TerminalWindowMsgKind::Scroll(direction))
+            Self::new(window_id, TermMsgKind::Scroll(direction))
         }
         pub fn jump_to_bottom(window_id: Entity) -> Self {
-            Self::new(window_id, TerminalWindowMsgKind::JumpToBottom)
+            Self::new(window_id, TermMsgKind::JumpToBottom)
         }
         pub fn reflow(window_id: Entity) -> Self {
-            Self::new(window_id, TerminalWindowMsgKind::Reflow)
+            Self::new(window_id, TermMsgKind::Reflow)
+        }
+        /// Writes a simple line to the buffer. For rich text support, see [Self::writeln_rich]
+        pub fn write(term_id: Entity, line: impl ToString) -> Self {
+            let line = line.to_string();
+            Self::new(term_id, TermMsgKind::Write(term_writeln!(line)))
+        }
+        /// Writes a rich line of text to the terminal See [`VirtualTextSpan`],
+        /// [`term_writeln!`], and [`VirtualTextSpanSpawner`] for more
+        /// information.
+        pub fn write_spans(term_id: Entity, spans: Vec<VirtualTextSpanSpawner>) -> Self {
+            Self::new(term_id, TermMsgKind::Write(spans))
         }
     }
 }
@@ -291,7 +332,7 @@ mod display {
     /// A terminal display. Will spawn a new [`Node`] sized to the parent
     /// container and populate the hierarchy with [`TextSpan`] components according
     /// to the target entity's properties.
-    #[derive(Component, Reflect)]
+    #[derive(Component, Reflect, Default)]
     #[require(
         Node {
             overflow: Overflow::clip(),
@@ -312,8 +353,7 @@ mod display {
         LineHeight,
     )]
     #[component(immutable, on_add=Self::on_add)]
-    #[relationship(relationship_target = WindowList)]
-    pub struct TerminalWindow(pub Entity);
+    pub struct TerminalWindow;
     impl TerminalWindow {
         /// Spawn [`TerminalCharWidth`] et al
         pub fn on_add(mut world: DeferredWorld, ctx: HookContext) {
@@ -423,9 +463,7 @@ mod display {
     pub struct TermWidth(pub usize);
     impl TermWidth {
         fn on_insert(mut world: DeferredWorld, ctx: HookContext) {
-            world
-                .commands()
-                .write_message(TerminalWindowMessage::reflow(ctx.entity));
+            world.commands().write_message(TermMsg::reflow(ctx.entity));
         }
     }
 
@@ -435,9 +473,7 @@ mod display {
     pub struct TermHeight(pub usize);
     impl TermHeight {
         fn on_insert(mut world: DeferredWorld, ctx: HookContext) {
-            world
-                .commands()
-                .write_message(TerminalWindowMessage::reflow(ctx.entity));
+            world.commands().write_message(TermMsg::reflow(ctx.entity));
         }
     }
 }

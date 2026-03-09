@@ -67,12 +67,12 @@ fn main() {
             .add_children(&children);
 
         for i in 0..100 {
-            commands.write_message(TerminalMessage::writeln(term_id, i));
+            commands.write_message(TermMsg::writeln(term_id, i));
         }
         let long_string = ["."].repeat(256).join("");
-        commands.write_message(TerminalMessage::writeln(term_id, long_string));
-        commands.write_message(TerminalMessage::writeln(term_id, LOREM_IPSUM));
-        commands.write_message(TerminalMessage::writeln_rich(
+        commands.write_message(TermMsg::writeln(term_id, long_string));
+        commands.write_message(TermMsg::writeln(term_id, LOREM_IPSUM));
+        commands.write_message(TermMsg::writeln_rich(
             term_id,
             term_writeln!(
                 "This is some ",
