@@ -18,13 +18,13 @@ pub fn update_font(
             &TextFont,
             &TextColor,
             &LineHeight,
-            &TerminalCharWidthTarget,
+            &VtCharWidthTarget,
             &Children,
         ),
         Changed<TextFont>,
     >,
-    q_cw: Query<Entity, With<TerminalCharWidth>>,
-    q_wrapper: Query<Entity, With<TerminalTextWrapper>>,
+    q_cw: Query<Entity, With<VtCharWidth>>,
+    q_wrapper: Query<Entity, With<VtTextWrapper>>,
     mut commands: Commands,
 ) {
     for (font, color, lineheight, target, children) in q_font {
@@ -39,13 +39,13 @@ pub fn update_font(
 /// Measure the character width of the monospace font by using a detached,
 /// invisible Node containing a single Text(" ")
 pub fn update_char_width(
-    q: Query<(Entity, &ComputedNode, &TerminalCharWidth), Changed<ComputedNode>>,
+    q: Query<(Entity, &ComputedNode, &VtCharWidth), Changed<ComputedNode>>,
     mut commands: Commands,
 ) {
     for (entity, node, cw) in q {
         commands
             .entity(entity)
-            .insert(TerminalCharWidth::new(cw.target(), node.content_size().x));
+            .insert(VtCharWidth::new(cw.target(), node.content_size().x));
     }
 }
 
@@ -56,11 +56,11 @@ pub fn resize(
             &ComputedNode,
             &TextFont,
             &LineHeight,
-            &TerminalCharWidthTarget,
+            &VtCharWidthTarget,
         ),
-        (Changed<ComputedNode>, With<TerminalWindow>),
+        (Changed<ComputedNode>, With<Terminal>),
     >,
-    q_width: Query<&TerminalCharWidth>,
+    q_width: Query<&VtCharWidth>,
     mut commands: Commands,
 ) {
     trace!("resize");
@@ -71,22 +71,17 @@ pub fn resize(
             LineHeight::Px(px) => *px,
             LineHeight::RelativeToFont(rel) => rel * font.font_size,
         };
-        let width = (size.x / cw.value()).floor() as usize;
-        let height = (size.y / line_height).floor() as usize;
-        commands.entity(window_id).insert(TermWidth(width));
-        commands.entity(window_id).insert(TermHeight(height));
+        let cols = (size.x / cw.value()).floor() as usize;
+        let rows = (size.y / line_height).floor() as usize;
+        commands.entity(window_id).insert(VtSize { cols, rows });
         debug!("Got node size: {size:?}");
-        debug!("Set new term size to {width} x {height}");
+        debug!("Set new term size to {cols} x {rows}");
     }
 }
 
 #[derive(QueryData, Debug)]
 pub struct LayoutQueryData<'a> {
-    window_id: Entity,
-    term_width: &'a TermWidth,
-    term_height: &'a TermHeight,
-    layout: &'a TerminalLayout,
-    scroll_pos: &'a TerminalScrollPos,
+    terminfo: TermInfo,
     line_height: &'a LineHeight,
     font: &'a TextFont,
     color: &'a TextColor,
@@ -97,19 +92,14 @@ pub fn update_layout(
     q: Query<
         LayoutQueryData,
         (
-            Or<(
-                Changed<TermHeight>,
-                Changed<TermWidth>,
-                Changed<TerminalLayout>,
-                Changed<TerminalScrollPos>,
-            )>,
-            With<TerminalWindow>,
+            Or<(Changed<VtSize>, Changed<VtViewport>, Changed<VtScrollPos>)>,
+            With<Terminal>,
         ),
     >,
-    q_lines: Query<(&TerminalLine, &Children)>,
+    q_lines: Query<(&VtLine, &Children)>,
     q_vspans: Query<&VirtualTextSpan>,
-    q_rows: Query<&TerminalRow>,
-    q_wrapper: Query<Entity, With<TerminalTextWrapper>>,
+    q_rows: Query<&VtRow>,
+    q_wrapper: Query<Entity, With<VtTextWrapper>>,
     mut commands: Commands,
 ) {
     trace!("update layout");
@@ -166,9 +156,9 @@ pub fn update_layout(
     }
 }
 
-pub(crate) fn scroll_terminal_window(
+pub(crate) fn on_scroll(
     trigger: On<Pointer<Scroll>>,
-    q: Query<(&LineHeight, &TextFont), With<TerminalWindow>>,
+    q: Query<(&LineHeight, &TextFont), With<Terminal>>,
     mut commands: Commands,
 ) {
     debug!(?trigger);
@@ -184,6 +174,15 @@ pub(crate) fn scroll_terminal_window(
         }
     };
     commands.write_message(TermMsg::scroll(trigger.entity, delta as isize));
+}
+
+pub(crate) fn scroll_viewport(
+    terminfo: Query<TermInfo, Changed<VtScrollPos>>,
+    q_viewport: Query<&VtViewportRow>,
+    q_rows: Query<&VtRow>,
+) {
+    // recreate viewport.
+    // ideally only get diff from scrollback.
 }
 
 // #[test]

@@ -6,12 +6,14 @@ pub fn handle_messages(
     mut messages: MessageReader<TermMsg>,
     mut commands: Commands,
     q_terminfo: Query<TermInfo>,
-    q_lines: Query<(Entity, &TerminalLine)>,
-    q_spans: Query<(Entity, &VirtualTextSpan)>,
+    q_lines: Query<(Entity, &VtLine)>,
+    q_rowtargets: Query<&VtRowTarget, With<VtLine>>,
+    q_rows: Query<(Entity, &VtRow, Option<&VtViewportRow>)>,
+    q_viewport_rows: Query<(Entity, &VtViewportRow)>,
 ) {
     trace!("handle window message");
     let mut to_reflow = vec![];
-    let mut to_write = HashMap::<Entity, Vec<&VirtualTextSpanSpawner>>::new();
+    let mut to_write = HashMap::<Entity, Vec<&TermWrite>>::new();
     for msg in messages.read() {
         match &msg.kind {
             TermMsgKind::Reflow => {
@@ -19,11 +21,15 @@ pub fn handle_messages(
                     to_reflow.push(msg.target);
                 }
             }
+            // TODO Make a system to respond to changes in VtScrollPos
             TermMsgKind::Scroll(dir) => {
-                commands.run_system_cached_with(scroll, (msg.target, *dir));
+                let terminfo = c!(q_terminfo.get(msg.target));
+                commands
+                    .entity(terminfo.id)
+                    .insert(VtScrollPos(terminfo.scroll_pos.saturating_sub_signed(*dir)));
             }
             TermMsgKind::JumpToBottom => {
-                commands.run_system_cached_with(jump_to_bottom, msg.target);
+                commands.entity(msg.target).insert(VtScrollPos(0));
             }
             TermMsgKind::Write(spawners) => {
                 to_write.entry(msg.target).or_default().extend(spawners);
@@ -37,76 +43,115 @@ pub fn handle_messages(
         // do NOT want to clear if we can't get terminfo.
         // try again next frame.
         let terminfo = r!(q_terminfo.get(target));
-        let mut performer = AnsiPerformer::new(&terminfo);
-        let mut stream = AnsiParser::new();
-        for spawner in vec {
-            // parse ansi
-            performer.set_default_style(spawner.style);
-            for byte in spawner.text.as_bytes() {
-                stream.advance(&mut performer, *byte);
+        let mut grid = Grid::new(
+            &terminfo,
+            &q_lines,
+            &q_rowtargets,
+            &q_rows,
+            &q_viewport_rows,
+        );
+        {
+            let mut performer = AnsiPerformer::new(&mut grid);
+            let mut stream = AnsiParser::new();
+            for spawner in vec {
+                // parse ansi
+                performer.set_default_style(spawner.style);
+                for byte in spawner.text.as_bytes() {
+                    stream.advance(&mut performer, *byte);
+                }
             }
         }
-        performer.execute(&mut commands, &q_lines, &q_spans);
+        grid.sync(&mut commands);
     }
     messages.clear();
 }
 
-/// Takes a TerminalLine and returns a vec of newly spawned TerminalRows.
+/// Takes a [`VtLine`] and returns a vec of newly spawned [`VtRow`]s.
 fn flow_line(
     commands: &mut Commands,
-    window_id: Entity,
+    terminfo: &TermInfoItem<'_, '_>,
     line_id: Entity,
-    line_len: usize,
-    num_cols: usize,
+    line: &VtLine,
 ) -> Vec<Entity> {
     trace!("flow line");
-    if num_cols == 0 {
-        return vec![];
-    }
     let mut res = vec![];
+    if terminfo.size.cols == 0 || terminfo.size.rows == 0 {
+        return res;
+    }
     let mut offset = 0;
-    while offset < line_len {
-        let new_row = TerminalRow::new(window_id, line_id, offset);
+    while offset < line.value.len() {
+        let new_row = VtRow::new(line_id, offset);
         let id = commands.spawn(new_row).id();
         res.push(id);
-        offset += num_cols;
+        offset += line.value.len();
     }
     res
+}
+
+fn spawn_viewport_rows(
+    commands: &mut Commands,
+    terminfo: &TermInfoItem<'_, '_>,
+    rows: Vec<Entity>,
+) {
+    rows.into_iter()
+        .rev()
+        .take(terminfo.size.rows)
+        .for_each(|row_id| {
+            commands
+                .entity(row_id)
+                .insert(VtViewportRow::new(terminfo.id));
+        });
 }
 
 /// Reflows the entire underlying buffer.
 fn reflow(
     id: In<Entity>,
     terminfo: Query<TermInfo>,
-    q_lines: Query<(Entity, &TerminalLine)>,
+    q_lines: Query<(Entity, &VtLine)>,
+    q_rows: Query<Entity, (With<VtRow>, Without<VtViewportRow>)>,
+    q_rowtargets: Query<Entity, With<VtRowTarget>>,
     mut commands: Commands,
 ) {
     trace!("Reflow");
     let terminfo = r!(terminfo.get(*id));
-    if **terminfo.num_cols == 0 {
+    // clear terminal display cache
+    q_rows.iter().for_each(|row_id| {
+        commands.entity(row_id).despawn();
+    });
+    q_rowtargets.iter().for_each(|row_id| {
+        commands.entity(row_id).remove::<VtRowTarget>();
+    });
+    commands.entity(*id).despawn_related::<VtViewport>();
+    // exit early if nothing to do
+    if terminfo.size.cols == 0 || terminfo.size.rows == 0 {
         return;
     }
-    commands.entity(*id).despawn_related::<TerminalLayout>();
-    for (line_id, line) in terminfo.grid_lines(&q_lines).collect::<Vec<_>>() {
-        flow_line(&mut commands, *id, line_id, line.len(), **terminfo.num_cols);
-    }
+    // reflow
+    let rows = terminfo
+        .lines(&q_lines)
+        .fold(vec![], |mut res, (line_id, line)| {
+            let mut rows = flow_line(&mut commands, &terminfo, line_id, line);
+            res.append(&mut rows);
+            res
+        });
+    spawn_viewport_rows(&mut commands, &terminfo, rows);
 }
 
-fn scroll(
-    In((window_id, val)): In<(Entity, isize)>,
-    q: Query<(&TerminalScrollPos, &TerminalLayout, &Children)>,
-    mut commands: Commands,
-) {
-    let (prev, rows, children) = r!(q.get(window_id));
-    commands.entity(window_id).insert(TerminalScrollPos(
-        prev.saturating_add_signed(val)
-            .clamp(0, rows.len().saturating_sub(children.len())),
-    ));
-}
+// fn scroll(
+//     In((window_id, val)): In<(Entity, isize)>,
+//     q: Query<(&VtScrollPos, &VtLayout, &Children)>,
+//     mut commands: Commands,
+// ) {
+//     let (prev, rows, children) = r!(q.get(window_id));
+//     commands.entity(window_id).insert(VtScrollPos(
+//         prev.saturating_add_signed(val)
+//             .clamp(0, rows.len().saturating_sub(children.len())),
+//     ));
+// }
 
-fn jump_to_bottom(In(target): In<Entity>, mut commands: Commands) {
-    commands.entity(target).insert(TerminalScrollPos(0));
-}
+// fn jump_to_bottom(In(target): In<Entity>, mut commands: Commands) {
+//     commands.entity(target).insert(VtScrollPos(0));
+// }
 
 // #[test]
 // fn test_reflow() {

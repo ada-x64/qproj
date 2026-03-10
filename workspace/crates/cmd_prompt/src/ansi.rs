@@ -3,7 +3,7 @@
 use crate::prelude::*;
 use anstyle_parse::{Parser, Utf8Parser};
 use bevy::color::palettes::css;
-use smol_str::{SmolStr, ToSmolStr};
+use itertools::Itertools;
 
 pub type AnsiParser = Parser<Utf8Parser>;
 
@@ -79,233 +79,230 @@ impl<'a, T: Clone> MaybeRef<'a, T> {
     }
 }
 
-struct WriteParams {
-    text: SmolStr,
-    cursor: TerminalCursor,
-    style: VspanStyle,
+/// A transient grid. Used to modify the terminal entities and reconstructed
+/// on each pass.
+#[derive(Debug)]
+pub struct Grid<'a> {
+    /// Raw logical lines
+    lines: Vec<MaybeRef<'a, VtLine>>,
+    /// Wrapped lines cache
+    rows: Vec<(MaybeRef<'a, VtRow>, Option<VtViewportRow>)>,
+    /// Viewport cache
+    viewport: Vec<MaybeRef<'a, VtViewportRow>>,
+    viewport_cols: usize,
+    viewport_rows: usize,
+    scroll_pos: usize,
+    cursor: VtCursor,
+    term_id: Entity,
 }
-
-type Grid<'a> = Vec<(
-    MaybeRef<'a, TerminalLine>,
-    Vec<MaybeRef<'a, VirtualTextSpan>>,
-)>;
-
-/// Parses the passed [`VirtualTextSpanSpawner`], possibly expanding it into multiple
-/// and modifying various [`TerminalLine`]s.
-pub(crate) struct AnsiPerformer<'w, 's, 'a> {
-    terminfo: &'a TermInfoItem<'w, 's>,
-    cursor: TerminalCursor,
-    style: VspanStyle,
-    default_style: VspanStyle,
-    to_write: Vec<WriteParams>,
-}
-impl<'w, 's, 'a> AnsiPerformer<'w, 's, 'a> {
-    pub fn new(terminfo: &'a TermInfoItem<'w, 's>) -> Self {
-        Self {
-            terminfo,
-            cursor: TerminalCursor {
-                char: terminfo.cursor.char,
-                // TODO: This depends on the VT100 DEC mode https://vt100.net/docs/vt100-ug/chapter3.html#DECOM
-                line: terminfo.cursor.line + **terminfo.scroll_pos,
-            },
-            style: VspanStyle::default(),
-            default_style: VspanStyle::default(),
-            to_write: vec![],
-        }
-    }
-    pub fn set_default_style(&mut self, style: VspanStyle) {
-        self.default_style = style;
-    }
-
-    // TODO: This logic seems bugged.
-    // Getting far too many lines.
-    fn write(
+impl<'a> Grid<'a> {
+    pub fn new<'w, 's>(
         terminfo: &TermInfoItem<'w, 's>,
-        grid: &mut Grid,
-        WriteParams {
-            text,
-            cursor,
-            style,
-        }: WriteParams,
-    ) {
-        // get current line and offset from cursor
-        // add to that line's buffer
-        if let Some((line_ref, spans)) = grid.get(cursor.line) {
-            let mut lineval = line_ref.value().value.clone();
-            lineval.insert_str(cursor.char, text.as_str());
-            let new_line = TerminalLine::new(terminfo.id, lineval);
-            let mut offset_increment = 0;
-            let spans = spans
-                .iter()
-                .flat_map(|span_ref| {
-                    let span_val = span_ref.value();
-                    // offset <= cursor.char <= offset + range
-                    if span_val.offset <= cursor.char
-                        && cursor.char <= span_val.offset + span_val.range
-                    {
-                        // if style doesn't match, then split the range and insert between
-                        if span_val.style != style {
-                            let this_val = VirtualTextSpan {
-                                range: span_val.range - new_line.len(),
-                                ..*span_val
-                            };
-                            let new_val = VirtualTextSpan {
-                                range: new_line.len(),
-                                offset: this_val.offset + this_val.range,
-                                style,
-                                line: this_val.line,
-                            };
-                            offset_increment += 1;
-                            vec![
-                                MaybeRef::Owned(span_ref.entity(), this_val),
-                                MaybeRef::Owned(span_ref.entity(), new_val),
-                            ]
-                        } else {
-                            // otherwise modify the span
-                            let new_span = VirtualTextSpan {
-                                line: Entity::PLACEHOLDER,
-                                range: span_val.range + new_line.len(),
-                                ..*span_val
-                            };
-                            vec![MaybeRef::Owned(None, new_span)]
-                        }
-                    } else if offset_increment != 0 {
-                        let new_span = VirtualTextSpan {
-                            offset: span_val.offset + offset_increment,
-                            ..*span_val
-                        };
-                        vec![MaybeRef::Owned(span_ref.entity(), new_span)]
-                    } else {
-                        vec![span_ref.clone()]
-                    }
-                })
-                .collect::<Vec<_>>();
-            grid.insert(
-                cursor.line,
-                (MaybeRef::Owned(line_ref.entity(), new_line), spans),
-            );
-        } else {
-            let line = TerminalLine::new(
-                terminfo.id,
-                String::from_iter((0..cursor.char).map(|_| ' ')) + text.as_str(),
-            );
-            let span = VirtualTextSpan {
-                line: Entity::PLACEHOLDER,
-                offset: 0,
-                range: text.len(),
-                style,
-            };
-            if grid.len() < cursor.line {
-                grid.resize_with(cursor.line, || {
-                    (
-                        MaybeRef::Owned(None, TerminalLine::new(terminfo.id, String::new())),
-                        vec![MaybeRef::Owned(
-                            None,
-                            VirtualTextSpan {
-                                line: Entity::PLACEHOLDER,
-                                offset: 0,
-                                range: 0,
-                                style,
-                            },
-                        )],
-                    )
-                });
-            }
-            grid.insert(
-                cursor.line,
-                (
-                    MaybeRef::Owned(None, line),
-                    vec![MaybeRef::Owned(None, span)],
-                ),
-            );
-        };
+        q_lines: &'a Query<(Entity, &VtLine)>,
+        q_rowtargets: &'a Query<&VtRowTarget, With<VtLine>>,
+        q_rows: &'a Query<(Entity, &VtRow, Option<&VtViewportRow>)>,
+        q_viewport_rows: &'a Query<(Entity, &VtViewportRow)>,
+    ) -> Self {
+        let lines = terminfo
+            .lines(q_lines)
+            .map(|(line_id, line)| MaybeRef::Borrowed(line_id, line))
+            .collect::<Vec<_>>();
+        let viewport = terminfo
+            .viewport_rows(q_viewport_rows)
+            .map(|(e, vrow)| MaybeRef::Borrowed(e, vrow))
+            .collect::<Vec<_>>();
+        let rows = terminfo
+            .rows(q_rowtargets, q_rows)
+            .map(|(e, row, vrow)| (MaybeRef::Borrowed(e, row), vrow.copied()))
+            .collect::<Vec<_>>();
+        Self {
+            lines,
+            rows,
+            viewport,
+            viewport_cols: terminfo.size.cols,
+            viewport_rows: terminfo.size.rows,
+            scroll_pos: terminfo.scroll_pos.0,
+            cursor: *terminfo.cursor,
+            term_id: terminfo.id,
+        }
     }
 
-    pub fn execute(
-        self,
-        commands: &mut Commands,
-        q_lines: &Query<(Entity, &TerminalLine)>,
-        q_spans: &Query<(Entity, &VirtualTextSpan)>,
-    ) {
-        // TODO: Iterate through self.actions and perform commands to spawn
-        // and modify entities as appropriate
-        // Spawn virutal text spans and their corresponding lines.
-        // Then flow the lines per window.
-        let terminfo = self.terminfo;
-        let mut grid: Grid = self
-            .terminfo
-            .grid(q_lines, q_spans)
-            .map(|(line_id, line, spans)| {
-                (
-                    MaybeRef::Borrowed(line_id, line),
-                    spans
-                        .into_iter()
-                        .map(|(span_id, span)| MaybeRef::Borrowed(span_id, span))
-                        .collect::<Vec<_>>(),
-                )
-            })
-            .collect::<Vec<_>>();
-        // update cursor to final position
-        commands.entity(terminfo.id).insert(self.cursor);
-        // update grid entities
-        for params in self.to_write.into_iter() {
-            Self::write(terminfo, &mut grid, params);
+    pub fn scroll_viewport(&mut self, dir: isize) {
+        self.scroll_pos = self.scroll_pos.saturating_add_signed(dir);
+    }
+
+    pub fn increment_char(&mut self, wrap: bool) {
+        self.cursor.char = (self.cursor.char + 1).max(self.viewport_cols);
+        if wrap && self.cursor.char >= self.viewport_cols {
+            if self.cursor.pending_wrap {
+                self.cursor.char = 0;
+                self.increment_line(wrap);
+            } else {
+                self.cursor.pending_wrap = true;
+            }
         }
-        for (line, spans) in grid.into_iter() {
+        self.assert_cursor_in_view();
+    }
+    pub fn decrement_char(&mut self, wrap: bool) {
+        if self.cursor.char == 0 && wrap {
+            self.decrement_line(true);
+            self.cursor.char = self.viewport_cols;
+            self.cursor.pending_wrap = true;
+        } else {
+            self.cursor.char.saturating_sub(1);
+        }
+        self.assert_cursor_in_view();
+    }
+    pub fn increment_line(&mut self, scroll: bool) {
+        self.cursor.line = (self.cursor.line + 1).max(self.viewport_rows);
+        if scroll && self.cursor.line >= self.viewport_rows {
+            self.scroll_pos += 1;
+            self.cursor.line -= 1;
+        }
+        self.assert_cursor_in_view();
+    }
+    pub fn decrement_line(&mut self, scroll: bool) {
+        if scroll && self.cursor.line == 0 {
+            self.scroll_pos -= 1;
+        } else {
+            self.cursor.line.saturating_sub(1);
+        }
+        self.assert_cursor_in_view();
+    }
+
+    #[inline(always)]
+    fn assert_cursor_in_view(&self) {
+        assert!(self.cursor.line < self.viewport_rows);
+        assert!(self.cursor.char < self.viewport_cols);
+    }
+
+    /// Returns (line_idx, row_idx)
+    fn cursor_to_idx(&self) -> Option<(usize, usize)> {
+        self.assert_cursor_in_view();
+        let vrow = self.viewport.get(self.cursor.line).unwrap();
+        self.rows
+            .iter()
+            .enumerate()
+            .find_map(|(i, (row, maybe_vrow))| {
+                if let Some(vrow_ref) = maybe_vrow {
+                    if vrow.value() == vrow_ref {
+                        self.lines
+                            .iter()
+                            .find_position(|l| l.entity() == row.entity())
+                            .map(|(pos, _)| (pos, i))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+    }
+
+    // TODO: The viewport should be immediately filled with rows up to TermHeight
+    // with strings of length TermWidth
+    pub fn write(&mut self, c: char, style: VtCellStyle) {
+        let idx = self.cursor_to_idx();
+        if let Some((line_idx, row_idx)) = idx {
+            self.modify_line(line_idx, row_idx, c, style);
+        } else {
+            self.new_line(self.cursor.line, c, style);
+        }
+    }
+    fn new_line(&mut self, line_idx: usize, c: char, style: VtCellStyle) {
+        self.assert_cursor_in_view();
+        while self.lines.len() < line_idx {
+            self.lines
+                .push(MaybeRef::Owned(None, VtLine::new(self.term_id)));
+        }
+        let line = self.lines.get_mut(line_idx).unwrap();
+        let new_line = MaybeRef::Owned(
+            line.entity(),
+            VtLine::from_str_with_style(self.term_id, &c, style),
+        );
+        *line = new_line;
+    }
+    fn modify_line(&mut self, line_idx: usize, row_idx: usize, c: char, style: VtCellStyle) {
+        let line = self.lines.get_mut(line_idx).unwrap(); //safety: this was just generated
+        let (row, _vrow) = self.rows.get(row_idx).unwrap();
+        let pos = row.value().offset + self.cursor.char;
+        let mut cells = line.value().value.clone();
+        cells.insert(pos, VtCell::new(c).with_style(style));
+        *line = MaybeRef::Owned(line.entity(), VtLine::from_cells(self.term_id, cells));
+    }
+
+    /// Synchronize the [`Grid`] with the [`Terminal`] component in the
+    /// [`World`]. Will update the corresponding [`VtRow`], [`VtLine`],
+    /// [`VtViewportRow`], [`VtCursor`], [`VtScrollPos`], and other components.
+    pub fn sync(self, commands: &mut Commands) {
+        // cache viewport info
+        commands.entity(self.term_id).insert(self.cursor);
+        commands
+            .entity(self.term_id)
+            .insert(VtScrollPos(self.scroll_pos));
+        // update grid entities
+        for line in self.lines.into_iter() {
             let line_id = match line {
                 MaybeRef::Owned(Some(entity), line) => commands.entity(entity).insert(line).id(),
                 MaybeRef::Owned(None, line) => commands.spawn(line).id(),
                 _ => continue,
             };
-            for span in spans {
-                // TODO: consolidate spans
-                match span {
-                    MaybeRef::Owned(None, span) => {
-                        let span_id = commands
-                            .spawn(VirtualTextSpan {
-                                line: line_id,
-                                ..span
-                            })
-                            .id();
-                        commands.entity(line_id).add_child(span_id);
+            self.rows
+                .iter()
+                .filter(|(row, _)| row.value().line() == line_id)
+                .for_each(|(row, vrow)| {
+                    let rowid = match row {
+                        MaybeRef::Owned(Some(entity), row) => {
+                            commands.entity(*entity).insert(*row).id()
+                        }
+                        MaybeRef::Owned(None, row) => commands.spawn(*row).id(),
+                        _ => return,
+                    };
+                    if let Some(vrow) = vrow {
+                        commands.entity(rowid).insert(*vrow);
                     }
-                    MaybeRef::Owned(Some(id), span) => {
-                        commands.entity(id).insert(VirtualTextSpan {
-                            line: line_id,
-                            ..span
-                        });
-                    }
-                    _ => unreachable!(),
-                }
-            }
+                });
         }
     }
 }
-impl<'w, 's, 'a> anstyle_parse::Perform for AnsiPerformer<'w, 's, 'a> {
+
+/// Parses the passed [`VirtualTextSpanSpawner`], possibly expanding it into multiple
+/// and modifying various [`TerminalLine`]s.
+pub(crate) struct AnsiPerformer<'a, 'g> {
+    grid: &'a mut Grid<'g>,
+    style: VtCellStyle,
+    default_style: VtCellStyle,
+}
+impl<'a, 'g> AnsiPerformer<'a, 'g> {
+    pub fn new(grid: &'a mut Grid<'g>) -> Self {
+        Self {
+            grid,
+            style: VtCellStyle::default(),
+            default_style: VtCellStyle::default(),
+        }
+    }
+    pub fn set_default_style(&mut self, style: VtCellStyle) {
+        self.default_style = style;
+    }
+}
+impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {
     fn print(&mut self, c: char) {
-        info!(?self.cursor, ?c);
-        self.to_write.push(WriteParams {
-            text: c.to_smolstr(),
-            style: self.style,
-            cursor: self.cursor,
-        });
-        self.cursor.char += 1;
+        info!(?self.grid, ?c);
+        self.grid.write(c, self.style);
+        self.grid.increment_char(true);
     }
 
     fn execute(&mut self, byte: u8) {
         match byte {
             byte if byte == ControlCodes::BEL as u8 => {
                 // TODO: sound a bell :)
-                info!(?self.cursor, "BEL");
+                info!(?self.grid, "BEL");
             }
             byte if byte == ControlCodes::LF as u8 => {
-                self.cursor.line += 1;
-                self.cursor.char = 0;
-                info!(?self.cursor, "LF");
+                self.grid.increment_line(true);
             }
             byte if byte == ControlCodes::CR as u8 => {
-                self.cursor.char = 0;
-                info!(?self.cursor, "CR");
+                self.grid.cursor.char = 0;
             }
             _ => {
                 info_once!(
@@ -316,8 +313,6 @@ impl<'w, 's, 'a> anstyle_parse::Perform for AnsiPerformer<'w, 's, 'a> {
         }
     }
 
-    // TODO: figure out what the hell all this means
-    // look at example impls
     fn hook(
         &mut self,
         _params: &anstyle_parse::Params,
@@ -338,9 +333,6 @@ impl<'w, 's, 'a> anstyle_parse::Perform for AnsiPerformer<'w, 's, 'a> {
 
     fn osc_dispatch(&mut self, _params: &[&[u8]], _bell_terminated: bool) {}
 
-    // FUN FACT! THIS IS NOT CORRECT :)
-    // Terminal cursor actions must account for text wrapping,
-    // since it is relative to the _displayed_ grid
     fn csi_dispatch(
         &mut self,
         params: &anstyle_parse::Params,
@@ -355,54 +347,64 @@ impl<'w, 's, 'a> anstyle_parse::Perform for AnsiPerformer<'w, 's, 'a> {
                 let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
                     return;
                 };
-                self.cursor.line -= *next as usize;
+                for _ in 0..*next {
+                    self.grid.decrement_line(false);
+                }
             }
             action if action == CsiAction::CUD as u8 => {
                 let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
                     return;
                 };
-                self.cursor.line += *next as usize;
+                for _ in 0..*next {
+                    self.grid.increment_line(false);
+                }
             }
             action if action == CsiAction::CUF as u8 => {
                 let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
                     return;
                 };
-                self.cursor.char += *next as usize;
+                for _ in 0..*next {
+                    self.grid.increment_char(false);
+                }
             }
             action if action == CsiAction::CUB as u8 => {
                 let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
                     return;
                 };
-                self.cursor.char -= *next as usize;
+                for _ in 0..*next {
+                    self.grid.decrement_char(false);
+                }
             }
             action if action == CsiAction::CNL as u8 => {
                 let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
                     return;
                 };
-                self.cursor.line += *next as usize;
-                self.cursor.char = 0;
+                self.grid.cursor.char = 0;
+                for _ in 0..*next {
+                    self.grid.increment_line(false);
+                }
             }
             action if action == CsiAction::CPL as u8 => {
                 let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
                     return;
                 };
-                self.cursor.line -= *next as usize;
-                self.cursor.char = 0;
+                self.grid.cursor.char = 0;
+                for _ in 0..*next {
+                    self.grid.decrement_line(false);
+                }
             }
             action if action == CsiAction::CHA as u8 => {
                 let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
                     return;
                 };
-                self.cursor.char = *next as usize;
+                self.grid.cursor.char = (*next as usize).clamp(0, self.grid.viewport_cols);
             }
             action if action == CsiAction::CUP as u8 || action == CsiAction::HVP as u8 => {
                 let [line, char, ..] = param_iter.next().unwrap_or(&[0u16]) else {
                     return;
                 };
-                self.cursor = TerminalCursor {
-                    line: *line as usize,
-                    char: *char as usize,
-                };
+                self.grid.cursor.line = (*line as usize).clamp(0, self.grid.viewport_rows);
+                self.grid.cursor.char = (*char as usize).clamp(0, self.grid.viewport_cols);
             }
             // action if action == CsiAction::ED as u8 => {
             //     self.actions.push(AnsiAction::Erase { mode: iter.next().unwrap_or(0) as usize });

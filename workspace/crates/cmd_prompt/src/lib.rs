@@ -11,7 +11,6 @@ pub mod prelude {
     pub use super::systems::*;
     #[cfg(test)]
     pub use super::test::*;
-    pub use crate::term_writeln;
     pub use bevy::prelude::*;
     pub use tiny_bail::prelude::*;
 }
