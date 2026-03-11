@@ -9,8 +9,8 @@ mod terminfo {
     pub struct TermInfo {
         pub id: Entity,
         pub cursor: &'static VtCursor,
-        pub(crate) lines: &'static VtLineTarget,
-        pub(crate) viewport: &'static VtViewport,
+        pub lines: &'static VtLineTarget,
+        pub viewport: &'static VtViewport,
         pub size: &'static VtSize,
         pub scroll_pos: &'static VtScrollPos,
     }
@@ -45,6 +45,13 @@ mod terminfo {
         #[inline(always)]
         pub fn mutate(&self, commands: &mut Commands, msg: TermMsgKind) {
             commands.write_message(TermMsg::new(self.id, msg));
+        }
+
+        pub fn write(&self, commands: &mut Commands, value: impl ToString) {
+            commands.write_message(TermMsg::write(self.id, value));
+        }
+        pub fn write_spans(&self, commands: &mut Commands, spans: Vec<TermWrite>) {
+            commands.write_message(TermMsg::write_spans(self.id, spans));
         }
     }
 }
@@ -86,29 +93,19 @@ mod pty {
 }
 pub use pty::*;
 
-mod terminal {
-    use super::*;
-
+mod ui {
     use bevy::{
         ecs::{lifecycle::HookContext, world::DeferredWorld},
-        picking::hover::DirectlyHovered,
         text::LineHeight,
     };
 
-    /// A terminal display. Will spawn a new [`Node`] sized to the parent
-    /// container and populate the hierarchy with [`TextSpan`] components according
-    /// to the target entity's properties.
+    use super::*;
+
+    /// [bevy::ui]-based implementation of the [`Terminal`] frontend.
     ///
-    /// Related components are prefixed with `Vt`, e.g. [`VtLayout`]
-    #[derive(Component, Default, Reflect)]
+    /// Related to [`VtUiTarget`] (1:1)
+    #[derive(Component, Reflect, Debug, PartialEq, Clone, Copy)]
     #[require(
-        // Interal
-        VtLineTarget,
-        VtCursor,
-        VtScrollPos,
-        VtSize,
-        VtViewport,
-        // Display items
         Node {
             overflow: Overflow::clip(),
             ..Default::default()
@@ -121,23 +118,108 @@ mod terminal {
         TextColor,
         TextFont,
         LineHeight,
-        )]
-    #[component(immutable, on_add=Self::on_add)]
-    pub struct Terminal;
-    impl Terminal {
-        /// Spawn [`TerminalCharWidth`] et al
-        pub fn on_add(mut world: DeferredWorld, ctx: HookContext) {
+        Text,
+    )]
+    #[component(on_add=Self::on_add)]
+    #[relationship(relationship_target = VtUiTarget)]
+    pub struct VtUi(Entity);
+    impl VtUi {
+        pub fn new(term_id: Entity) -> Self {
+            Self(term_id)
+        }
+        pub fn target(&self) -> Entity {
+            self.0
+        }
+        /// Spawn [`VtUiTarget`], [`VtCharWidth`] etc
+        fn on_add(mut world: DeferredWorld, ctx: HookContext) {
+            let term_id = world.get::<VtUi>(ctx.entity).unwrap().0;
             let mut commands = world.commands();
+            commands.entity(term_id).insert(VtUiTarget::new(ctx.entity));
+
             let id = commands.spawn(VtCharWidth::new(ctx.entity, 0.)).id();
             commands
                 .entity(ctx.entity)
                 .add_one_related::<VtCharWidth>(id)
-                .observe(on_scroll)
-                .observe(|event: On<Pointer<Over>>| {
-                    debug!(?event);
-                });
+                .observe(on_scroll);
         }
     }
+
+    /// Relationship target for [`VtUi`] (1:1). Will be attached to the given [`Terminal`] entity when
+    /// spawning [`VtUi`].
+    #[derive(Component, Debug, Reflect, PartialEq, Clone, Copy)]
+    #[relationship_target(relationship=VtUi)]
+    pub struct VtUiTarget(Entity);
+    impl VtUiTarget {
+        pub fn new(target: Entity) -> Self {
+            Self(target)
+        }
+        pub fn target(&self) -> Entity {
+            self.0
+        }
+    }
+
+    /// Width of a character cell in pixels, determined by measuring the width of a space.
+    /// Related to [`VtCharWidthTarget`] (1:1)
+    #[derive(Component, Debug, Reflect, PartialEq, Clone, Copy)]
+    #[component(immutable)]
+    #[require(Node::default(), Pickable::IGNORE, Visibility::Hidden, Text::new(" "))]
+    #[relationship(relationship_target=VtCharWidthTarget)]
+    pub struct VtCharWidth {
+        #[relationship]
+        target: Entity,
+        value: f32,
+    }
+    impl VtCharWidth {
+        pub fn new(target: Entity, value: f32) -> Self {
+            Self { target, value }
+        }
+        pub fn value(&self) -> f32 {
+            self.value
+        }
+        pub fn target(&self) -> Entity {
+            self.target
+        }
+    }
+
+    /// Relationship target for [`VtCharWidth`]. Relationship is 1:1. Appears only with
+    /// [`VtUi`] or [`VtUi2d`].
+    #[derive(Component, Debug, Reflect, PartialEq, Eq, Hash, Clone, Copy, Deref)]
+    #[relationship_target(relationship=VtCharWidth, linked_spawn)]
+    pub struct VtCharWidthTarget(Entity);
+    impl VtCharWidthTarget {
+        pub fn target(&self) -> Entity {
+            self.0
+        }
+    }
+}
+pub use ui::*;
+
+mod terminal {
+    use super::*;
+
+    use bevy::ecs::{lifecycle::HookContext, world::DeferredWorld};
+
+    /// A terminal display. Will spawn a new [`Node`] sized to the parent
+    /// container and populate the hierarchy with [`TextSpan`] components according
+    /// to the target entity's properties.
+    ///
+    /// Related components are prefixed with `Vt`, e.g. [`VtViewport`].
+    ///
+    /// In order to display the terminal, you need to choose a front-end
+    /// component. They do not have to be on the same entity. For
+    /// [bevy::ui]-based rendering use [`VtUi`]. For [bevy::sprite]-based
+    /// rendering use [`VtUi2d`].
+    #[derive(Component, Default, Reflect)]
+    #[require(
+        // Interal
+        VtLineTarget,
+        VtCursor,
+        VtScrollPos,
+        VtSize,
+        VtViewport,
+        Name::new("Terminal"),
+        )]
+    pub struct Terminal;
 
     /// Cursor for the [`Terminal`]. Points at a given char index into a
     /// [`TerminalRow`] (nth from end). Note that this is relative to the
@@ -214,7 +296,7 @@ mod terminal {
         }
         pub fn from_str<S: ToString>(terminal_id: Entity, string: S) -> Self {
             Self {
-                value: string.to_string().chars().map(|c| VtCell::new(c)).collect(),
+                value: string.to_string().chars().map(VtCell::new).collect(),
                 target: terminal_id,
             }
         }
@@ -262,6 +344,14 @@ mod terminal {
         pub value: char,
         pub style: VtCellStyle,
     }
+    impl Default for VtCell {
+        fn default() -> Self {
+            Self {
+                value: ' ',
+                style: Default::default(),
+            }
+        }
+    }
     impl VtCell {
         pub fn new(value: char) -> Self {
             Self {
@@ -295,39 +385,6 @@ mod terminal {
     #[component(immutable)]
     pub struct VtScrollPos(pub usize);
 
-    /// Width of a character cell in pixels, determined by measuring the width of a space.
-    /// Related to [`VtCharWidthTarget`] (1:1)
-    #[derive(Component, Debug, Reflect, PartialEq, Clone, Copy)]
-    #[component(immutable)]
-    #[require(Node::default(), Pickable::IGNORE, Visibility::Hidden, Text::new(" "))]
-    #[relationship(relationship_target=VtCharWidthTarget)]
-    pub struct VtCharWidth {
-        #[relationship]
-        target: Entity,
-        value: f32,
-    }
-    impl VtCharWidth {
-        pub fn new(target: Entity, value: f32) -> Self {
-            Self { target, value }
-        }
-        pub fn value(&self) -> f32 {
-            self.value
-        }
-        pub fn target(&self) -> Entity {
-            self.target
-        }
-    }
-
-    /// Relationship target for [`VtCharWidth`]. Relationship is 1:1.
-    #[derive(Component, Debug, Reflect, PartialEq, Eq, Hash, Clone, Copy, Deref)]
-    #[relationship_target(relationship=VtCharWidth, linked_spawn)]
-    pub struct VtCharWidthTarget(Entity);
-    impl VtCharWidthTarget {
-        pub fn target(&self) -> Entity {
-            self.0
-        }
-    }
-
     /// Visible layout for the terminal.
     /// The terminal's layout grid. Contains references to entities which should
     /// contain [`VtRow`] and [`VtViewportRow`] components.
@@ -335,26 +392,21 @@ mod terminal {
     /// Relationship target for [`VtViewportRow`] (1:n).
     #[derive(Component, Default, Deref, Debug, Reflect)]
     #[relationship_target(relationship=VtViewportRow)]
-    #[component(on_add = Self::on_add)]
+    #[component(on_add=Self::on_add)]
     pub struct VtViewport(Vec<Entity>);
     impl VtViewport {
         fn on_add(mut world: DeferredWorld, ctx: HookContext) {
-            let child_node = world.commands().spawn(VtTextWrapper).id();
-            world.commands().entity(ctx.entity).add_child(child_node);
+            let cols = world.get::<VtSize>(ctx.entity).unwrap().cols;
+            let mut commands = world.commands();
+            commands.entity(ctx.entity).despawn_related::<VtViewport>();
+            commands.spawn_batch([VtViewportRow::new(ctx.entity)].repeat(cols));
         }
     }
 
-    /// A marker component for the [`VtLayout`] entity's child component,
-    /// which contains the automatically created [`TextSpan`] children;
-    #[derive(Component, Default, Debug, Reflect)]
-    #[require(Node, Text, DirectlyHovered, Pickable)]
-    pub struct VtTextWrapper;
-
-    /// Visible row. Possible sibling of [`VtRow`]. Automatically spawns
-    /// necessary components to render this row. See [`VtRow`] for more details.
+    /// Visible row. Possible sibling of [`VtRow`].
     ///
     /// This entity does not require [`VtRow`] as there may be empty terminal
-    /// lines that still need to be renered, for example when the buffer is
+    /// lines that still need to be rendered, for example when the buffer is
     /// cleared.
     ///
     /// Related to [`VtViewport`] 1:n.
@@ -366,26 +418,22 @@ mod terminal {
         pub fn new(term_id: Entity) -> Self {
             Self(term_id)
         }
-        pub fn on_insert() {
-            // spawn node et al
-        }
     }
 
     /// A reference to a logical line with a character offset into its full text
     /// value.
     ///
     /// This entity may optionally have a [`VtViewportRow`] component attached
-    /// to it. If so, it will automatically spawn the necessary components to
-    /// render this row to the viewport.
+    /// to it.
     ///
     /// ```notrust
     ///                              (Terminal; VtViewport)
     ///                                             ^
-    ///     (VtLine; VtRowTarget) -> (VtRow; VtViewportRow; Children)
-    ///                      \-----> (VtRow)                   \-> (Node; Text; ...)
+    ///     (VtLine; VtRowTarget) -> (VtRow; VtViewportRow)
+    ///                      \-----> (VtRow)
     /// ```
     ///
-    /// Related to [`VtLayout`] (1:n)
+    /// Related to [`VtRowTarget`] (1:n)
     #[derive(Component, Debug, Reflect, PartialEq, Eq, Hash, Clone, Copy)]
     #[relationship(relationship_target=VtRowTarget)]
     #[component(immutable)]
@@ -407,7 +455,7 @@ mod terminal {
         }
     }
 
-    #[derive(Component, Default, Debug)]
+    #[derive(Component, Default, Debug, Reflect)]
     #[component(immutable, on_insert=Self::on_insert)]
     pub struct VtSize {
         pub rows: usize,
@@ -425,12 +473,13 @@ mod events {
     use super::*;
 
     /// A mutation to send to the terminal window.
-    #[derive(Debug, Message, Reflect)]
+    #[derive(Debug, Message, Reflect, Clone)]
     pub struct TermMsg {
         pub target: Entity,
         pub kind: TermMsgKind,
+        pub(crate) retry_count: usize,
     }
-    #[derive(Debug, Reflect)]
+    #[derive(Debug, Reflect, Clone)]
     pub enum TermMsgKind {
         /// Reflow the terminal. Modifes LineRefs.
         Reflow,
@@ -443,20 +492,21 @@ mod events {
         Write(Vec<TermWrite>),
     }
     impl TermMsg {
-        pub fn new(window_id: Entity, kind: TermMsgKind) -> Self {
+        pub fn new(term_id: Entity, kind: TermMsgKind) -> Self {
             Self {
-                target: window_id,
+                target: term_id,
                 kind,
+                retry_count: 0,
             }
         }
-        pub fn scroll(window_id: Entity, direction: isize) -> Self {
-            Self::new(window_id, TermMsgKind::Scroll(direction))
+        pub fn scroll(term_id: Entity, direction: isize) -> Self {
+            Self::new(term_id, TermMsgKind::Scroll(direction))
         }
-        pub fn jump_to_bottom(window_id: Entity) -> Self {
-            Self::new(window_id, TermMsgKind::JumpToBottom)
+        pub fn jump_to_bottom(term_id: Entity) -> Self {
+            Self::new(term_id, TermMsgKind::JumpToBottom)
         }
-        pub fn reflow(window_id: Entity) -> Self {
-            Self::new(window_id, TermMsgKind::Reflow)
+        pub fn reflow(term_id: Entity) -> Self {
+            Self::new(term_id, TermMsgKind::Reflow)
         }
         /// Writes a simple line to the buffer. For rich text support, see [Self::writeln_rich]
         pub fn write(term_id: Entity, line: impl ToString) -> Self {

@@ -1,4 +1,12 @@
-use bevy::{ecs::query::QueryData, input::mouse::MouseScrollUnit, text::LineHeight};
+use bevy::{
+    ecs::{
+        query::{QueryData, WorldQuery},
+        relationship::Relationship,
+    },
+    input::mouse::MouseScrollUnit,
+    text::LineHeight,
+};
+use itertools::Itertools;
 
 use crate::prelude::*;
 
@@ -11,31 +19,18 @@ use crate::prelude::*;
 // We _could_ make the parent node invisible, then override the inserted text span's Visibility components.
 //
 
-/// Propogates font changes from the TerminalWindow to the targeted TerminalCharWidth entity.
+/// Propogates font changes from the [`VtUi`] to the targeted TerminalCharWidth entity.
 pub fn update_font(
-    q_font: Query<
-        (
-            &TextFont,
-            &TextColor,
-            &LineHeight,
-            &VtCharWidthTarget,
-            &Children,
-        ),
-        Changed<TextFont>,
-    >,
+    q_font: Query<(&TextFont, &VtCharWidthTarget), Changed<TextFont>>,
     q_cw: Query<Entity, With<VtCharWidth>>,
-    q_wrapper: Query<Entity, With<VtTextWrapper>>,
     mut commands: Commands,
 ) {
-    for (font, color, lineheight, target, children) in q_font {
-        let entity = c!(q_cw.get(target.target()));
-        commands.entity(entity).insert(font.clone());
-        let wrapper = c!(q_wrapper.iter().find(|c| children.contains(c)));
-        commands
-            .entity(wrapper)
-            .insert((*lineheight, font.clone(), *color));
+    for (font, target) in q_font {
+        let cw_id = c!(q_cw.get(target.target()));
+        commands.entity(cw_id).insert(font.clone());
     }
 }
+
 /// Measure the character width of the monospace font by using a detached,
 /// invisible Node containing a single Text(" ")
 pub fn update_char_width(
@@ -50,21 +45,21 @@ pub fn update_char_width(
 }
 
 pub fn resize(
-    q_window: Query<
+    q_ui: Query<
         (
-            Entity,
+            &VtUi,
             &ComputedNode,
             &TextFont,
             &LineHeight,
             &VtCharWidthTarget,
         ),
-        (Changed<ComputedNode>, With<Terminal>),
+        Changed<ComputedNode>,
     >,
     q_width: Query<&VtCharWidth>,
     mut commands: Commands,
 ) {
     trace!("resize");
-    for (window_id, node, font, line_height, cw_target) in q_window.iter() {
+    for (vt_ui, node, font, line_height, cw_target) in q_ui.iter() {
         let cw = c!(q_width.get(cw_target.entity()));
         let size = node.size();
         let line_height = match line_height {
@@ -73,88 +68,158 @@ pub fn resize(
         };
         let cols = (size.x / cw.value()).floor() as usize;
         let rows = (size.y / line_height).floor() as usize;
-        commands.entity(window_id).insert(VtSize { cols, rows });
+        commands
+            .entity(vt_ui.target())
+            .insert(VtSize { cols, rows });
         debug!("Got node size: {size:?}");
         debug!("Set new term size to {cols} x {rows}");
     }
 }
 
-#[derive(QueryData, Debug)]
-pub struct LayoutQueryData<'a> {
-    terminfo: TermInfo,
-    line_height: &'a LineHeight,
-    font: &'a TextFont,
-    color: &'a TextColor,
-    children: &'a Children,
+#[derive(Debug, Bundle, PartialEq, Clone, Copy)]
+struct TextSpanStyleBundle {
+    color: TextColor,
+    bg: TextBackgroundColor,
 }
 
-pub fn update_layout(
-    q: Query<
-        LayoutQueryData,
-        (
-            Or<(Changed<VtSize>, Changed<VtViewport>, Changed<VtScrollPos>)>,
-            With<Terminal>,
-        ),
-    >,
-    q_lines: Query<(&VtLine, &Children)>,
-    q_vspans: Query<&VirtualTextSpan>,
-    q_rows: Query<&VtRow>,
-    q_wrapper: Query<Entity, With<VtTextWrapper>>,
-    mut commands: Commands,
+/// Given a row and its corresponding lines, spawn the text spans.
+fn spawn_row_ui(
+    commands: &mut Commands,
+    terminfo: &TermInfoItem,
+    ui_id: Entity,
+    row_and_line: Option<(&VtRow, &VtLine)>,
 ) {
-    trace!("update layout");
-    for data in q {
-        let wrapper_id = c!(data.children.iter().find(|c| q_wrapper.contains(*c)));
-        let new_children = data
-            .layout
+    let top_text = if row_and_line.is_none() {
+        Text::new(" ".repeat(terminfo.size.cols))
+    } else {
+        Text::default()
+    };
+    let parent = commands.spawn((Node::default(), top_text)).id();
+    commands.entity(ui_id).add_child(parent);
+    if let Some((row, line)) = row_and_line {
+        let spans = line
+            .value
             .iter()
-            .rev()
-            .skip(**data.scroll_pos)
-            .take(**data.term_height)
-            .filter_map(|id| {
-                debug!(?id);
-                let row = r!(q_rows.get(id));
-                let (line, vspans) = r!(q_lines.get(r!(row.line)));
-                let textval = line
-                    .chars()
-                    .skip(row.offset)
-                    .take(**data.term_width)
-                    .collect::<String>();
-                let ret = vspans
-                    .iter()
-                    .filter_map(|child| q_vspans.get(child).ok())
-                    .enumerate()
-                    .fold(vec![], |mut accum, (i, vspan)| {
-                        let mut text = textval
-                            .chars()
-                            .skip(vspan.offset)
-                            .take(vspan.range)
-                            .collect::<String>();
-
-                        if i == vspans.len() - 1 {
-                            text += "\n";
+            .skip(row.offset)
+            .take(terminfo.size.cols)
+            .copied()
+            .pad_using(terminfo.size.cols, |_| VtCell::default())
+            .fold(
+                Vec::<(TextSpan, TextSpanStyleBundle, ChildOf)>::new(),
+                |mut spans, cell| {
+                    let color = TextColor(cell.style.color);
+                    let bg = TextBackgroundColor(cell.style.color);
+                    let style_bundle = TextSpanStyleBundle { color, bg };
+                    let new = (TextSpan::new(cell.value), style_bundle, ChildOf(parent));
+                    if let Some(last) = spans.last_mut() {
+                        if last.1 != style_bundle {
+                            spans.push(new);
+                        } else {
+                            last.0.0.push(cell.value);
                         }
-                        let id = commands
-                            .spawn((
-                                TextSpan(text),
-                                TextColor(vspan.style.color),
-                                TextBackgroundColor(vspan.style.background),
-                                data.font.clone(),
-                            ))
-                            .id();
-                        accum.push(id);
-                        accum
-                    });
-                debug!(?ret);
-                Some(ret)
-            })
-            .rev()
-            .flatten()
-            .collect::<Vec<Entity>>();
-        commands.entity(wrapper_id).despawn_children();
-        commands.entity(wrapper_id).add_children(&new_children);
+                    } else {
+                        spans.push(new);
+                    };
+                    spans
+                },
+            );
+        debug!(?spans);
+        commands.spawn_batch(spans);
     }
 }
+
+/// Translates from [`VtViewportRow`] entities to the [`VtUi`]-based render.
+pub fn update_layout_ui(
+    q: Query<
+        (TermInfo, &VtUiTarget),
+        Or<(Changed<VtSize>, Changed<VtViewport>, Changed<VtScrollPos>)>,
+    >,
+    q_lines: Query<&VtLine>,
+    q_viewport: Query<(&VtViewportRow, Option<Ref<VtRow>>)>,
+    mut commands: Commands,
+) {
+    trace!("update_layout_ui");
+    for (terminfo, ui_target) in q {
+        let ui_id = ui_target.target();
+        commands.entity(ui_id).despawn_children();
+        for (_, maybe_row) in q_viewport.iter_many(terminfo.viewport.iter()) {
+            if let Some(row) = maybe_row {
+                let line = c!(q_lines.get(row.line()));
+                spawn_row_ui(&mut commands, &terminfo, ui_id, Some((row.as_ref(), line)));
+            } else {
+                spawn_row_ui(&mut commands, &terminfo, ui_id, None);
+            }
+        }
+    }
+}
+
+// pub fn update_layout(
+//     q: Query<
+//         LayoutQueryData,
+//         (
+//             Or<(Changed<VtSize>, Changed<VtViewport>, Changed<VtScrollPos>)>,
+//             With<Terminal>,
+//         ),
+//     >,
+//     q_lines: Query<(&VtLine, &Children)>,
+//     q_vspans: Query<&VirtualTextSpan>,
+//     q_rows: Query<&VtRow>,
+//     q_wrapper: Query<Entity, With<VtTextWrapper>>,
+//     mut commands: Commands,
+// ) {
+//     trace!("update layout");
+//     for data in q {
+//         let wrapper_id = c!(data.children.iter().find(|c| q_wrapper.contains(*c)));
+//         let new_children = data
+//             .layout
+//             .iter()
+//             .rev()
+//             .skip(**data.scroll_pos)
+//             .take(**data.term_height)
+//             .filter_map(|id| {
+//                 debug!(?id);
+//                 let row = r!(q_rows.get(id));
+//                 let (line, vspans) = r!(q_lines.get(r!(row.line)));
+//                 let textval = line
+//                     .chars()
+//                     .skip(row.offset)
+//                     .take(**data.term_width)
+//                     .collect::<String>();
+//                 let ret = vspans
+//                     .iter()
+//                     .filter_map(|child| q_vspans.get(child).ok())
+//                     .enumerate()
+//                     .fold(vec![], |mut accum, (i, vspan)| {
+//                         let mut text = textval
+//                             .chars()
+//                             .skip(vspan.offset)
+//                             .take(vspan.range)
+//                             .collect::<String>();
+
+//                         if i == vspans.len() - 1 {
+//                             text += "\n";
+//                         }
+//                         let id = commands
+//                             .spawn((
+//                                 TextSpan(text),
+//                                 TextColor(vspan.style.color),
+//                                 TextBackgroundColor(vspan.style.background),
+//                                 data.font.clone(),
+//                             ))
+//                             .id();
+//                         accum.push(id);
+//                         accum
+//                     });
+//                 debug!(?ret);
+//                 Some(ret)
+//             })
+//             .rev()
+//             .flatten()
+//             .collect::<Vec<Entity>>();
+//         commands.entity(wrapper_id).despawn_children();
+//         commands.entity(wrapper_id).add_children(&new_children);
+//     }
+// }
 
 pub(crate) fn on_scroll(
     trigger: On<Pointer<Scroll>>,

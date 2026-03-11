@@ -79,6 +79,18 @@ impl<'a, T: Clone> MaybeRef<'a, T> {
     }
 }
 
+macro_rules! assert_cursor_in_view {
+    ($self:ident$(, $retvalue:expr)?) => {
+        trace!(?$self.cursor, ?$self.viewport);
+        if $self.viewport.len() == 0 {
+            warn!("Empty viewport");
+            return $($retvalue)?;
+        }
+        assert!($self.cursor.line <= $self.viewport_rows);
+        assert!($self.cursor.char <= $self.viewport_cols);
+    }
+}
+
 /// A transient grid. Used to modify the terminal entities and reconstructed
 /// on each pass.
 #[derive(Debug)]
@@ -141,7 +153,7 @@ impl<'a> Grid<'a> {
                 self.cursor.pending_wrap = true;
             }
         }
-        self.assert_cursor_in_view();
+        assert_cursor_in_view!(self);
     }
     pub fn decrement_char(&mut self, wrap: bool) {
         if self.cursor.char == 0 && wrap {
@@ -149,9 +161,9 @@ impl<'a> Grid<'a> {
             self.cursor.char = self.viewport_cols;
             self.cursor.pending_wrap = true;
         } else {
-            self.cursor.char.saturating_sub(1);
+            self.cursor.char = self.cursor.char.saturating_sub(1);
         }
-        self.assert_cursor_in_view();
+        assert_cursor_in_view!(self);
     }
     pub fn increment_line(&mut self, scroll: bool) {
         self.cursor.line = (self.cursor.line + 1).max(self.viewport_rows);
@@ -159,26 +171,20 @@ impl<'a> Grid<'a> {
             self.scroll_pos += 1;
             self.cursor.line -= 1;
         }
-        self.assert_cursor_in_view();
+        assert_cursor_in_view!(self);
     }
     pub fn decrement_line(&mut self, scroll: bool) {
         if scroll && self.cursor.line == 0 {
             self.scroll_pos -= 1;
         } else {
-            self.cursor.line.saturating_sub(1);
+            self.cursor.char = self.cursor.line.saturating_sub(1);
         }
-        self.assert_cursor_in_view();
-    }
-
-    #[inline(always)]
-    fn assert_cursor_in_view(&self) {
-        assert!(self.cursor.line < self.viewport_rows);
-        assert!(self.cursor.char < self.viewport_cols);
+        assert_cursor_in_view!(self);
     }
 
     /// Returns (line_idx, row_idx)
     fn cursor_to_idx(&self) -> Option<(usize, usize)> {
-        self.assert_cursor_in_view();
+        assert_cursor_in_view!(self, None);
         let vrow = self.viewport.get(self.cursor.line).unwrap();
         self.rows
             .iter()
@@ -210,7 +216,7 @@ impl<'a> Grid<'a> {
         }
     }
     fn new_line(&mut self, line_idx: usize, c: char, style: VtCellStyle) {
-        self.assert_cursor_in_view();
+        assert_cursor_in_view!(self);
         while self.lines.len() < line_idx {
             self.lines
                 .push(MaybeRef::Owned(None, VtLine::new(self.term_id)));
@@ -218,7 +224,7 @@ impl<'a> Grid<'a> {
         let line = self.lines.get_mut(line_idx).unwrap();
         let new_line = MaybeRef::Owned(
             line.entity(),
-            VtLine::from_str_with_style(self.term_id, &c, style),
+            VtLine::from_str_with_style(self.term_id, c, style),
         );
         *line = new_line;
     }

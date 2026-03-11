@@ -2,6 +2,18 @@ use bevy::platform::collections::HashMap;
 
 use crate::prelude::*;
 
+fn retry_message(commands: &mut Commands, msg: TermMsg) {
+    if msg.retry_count < 3 {
+        // try again next frame
+        commands.write_message(TermMsg {
+            retry_count: msg.retry_count + 1,
+            ..msg
+        });
+    } else {
+        warn!(?msg, "Dropped terminal message");
+    }
+}
+
 pub fn handle_messages(
     mut messages: MessageReader<TermMsg>,
     mut commands: Commands,
@@ -15,6 +27,16 @@ pub fn handle_messages(
     let mut to_reflow = vec![];
     let mut to_write = HashMap::<Entity, Vec<&TermWrite>>::new();
     for msg in messages.read() {
+        let terminfo = q_terminfo.get(msg.target);
+        if terminfo.is_err() {
+            retry_message(&mut commands, msg.clone());
+            continue;
+        }
+        let terminfo = terminfo.unwrap();
+        if terminfo.size.cols == 0 || terminfo.size.rows == 0 {
+            retry_message(&mut commands, msg.clone());
+            continue;
+        }
         match &msg.kind {
             TermMsgKind::Reflow => {
                 if !to_reflow.contains(&msg.target) {
@@ -23,7 +45,6 @@ pub fn handle_messages(
             }
             // TODO Make a system to respond to changes in VtScrollPos
             TermMsgKind::Scroll(dir) => {
-                let terminfo = c!(q_terminfo.get(msg.target));
                 commands
                     .entity(terminfo.id)
                     .insert(VtScrollPos(terminfo.scroll_pos.saturating_sub_signed(*dir)));

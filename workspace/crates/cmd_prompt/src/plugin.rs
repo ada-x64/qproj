@@ -25,7 +25,7 @@ impl Plugin for TerminalPlugin {
         );
         app.add_systems(
             PostUpdate,
-            (handle_messages, update_layout)
+            (handle_messages, update_layout_ui)
                 .after(ui_layout_system)
                 .chain()
                 .in_set(TerminalSystems::Mutation),

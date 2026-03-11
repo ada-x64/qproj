@@ -20,18 +20,31 @@ fn main() {
     ));
     app.add_systems(Startup, |mut commands: Commands| {
         commands.spawn(Camera2d);
-        let term_id = commands.spawn((Terminal,
+        let term_id = commands.spawn(Terminal).id();
+        commands.spawn((
+            VtUi::new(term_id),
             Node {
-                width: percent(100),
-                height: percent(100),
+                width: vw(100),
+                height: vh(100),
                 ..Default::default()
             },
-        )).id();
-        for i in 0..100 {
-            commands.write_message(TermMsg::write(term_id, format!("{i}\n")));
-        }
-        commands
-            .write_message(TermMsg::write(term_id, "This is a really long line! It should be wrapping. Just checking :) How are you doing today? I'm doing pretty good myself.\n"));
+        ));
+        commands.write_message(TermMsg::write(term_id, "hello\n"));
+        // }
+        // commands
+        //     .write_message(TermMsg::write(term_id, "This is a really long line! It should be wrapping. Just checking :) How are you doing today? I'm doing pretty good myself.\n"));
     });
+    // app.add_systems(
+    //     Update,
+    //     |q_terminfo: Query<TermInfo>, mut commands: Commands, mut ran: Local<bool>| {
+    //         if *ran {
+    //             return;
+    //         }
+    //         for terminfo in q_terminfo {
+    //             terminfo.write(&mut commands, "Hello!");
+    //         }
+    //         *ran = true;
+    //     },
+    // );
     app.run();
 }
