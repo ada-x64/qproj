@@ -34,17 +34,15 @@ fn main() {
         // commands
         //     .write_message(TermMsg::write(term_id, "This is a really long line! It should be wrapping. Just checking :) How are you doing today? I'm doing pretty good myself.\n"));
     });
-    // app.add_systems(
-    //     Update,
-    //     |q_terminfo: Query<TermInfo>, mut commands: Commands, mut ran: Local<bool>| {
-    //         if *ran {
-    //             return;
-    //         }
-    //         for terminfo in q_terminfo {
-    //             terminfo.write(&mut commands, "Hello!");
-    //         }
-    //         *ran = true;
-    //     },
-    // );
+    app.add_systems(
+        PostUpdate,
+        |mut commands: Commands, mut ran: Local<bool>| {
+            if *ran {
+                commands.write_message(AppExit::Success);
+            } else {
+                *ran = true;
+            }
+        },
+    );
     app.run();
 }

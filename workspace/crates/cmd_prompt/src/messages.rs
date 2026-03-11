@@ -18,10 +18,8 @@ pub fn handle_messages(
     mut messages: MessageReader<TermMsg>,
     mut commands: Commands,
     q_terminfo: Query<TermInfo>,
-    q_lines: Query<(Entity, &VtLine)>,
-    q_rowtargets: Query<&VtRowTarget, With<VtLine>>,
+    q_lines: Query<(Entity, &VtLine, &VtRowTarget)>,
     q_rows: Query<(Entity, &VtRow, Option<&VtViewportRow>)>,
-    q_viewport_rows: Query<(Entity, &VtViewportRow)>,
 ) {
     trace!("handle window message");
     let mut to_reflow = vec![];
@@ -64,13 +62,7 @@ pub fn handle_messages(
         // do NOT want to clear if we can't get terminfo.
         // try again next frame.
         let terminfo = r!(q_terminfo.get(target));
-        let mut grid = Grid::new(
-            &terminfo,
-            &q_lines,
-            &q_rowtargets,
-            &q_rows,
-            &q_viewport_rows,
-        );
+        let mut grid = Grid::new(&terminfo, &q_lines, &q_rows);
         {
             let mut performer = AnsiPerformer::new(&mut grid);
             let mut stream = AnsiParser::new();
@@ -100,11 +92,11 @@ fn flow_line(
         return res;
     }
     let mut offset = 0;
-    while offset < line.value.len() {
+    while offset < line.cells().len() {
         let new_row = VtRow::new(line_id, offset);
         let id = commands.spawn(new_row).id();
         res.push(id);
-        offset += line.value.len();
+        offset += line.cells().len();
     }
     res
 }

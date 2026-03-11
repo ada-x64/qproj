@@ -98,7 +98,7 @@ fn spawn_row_ui(
     commands.entity(ui_id).add_child(parent);
     if let Some((row, line)) = row_and_line {
         let spans = line
-            .value
+            .cells()
             .iter()
             .skip(row.offset)
             .take(terminfo.size.cols)

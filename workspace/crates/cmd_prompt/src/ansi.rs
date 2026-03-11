@@ -1,5 +1,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
+use std::collections::VecDeque;
+
 use crate::prelude::*;
 use anstyle_parse::{Parser, Utf8Parser};
 use bevy::color::palettes::css;
@@ -58,7 +60,7 @@ enum CsiAction {
     SGR = 0x6d,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 enum MaybeRef<'a, T: Clone> {
     Owned(Option<Entity>, T),
     Borrowed(Entity, &'a T),
@@ -81,26 +83,40 @@ impl<'a, T: Clone> MaybeRef<'a, T> {
 
 macro_rules! assert_cursor_in_view {
     ($self:ident$(, $retvalue:expr)?) => {
-        trace!(?$self.cursor, ?$self.viewport);
-        if $self.viewport.len() == 0 {
-            warn!("Empty viewport");
-            return $($retvalue)?;
-        }
         assert!($self.cursor.line <= $self.viewport_rows);
         assert!($self.cursor.char <= $self.viewport_cols);
-    }
+    };
+}
+
+#[derive(Debug, PartialEq, Copy, Clone)]
+struct VisibleRowIndex {
+    line_idx: usize,
+    row_idx: usize,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+struct GridLine<'a> {
+    line: MaybeRef<'a, VtLine>,
+    rows: Vec<GridRow<'a>>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+struct GridRow<'a> {
+    row: MaybeRef<'a, VtRow>,
+    visible: bool,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+struct GridViewportRow<'a> {
+    vrow: MaybeRef<'a, VtViewportRow>,
+    has_row: bool,
 }
 
 /// A transient grid. Used to modify the terminal entities and reconstructed
 /// on each pass.
 #[derive(Debug)]
 pub struct Grid<'a> {
-    /// Raw logical lines
-    lines: Vec<MaybeRef<'a, VtLine>>,
-    /// Wrapped lines cache
-    rows: Vec<(MaybeRef<'a, VtRow>, Option<VtViewportRow>)>,
-    /// Viewport cache
-    viewport: Vec<MaybeRef<'a, VtViewportRow>>,
+    lines: Vec<GridLine<'a>>,
     viewport_cols: usize,
     viewport_rows: usize,
     scroll_pos: usize,
@@ -110,27 +126,28 @@ pub struct Grid<'a> {
 impl<'a> Grid<'a> {
     pub fn new<'w, 's>(
         terminfo: &TermInfoItem<'w, 's>,
-        q_lines: &'a Query<(Entity, &VtLine)>,
-        q_rowtargets: &'a Query<&VtRowTarget, With<VtLine>>,
+        q_lines: &'a Query<(Entity, &VtLine, &VtRowTarget)>,
         q_rows: &'a Query<(Entity, &VtRow, Option<&VtViewportRow>)>,
-        q_viewport_rows: &'a Query<(Entity, &VtViewportRow)>,
     ) -> Self {
-        let lines = terminfo
-            .lines(q_lines)
-            .map(|(line_id, line)| MaybeRef::Borrowed(line_id, line))
+        let lines = q_lines
+            .iter_many(terminfo.line_target.entities())
+            .map(|(line_id, line, row_target)| {
+                let rows = q_rows
+                    .iter_many(row_target.entities())
+                    .map(|(row_id, row, maybe_vrow)| GridRow {
+                        row: MaybeRef::Borrowed(row_id, row),
+                        visible: maybe_vrow.is_some(),
+                    })
+                    .collect::<Vec<_>>();
+                GridLine {
+                    line: MaybeRef::Borrowed(line_id, line),
+                    rows,
+                }
+            })
             .collect::<Vec<_>>();
-        let viewport = terminfo
-            .viewport_rows(q_viewport_rows)
-            .map(|(e, vrow)| MaybeRef::Borrowed(e, vrow))
-            .collect::<Vec<_>>();
-        let rows = terminfo
-            .rows(q_rowtargets, q_rows)
-            .map(|(e, row, vrow)| (MaybeRef::Borrowed(e, row), vrow.copied()))
-            .collect::<Vec<_>>();
+
         Self {
             lines,
-            rows,
-            viewport,
             viewport_cols: terminfo.size.cols,
             viewport_rows: terminfo.size.rows,
             scroll_pos: terminfo.scroll_pos.0,
@@ -182,90 +199,107 @@ impl<'a> Grid<'a> {
         assert_cursor_in_view!(self);
     }
 
-    /// Returns (line_idx, row_idx)
-    fn cursor_to_idx(&self) -> Option<(usize, usize)> {
-        assert_cursor_in_view!(self, None);
-        let vrow = self.viewport.get(self.cursor.line).unwrap();
-        self.rows
+    /// Returns (line_idx, row_idx) in _reverse order._
+    /// row_idx is relative to the line
+    fn visible_rows(&self) -> VecDeque<VisibleRowIndex> {
+        assert_cursor_in_view!(self, vec![]);
+        self.lines
             .iter()
             .enumerate()
-            .find_map(|(i, (row, maybe_vrow))| {
-                if let Some(vrow_ref) = maybe_vrow {
-                    if vrow.value() == vrow_ref {
-                        self.lines
-                            .iter()
-                            .find_position(|l| l.entity() == row.entity())
-                            .map(|(pos, _)| (pos, i))
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
+            .flat_map(|(line_idx, line)| {
+                line.rows
+                    .iter()
+                    .enumerate()
+                    .map(|(row_idx, _)| VisibleRowIndex { line_idx, row_idx })
+                    .collect::<Vec<_>>()
             })
+            .rev()
+            .skip(self.scroll_pos)
+            .take(self.viewport_rows)
+            .collect::<VecDeque<_>>()
     }
 
-    // TODO: The viewport should be immediately filled with rows up to TermHeight
-    // with strings of length TermWidth
     pub fn write(&mut self, c: char, style: VtCellStyle) {
-        let idx = self.cursor_to_idx();
-        if let Some((line_idx, row_idx)) = idx {
-            self.modify_line(line_idx, row_idx, c, style);
-        } else {
-            self.new_line(self.cursor.line, c, style);
+        trace!("Write");
+        let mut visible_rows = self.visible_rows();
+        while visible_rows.len() < self.cursor.line {
+            let new_line = GridLine {
+                line: MaybeRef::Owned(None, VtLine::new(self.term_id)),
+                rows: vec![GridRow {
+                    row: MaybeRef::Owned(None, VtRow::new(Entity::PLACEHOLDER, 0)),
+                    visible: true,
+                }],
+            };
+            self.lines.push(new_line);
+            visible_rows.push_back(VisibleRowIndex {
+                line_idx: self.lines.len(),
+                row_idx: 0,
+            });
         }
-    }
-    fn new_line(&mut self, line_idx: usize, c: char, style: VtCellStyle) {
-        assert_cursor_in_view!(self);
-        while self.lines.len() < line_idx {
-            self.lines
-                .push(MaybeRef::Owned(None, VtLine::new(self.term_id)));
-        }
-        let line = self.lines.get_mut(line_idx).unwrap();
-        let new_line = MaybeRef::Owned(
-            line.entity(),
-            VtLine::from_str_with_style(self.term_id, c, style),
-        );
-        *line = new_line;
-    }
-    fn modify_line(&mut self, line_idx: usize, row_idx: usize, c: char, style: VtCellStyle) {
-        let line = self.lines.get_mut(line_idx).unwrap(); //safety: this was just generated
-        let (row, _vrow) = self.rows.get(row_idx).unwrap();
-        let pos = row.value().offset + self.cursor.char;
-        let mut cells = line.value().value.clone();
+        trace!(?visible_rows, ?self.cursor);
+
+        let VisibleRowIndex { line_idx, row_idx } = r!(visible_rows.get(self.cursor.line));
+        let gridline = self.lines.get_mut(*line_idx).unwrap();
+        let gridrow = gridline.rows.get_mut(*row_idx).unwrap();
+        let pos = gridrow.row.value().offset + self.cursor.char;
+        // update line cells
+        let mut cells = gridline.line.value().cells().to_vec();
         cells.insert(pos, VtCell::new(c).with_style(style));
-        *line = MaybeRef::Owned(line.entity(), VtLine::from_cells(self.term_id, cells));
+        gridline.line = MaybeRef::Owned(
+            gridline.line.entity(),
+            VtLine::from_cells(self.term_id, cells),
+        );
+        // bump following offsets
+        gridline
+            .rows
+            .iter_mut()
+            .enumerate()
+            .for_each(|(idx, gridrow)| {
+                if idx > *row_idx {
+                    let line_id = gridrow.row.value().line();
+                    let offset = gridrow.row.value().offset + 1;
+                    gridrow.row = MaybeRef::Owned(gridrow.row.entity(), VtRow::new(line_id, offset))
+                }
+            });
+        trace!("{gridline:#?}");
     }
 
     /// Synchronize the [`Grid`] with the [`Terminal`] component in the
     /// [`World`]. Will update the corresponding [`VtRow`], [`VtLine`],
-    /// [`VtViewportRow`], [`VtCursor`], [`VtScrollPos`], and other components.
+    /// [`VtCursor`], [`VtScrollPos`], and other components.
     pub fn sync(self, commands: &mut Commands) {
+        debug!("{self:#?}");
+        let visible_rows = self.visible_rows();
         // cache viewport info
-        commands.entity(self.term_id).insert(self.cursor);
         commands
             .entity(self.term_id)
-            .insert(VtScrollPos(self.scroll_pos));
+            .insert((self.cursor, VtScrollPos(self.scroll_pos)));
         // update grid entities
-        for line in self.lines.into_iter() {
-            let line_id = match line {
+        for (line_idx, gridline) in self.lines.into_iter().enumerate() {
+            let line_id = match gridline.line {
                 MaybeRef::Owned(Some(entity), line) => commands.entity(entity).insert(line).id(),
                 MaybeRef::Owned(None, line) => commands.spawn(line).id(),
                 _ => continue,
             };
-            self.rows
-                .iter()
-                .filter(|(row, _)| row.value().line() == line_id)
-                .for_each(|(row, vrow)| {
-                    let rowid = match row {
-                        MaybeRef::Owned(Some(entity), row) => {
-                            commands.entity(*entity).insert(*row).id()
+            gridline
+                .rows
+                .into_iter()
+                .enumerate()
+                .for_each(|(row_idx, gridrow)| {
+                    let rowid = match gridrow.row {
+                        MaybeRef::Owned(Some(entity), row) => commands
+                            .entity(entity)
+                            .insert(VtRow::new(line_id, row.offset))
+                            .id(),
+                        MaybeRef::Owned(None, row) => {
+                            commands.spawn(VtRow::new(line_id, row.offset)).id()
                         }
-                        MaybeRef::Owned(None, row) => commands.spawn(*row).id(),
                         _ => return,
                     };
-                    if let Some(vrow) = vrow {
-                        commands.entity(rowid).insert(*vrow);
+                    if visible_rows.contains(&VisibleRowIndex { line_idx, row_idx }) {
+                        commands
+                            .entity(rowid)
+                            .insert(VtViewportRow::new(self.term_id));
                     }
                 });
         }
@@ -293,7 +327,6 @@ impl<'a, 'g> AnsiPerformer<'a, 'g> {
 }
 impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {
     fn print(&mut self, c: char) {
-        info!(?self.grid, ?c);
         self.grid.write(c, self.style);
         self.grid.increment_char(true);
     }

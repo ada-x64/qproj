@@ -8,8 +8,22 @@
     "adapter": "CodeLLDB",
     "build": {
       "command": "cargo",
-      "args": ["build"]
+      "args": ["build"],
     },
-    "sourceLanguages": ["rust"]
-  }
+    "sourceLanguages": ["rust"],
+  },
+  {
+    "label": "Debug example - q_term::minimal",
+    "adapter": "CodeLLDB",
+    "build": {
+      "command": "mise",
+      "args": ["build", "-p", "q_cmd_prompt", "--example", "minimal"],
+    },
+    "sourceLanguages": ["rust"],
+    "env": {
+      "RUST_LOG": "q_cmd_prompt=trace",
+    },
+    "program": "workspace/target/debug/examples/minimal",
+    "request": "launch",
+  },
 ]

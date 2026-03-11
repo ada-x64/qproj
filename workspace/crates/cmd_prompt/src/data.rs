@@ -9,7 +9,7 @@ mod terminfo {
     pub struct TermInfo {
         pub id: Entity,
         pub cursor: &'static VtCursor,
-        pub lines: &'static VtLineTarget,
+        pub line_target: &'static VtLineTarget,
         pub viewport: &'static VtViewport,
         pub size: &'static VtSize,
         pub scroll_pos: &'static VtScrollPos,
@@ -20,7 +20,7 @@ mod terminfo {
             &self,
             q_lines: &'a Query<(Entity, &VtLine)>,
         ) -> impl Iterator<Item = (Entity, &'a VtLine)> {
-            q_lines.iter_many(self.lines.iter())
+            q_lines.iter_many(self.line_target.iter())
         }
 
         #[inline(always)]
@@ -36,7 +36,7 @@ mod terminfo {
             q_row_targets: &'a Query<&VtRowTarget, With<VtLine>>,
             q_rows: &'a Query<(Entity, &VtRow, Option<&VtViewportRow>)>,
         ) -> impl Iterator<Item = (Entity, &'a VtRow, Option<&'a VtViewportRow>)> {
-            self.lines.iter().flat_map(|line_id| {
+            self.line_target.iter().flat_map(|line_id| {
                 let target = r!(q_row_targets.get(line_id).ok());
                 q_rows.iter_many(target.entities()).collect::<Vec<_>>()
             })
@@ -262,6 +262,11 @@ mod terminal {
     #[derive(Component, Default, Deref, Debug, Reflect)]
     #[relationship_target(relationship=VtLine)]
     pub struct VtLineTarget(Vec<Entity>);
+    impl VtLineTarget {
+        pub fn entities(&self) -> &[Entity] {
+            &self.0
+        }
+    }
 
     /// A single, newline-delimited logical line. Lines are composed of vecs of
     /// [`VtCell`]s. Lines do _not_ include the trailing newline.
@@ -283,20 +288,20 @@ mod terminal {
     #[relationship(relationship_target=VtLineTarget)]
     #[require(VtRowTarget)]
     pub struct VtLine {
-        pub value: Vec<VtCell>,
+        cells: Vec<VtCell>,
         #[relationship]
         target: Entity,
     }
     impl VtLine {
         pub fn new(terminal_id: Entity) -> Self {
             Self {
-                value: vec![],
+                cells: vec![],
                 target: terminal_id,
             }
         }
         pub fn from_str<S: ToString>(terminal_id: Entity, string: S) -> Self {
             Self {
-                value: string.to_string().chars().map(VtCell::new).collect(),
+                cells: string.to_string().chars().map(VtCell::new).collect(),
                 target: terminal_id,
             }
         }
@@ -306,7 +311,7 @@ mod terminal {
             style: VtCellStyle,
         ) -> Self {
             Self {
-                value: string
+                cells: string
                     .to_string()
                     .chars()
                     .map(|c| VtCell::new(c).with_style(style))
@@ -315,20 +320,24 @@ mod terminal {
             }
         }
         pub fn as_string(&self) -> String {
-            self.value.iter().map(|cell| cell.value).collect()
+            self.cells.iter().map(|cell| cell.value).collect()
         }
         pub fn from_cells(terminal_id: Entity, cells: Vec<VtCell>) -> Self {
             Self {
-                value: cells,
+                cells,
                 target: terminal_id,
             }
+        }
+
+        pub fn cells(&self) -> &[VtCell] {
+            &self.cells
         }
     }
 
     /// Always coupled with [`VtLine`].
     ///
     /// Relationship target for [`VtRow`] 1:n
-    #[derive(Component, Debug, Reflect, Default)]
+    #[derive(Component, Debug, Reflect, Default, Clone)]
     #[relationship_target(relationship=VtRow)]
     pub struct VtRowTarget(Vec<Entity>);
     impl VtRowTarget {
@@ -395,6 +404,9 @@ mod terminal {
     #[component(on_add=Self::on_add)]
     pub struct VtViewport(Vec<Entity>);
     impl VtViewport {
+        pub fn entities(&self) -> &[Entity] {
+            &self.0
+        }
         fn on_add(mut world: DeferredWorld, ctx: HookContext) {
             let cols = world.get::<VtSize>(ctx.entity).unwrap().cols;
             let mut commands = world.commands();
