@@ -92,7 +92,7 @@ fn flow_line(
         let new_row = VtRow::new(line_id, offset);
         let id = commands.spawn(new_row).id();
         res.push(id);
-        offset += line.cells().len();
+        offset += terminfo.size.cols;
     }
     res
 }
@@ -126,15 +126,15 @@ fn reflow(
         });
     trace!("spawned rows");
     // spawn
-    rows.into_iter()
+    let row_ids = rows
+        .into_iter()
         .rev()
         .skip(terminfo.scroll_pos.0)
         .take(terminfo.size.rows)
-        .for_each(|row_id| {
-            commands
-                .entity(row_id)
-                .insert(VtViewportRow::new(terminfo.id));
-        });
+        .collect::<Vec<_>>();
+    for id in row_ids.into_iter().rev() {
+        commands.entity(id).insert(VtViewportRow::new(terminfo.id));
+    }
     trace!("spawned viewport rows");
 }
 

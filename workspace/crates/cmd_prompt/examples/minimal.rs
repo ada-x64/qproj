@@ -27,31 +27,13 @@ fn main() {
                 height: vh(100),
                 ..Default::default()
             },
+            // to prevent flashing on resize
+            BackgroundColor(Color::BLACK),
             VtUi::new(term_id),
         ));
         commands.write_message(TermMsg::write(term_id, "hello\nhere are multiple lines\n"));
         commands
             .write_message(TermMsg::write(term_id, "This is a really long line! It should be wrapping. Just checking :) How are you doing today? I'm doing pretty good myself.\n"));
-
-        // commands.spawn((
-        //     Node {width: px(500), height: px(500), ..Default::default()},
-        //     TextLayout::new_with_no_wrap(),
-        //     Text::new(""),
-        //     BackgroundColor(Color::BLACK),
-        //     TextColor(Color::WHITE),
-        //     ZIndex(1000),
-        //     children![(TextSpan::new("Absolute layout mode Test!")),(TextSpan::new(" SAME LINE\n")),(TextSpan::new("LINE 2\n")), (TextSpan::new("LINE 3 GO!!!!"))]
-        // ));
     });
-    app.add_systems(
-        PostUpdate,
-        |mut commands: Commands, mut ran: Local<bool>| {
-            if *ran {
-                // commands.write_message(AppExit::Success);
-            } else {
-                *ran = true;
-            }
-        },
-    );
     app.run();
 }
