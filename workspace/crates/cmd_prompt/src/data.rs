@@ -110,10 +110,7 @@ mod ui {
             overflow: Overflow::clip(),
             ..Default::default()
         },
-        TextLayout {
-            justify: Justify::Left,
-            linebreak: LineBreak::NoWrap
-        },
+        TextLayout::new_with_no_wrap(),
         Pickable,
         TextColor,
         TextFont,

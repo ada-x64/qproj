@@ -1,11 +1,4 @@
-use bevy::{
-    ecs::{
-        query::{QueryData, WorldQuery},
-        relationship::Relationship,
-    },
-    input::mouse::MouseScrollUnit,
-    text::LineHeight,
-};
+use bevy::{input::mouse::MouseScrollUnit, text::LineHeight};
 use itertools::Itertools;
 
 use crate::prelude::*;
@@ -25,6 +18,7 @@ pub fn update_font(
     q_cw: Query<Entity, With<VtCharWidth>>,
     mut commands: Commands,
 ) {
+    trace!("update_font");
     for (font, target) in q_font {
         let cw_id = c!(q_cw.get(target.target()));
         commands.entity(cw_id).insert(font.clone());
@@ -37,6 +31,7 @@ pub fn update_char_width(
     q: Query<(Entity, &ComputedNode, &VtCharWidth), Changed<ComputedNode>>,
     mut commands: Commands,
 ) {
+    trace!("update_char_width");
     for (entity, node, cw) in q {
         commands
             .entity(entity)
@@ -81,23 +76,24 @@ struct TextSpanStyleBundle {
     color: TextColor,
     bg: TextBackgroundColor,
 }
+impl Default for TextSpanStyleBundle {
+    fn default() -> Self {
+        Self {
+            color: TextColor(Color::WHITE),
+            bg: TextBackgroundColor(Color::BLACK),
+        }
+    }
+}
 
 /// Given a row and its corresponding lines, spawn the text spans.
-fn spawn_row_ui(
-    commands: &mut Commands,
+fn generate_textspan_ui(
     terminfo: &TermInfoItem,
     ui_id: Entity,
     row_and_line: Option<(&VtRow, &VtLine)>,
-) {
-    let top_text = if row_and_line.is_none() {
-        Text::new(" ".repeat(terminfo.size.cols))
-    } else {
-        Text::default()
-    };
-    let parent = commands.spawn((Node::default(), top_text)).id();
-    commands.entity(ui_id).add_child(parent);
+) -> Vec<(TextSpan, TextSpanStyleBundle, ChildOf)> {
+    trace!("spawn_row_ui");
     if let Some((row, line)) = row_and_line {
-        let spans = line
+        let mut spans = line
             .cells()
             .iter()
             .skip(row.offset)
@@ -108,9 +104,9 @@ fn spawn_row_ui(
                 Vec::<(TextSpan, TextSpanStyleBundle, ChildOf)>::new(),
                 |mut spans, cell| {
                     let color = TextColor(cell.style.color);
-                    let bg = TextBackgroundColor(cell.style.color);
+                    let bg = TextBackgroundColor(cell.style.background);
                     let style_bundle = TextSpanStyleBundle { color, bg };
-                    let new = (TextSpan::new(cell.value), style_bundle, ChildOf(parent));
+                    let new = (TextSpan::new(cell.value), style_bundle, ChildOf(ui_id));
                     if let Some(last) = spans.last_mut() {
                         if last.1 != style_bundle {
                             spans.push(new);
@@ -123,8 +119,16 @@ fn spawn_row_ui(
                     spans
                 },
             );
-        debug!(?spans);
-        commands.spawn_batch(spans);
+        if let Some((span, _, _)) = spans.last_mut() {
+            span.0.push('\n')
+        }
+        spans
+    } else {
+        vec![(
+            TextSpan::new(" ".repeat(terminfo.size.cols)),
+            TextSpanStyleBundle::default(),
+            ChildOf(ui_id),
+        )]
     }
 }
 
@@ -142,14 +146,17 @@ pub fn update_layout_ui(
     for (terminfo, ui_target) in q {
         let ui_id = ui_target.target();
         commands.entity(ui_id).despawn_children();
+        let mut spans = vec![];
         for (_, maybe_row) in q_viewport.iter_many(terminfo.viewport.iter()) {
-            if let Some(row) = maybe_row {
+            let mut new_spans = if let Some(row) = maybe_row {
                 let line = c!(q_lines.get(row.line()));
-                spawn_row_ui(&mut commands, &terminfo, ui_id, Some((row.as_ref(), line)));
+                generate_textspan_ui(&terminfo, ui_id, Some((row.as_ref(), line)))
             } else {
-                spawn_row_ui(&mut commands, &terminfo, ui_id, None);
-            }
+                generate_textspan_ui(&terminfo, ui_id, None)
+            };
+            spans.append(&mut new_spans);
         }
+        commands.spawn_batch(spans);
     }
 }
 

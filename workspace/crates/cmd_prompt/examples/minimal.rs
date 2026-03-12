@@ -38,7 +38,7 @@ fn main() {
         PostUpdate,
         |mut commands: Commands, mut ran: Local<bool>| {
             if *ran {
-                commands.write_message(AppExit::Success);
+                // commands.write_message(AppExit::Success);
             } else {
                 *ran = true;
             }

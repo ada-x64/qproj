@@ -2,15 +2,15 @@ use bevy::platform::collections::HashMap;
 
 use crate::prelude::*;
 
-fn retry_message(commands: &mut Commands, msg: TermMsg) {
-    if msg.retry_count < 3 {
+fn retry_message(commands: &mut Commands, msg: TermMsg, reason: &str) {
+    if msg.retry_count < 10 {
         // try again next frame
         commands.write_message(TermMsg {
             retry_count: msg.retry_count + 1,
             ..msg
         });
     } else {
-        warn!(?msg, "Dropped terminal message");
+        warn!(?msg, reason, "Dropped terminal message");
     }
 }
 
@@ -25,16 +25,6 @@ pub fn handle_messages(
     let mut to_reflow = vec![];
     let mut to_write = HashMap::<Entity, Vec<&TermWrite>>::new();
     for msg in messages.read() {
-        let terminfo = q_terminfo.get(msg.target);
-        if terminfo.is_err() {
-            retry_message(&mut commands, msg.clone());
-            continue;
-        }
-        let terminfo = terminfo.unwrap();
-        if terminfo.size.cols == 0 || terminfo.size.rows == 0 {
-            retry_message(&mut commands, msg.clone());
-            continue;
-        }
         match &msg.kind {
             TermMsgKind::Reflow => {
                 if !to_reflow.contains(&msg.target) {
@@ -43,6 +33,12 @@ pub fn handle_messages(
             }
             // TODO Make a system to respond to changes in VtScrollPos
             TermMsgKind::Scroll(dir) => {
+                let terminfo = q_terminfo.get(msg.target);
+                if terminfo.is_err() {
+                    retry_message(&mut commands, msg.clone(), "no terminfo");
+                    continue;
+                }
+                let terminfo = terminfo.unwrap();
                 commands
                     .entity(terminfo.id)
                     .insert(VtScrollPos(terminfo.scroll_pos.saturating_sub_signed(*dir)));
@@ -101,28 +97,12 @@ fn flow_line(
     res
 }
 
-fn spawn_viewport_rows(
-    commands: &mut Commands,
-    terminfo: &TermInfoItem<'_, '_>,
-    rows: Vec<Entity>,
-) {
-    rows.into_iter()
-        .rev()
-        .take(terminfo.size.rows)
-        .for_each(|row_id| {
-            commands
-                .entity(row_id)
-                .insert(VtViewportRow::new(terminfo.id));
-        });
-}
-
 /// Reflows the entire underlying buffer.
 fn reflow(
     id: In<Entity>,
     terminfo: Query<TermInfo>,
     q_lines: Query<(Entity, &VtLine)>,
     q_rows: Query<Entity, (With<VtRow>, Without<VtViewportRow>)>,
-    q_rowtargets: Query<Entity, With<VtRowTarget>>,
     mut commands: Commands,
 ) {
     trace!("Reflow");
@@ -130,9 +110,6 @@ fn reflow(
     // clear terminal display cache
     q_rows.iter().for_each(|row_id| {
         commands.entity(row_id).despawn();
-    });
-    q_rowtargets.iter().for_each(|row_id| {
-        commands.entity(row_id).remove::<VtRowTarget>();
     });
     commands.entity(*id).despawn_related::<VtViewport>();
     // exit early if nothing to do
@@ -147,7 +124,16 @@ fn reflow(
             res.append(&mut rows);
             res
         });
-    spawn_viewport_rows(&mut commands, &terminfo, rows);
+    // spawn
+    rows.into_iter()
+        .rev()
+        .skip(terminfo.scroll_pos.0)
+        .take(terminfo.size.rows)
+        .for_each(|row_id| {
+            commands
+                .entity(row_id)
+                .insert(VtViewportRow::new(terminfo.id));
+        });
 }
 
 // fn scroll(
