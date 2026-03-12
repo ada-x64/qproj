@@ -124,6 +124,7 @@ fn reflow(
             res.append(&mut rows);
             res
         });
+    trace!("spawned rows");
     // spawn
     rows.into_iter()
         .rev()
@@ -134,6 +135,7 @@ fn reflow(
                 .entity(row_id)
                 .insert(VtViewportRow::new(terminfo.id));
         });
+    trace!("spawned viewport rows");
 }
 
 // fn scroll(

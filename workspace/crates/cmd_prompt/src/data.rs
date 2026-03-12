@@ -398,17 +398,11 @@ mod terminal {
     /// Relationship target for [`VtViewportRow`] (1:n).
     #[derive(Component, Default, Deref, Debug, Reflect)]
     #[relationship_target(relationship=VtViewportRow)]
-    #[component(on_add=Self::on_add)]
+    // #[component(on_add=Self::on_add)]
     pub struct VtViewport(Vec<Entity>);
     impl VtViewport {
         pub fn entities(&self) -> &[Entity] {
             &self.0
-        }
-        fn on_add(mut world: DeferredWorld, ctx: HookContext) {
-            let cols = world.get::<VtSize>(ctx.entity).unwrap().cols;
-            let mut commands = world.commands();
-            commands.entity(ctx.entity).despawn_related::<VtViewport>();
-            commands.spawn_batch([VtViewportRow::new(ctx.entity)].repeat(cols));
         }
     }
 

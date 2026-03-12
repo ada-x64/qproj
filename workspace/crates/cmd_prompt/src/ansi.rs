@@ -79,6 +79,11 @@ impl<'a, T: Clone> MaybeRef<'a, T> {
             MaybeRef::Borrowed(e, _) => Some(*e),
         }
     }
+    fn to_owned(&mut self) {
+        if let MaybeRef::Borrowed(_, t) = self {
+            *self = MaybeRef::Owned(None, t.clone());
+        }
+    }
 }
 
 macro_rules! assert_cursor_in_view {
@@ -99,17 +104,31 @@ struct GridLine<'a> {
     line: MaybeRef<'a, VtLine>,
     rows: Vec<GridRow<'a>>,
 }
+impl<'a> GridLine<'a> {
+    pub fn new(term_id: Entity, rows: Vec<GridRow<'a>>) -> Self {
+        Self {
+            line: MaybeRef::Owned(None, VtLine::new(term_id)),
+            rows,
+        }
+    }
+    pub fn push_row(&mut self, row: GridRow<'a>) {
+        self.rows.push(row);
+        self.line.to_owned();
+    }
+}
 
 #[derive(Debug, PartialEq, Clone)]
 struct GridRow<'a> {
     row: MaybeRef<'a, VtRow>,
     visible: bool,
 }
-
-#[derive(Debug, PartialEq, Clone)]
-struct GridViewportRow<'a> {
-    vrow: MaybeRef<'a, VtViewportRow>,
-    has_row: bool,
+impl<'a> GridRow<'a> {
+    pub fn new(offset: usize, visible: bool) -> Self {
+        Self {
+            row: MaybeRef::Owned(None, VtRow::new(Entity::PLACEHOLDER, offset)),
+            visible,
+        }
+    }
 }
 
 /// A transient grid. Used to modify the terminal entities and reconstructed
@@ -156,12 +175,37 @@ impl<'a> Grid<'a> {
         }
     }
 
+    fn visible_lines_as_string(&self) -> String {
+        self.visible_rows()
+            .iter()
+            .flat_map(|vrow| {
+                let line = self.lines.get(vrow.line_idx).unwrap();
+                let row = line.rows.get(vrow.row_idx).unwrap();
+                let mut string = line
+                    .line
+                    .value()
+                    .as_string()
+                    .chars()
+                    .skip(row.row.value().offset)
+                    .take(self.viewport_cols)
+                    .collect::<String>();
+                if let Some(last) = string.chars().last()
+                    && last != '\n'
+                    && string.len() == self.viewport_cols
+                {
+                    string.push_str("[WRAP]\n");
+                }
+                string.chars().collect::<Vec<char>>()
+            })
+            .collect()
+    }
+
     pub fn scroll_viewport(&mut self, dir: isize) {
         self.scroll_pos = self.scroll_pos.saturating_add_signed(dir);
     }
 
     pub fn increment_char(&mut self, wrap: bool) {
-        self.cursor.char = (self.cursor.char + 1).max(self.viewport_cols);
+        self.cursor.char = (self.cursor.char + 1).min(self.viewport_cols);
         if wrap && self.cursor.char >= self.viewport_cols {
             if self.cursor.pending_wrap {
                 self.cursor.char = 0;
@@ -183,7 +227,7 @@ impl<'a> Grid<'a> {
         assert_cursor_in_view!(self);
     }
     pub fn increment_line(&mut self, scroll: bool) {
-        self.cursor.line = (self.cursor.line + 1).max(self.viewport_rows);
+        self.cursor.line = (self.cursor.line + 1).clamp(0, self.viewport_rows);
         if scroll && self.cursor.line >= self.viewport_rows {
             self.scroll_pos += 1;
             self.cursor.line -= 1;
@@ -199,11 +243,12 @@ impl<'a> Grid<'a> {
         assert_cursor_in_view!(self);
     }
 
-    /// Returns (line_idx, row_idx) in _reverse order._
+    /// Returns (line_idx, row_idx)
     /// row_idx is relative to the line
-    fn visible_rows(&self) -> VecDeque<VisibleRowIndex> {
+    fn visible_rows(&self) -> Vec<VisibleRowIndex> {
         assert_cursor_in_view!(self, vec![]);
-        self.lines
+        let mut lines = self
+            .lines
             .iter()
             .enumerate()
             .flat_map(|(line_idx, line)| {
@@ -216,29 +261,55 @@ impl<'a> Grid<'a> {
             .rev()
             .skip(self.scroll_pos)
             .take(self.viewport_rows)
-            .collect::<VecDeque<_>>()
+            .collect::<Vec<_>>();
+        lines.reverse();
+        lines
     }
 
     pub fn write(&mut self, c: char, style: VtCellStyle) {
-        trace!("Write");
+        trace!(?c, ?self.cursor, "write\n------\n{}\n------\n", self.visible_lines_as_string());
+        if self.cursor.pending_wrap {
+            self.cursor.char = 0;
+            self.increment_line(true);
+            self.cursor.pending_wrap = false;
+        }
         let mut visible_rows = self.visible_rows();
-        while visible_rows.len() < self.cursor.line {
-            let new_line = GridLine {
-                line: MaybeRef::Owned(None, VtLine::new(self.term_id)),
-                rows: vec![GridRow {
-                    row: MaybeRef::Owned(None, VtRow::new(Entity::PLACEHOLDER, 0)),
-                    visible: true,
-                }],
-            };
-            self.lines.push(new_line);
-            visible_rows.push_back(VisibleRowIndex {
-                line_idx: self.lines.len(),
-                row_idx: 0,
+        while visible_rows.len() <= self.cursor.line {
+            // if there is a last line and it does not end with \n ...
+            if let Some(last_line) = self.lines.last_mut()
+                && (last_line
+                    .line
+                    .value()
+                    .cells()
+                    .last()
+                    .map(|cell| cell.value != '\n')
+                    .unwrap_or(true))
+            {
+                trace!(
+                    ?last_line.rows,
+                    "add new row :: {:?}",
+                    last_line.line.value().as_string(),
+                );
+                // ... add a new row
+                let num_cells = last_line.line.value().cells().len();
+                last_line.push_row(GridRow::new(num_cells, true));
+            } else {
+                trace!("add new line (len = {:?})", self.lines.len());
+                // ... otherwise add a new line
+                self.lines
+                    .push(GridLine::new(self.term_id, vec![GridRow::new(0, true)]));
+            }
+            // guaranteed to exist as we just added it
+            let last_line = self.lines.last().unwrap();
+            visible_rows.push(VisibleRowIndex {
+                line_idx: self.lines.len() - 1,
+                row_idx: last_line.rows.len() - 1,
             });
         }
-        trace!(?visible_rows, ?self.cursor);
 
+        trace!(?visible_rows);
         let VisibleRowIndex { line_idx, row_idx } = r!(visible_rows.get(self.cursor.line));
+        trace!(?line_idx, ?row_idx, "got visible row idx:");
         let gridline = self.lines.get_mut(*line_idx).unwrap();
         let gridrow = gridline.rows.get_mut(*row_idx).unwrap();
         let pos = gridrow.row.value().offset + self.cursor.char;
@@ -261,14 +332,12 @@ impl<'a> Grid<'a> {
                     gridrow.row = MaybeRef::Owned(gridrow.row.entity(), VtRow::new(line_id, offset))
                 }
             });
-        trace!("{gridline:#?}");
     }
 
     /// Synchronize the [`Grid`] with the [`Terminal`] component in the
     /// [`World`]. Will update the corresponding [`VtRow`], [`VtLine`],
     /// [`VtCursor`], [`VtScrollPos`], and other components.
     pub fn sync(self, commands: &mut Commands) {
-        debug!("{self:#?}");
         let visible_rows = self.visible_rows();
         // cache viewport info
         commands
@@ -327,6 +396,7 @@ impl<'a, 'g> AnsiPerformer<'a, 'g> {
 }
 impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {
     fn print(&mut self, c: char) {
+        trace!("print");
         self.grid.write(c, self.style);
         self.grid.increment_char(true);
     }
@@ -338,7 +408,10 @@ impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {
                 info!(?self.grid, "BEL");
             }
             byte if byte == ControlCodes::LF as u8 => {
+                trace!("LF");
+                self.grid.write('\n', self.style);
                 self.grid.increment_line(true);
+                self.grid.cursor.char = 0;
             }
             byte if byte == ControlCodes::CR as u8 => {
                 self.grid.cursor.char = 0;

@@ -91,8 +91,8 @@ fn generate_textspan_ui(
     ui_id: Entity,
     row_and_line: Option<(&VtRow, &VtLine)>,
 ) -> Vec<(TextSpan, TextSpanStyleBundle, ChildOf)> {
-    trace!("spawn_row_ui");
     if let Some((row, line)) = row_and_line {
+        trace!("spawn_row_ui:: {:?} >>{:?}", line.as_string(), row.offset);
         let mut spans = line
             .cells()
             .iter()
