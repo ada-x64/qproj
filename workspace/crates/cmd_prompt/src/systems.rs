@@ -99,6 +99,7 @@ fn generate_textspan_ui(
             .skip(row.offset)
             .take(terminfo.size.cols)
             .copied()
+            .filter(|cell| cell.value != '\n')
             .pad_using(terminfo.size.cols, |_| VtCell::default())
             .fold(
                 Vec::<(TextSpan, TextSpanStyleBundle, ChildOf)>::new(),
@@ -119,9 +120,15 @@ fn generate_textspan_ui(
                     spans
                 },
             );
-        if let Some((span, _, _)) = spans.last_mut() {
+        if let Some((span, _, _)) = spans.last_mut()
+            && !span.0.ends_with('\n')
+        {
             span.0.push('\n')
         }
+        debug!(
+            "spans => {:?}",
+            spans.iter().map(|(span, _, _)| &span.0).collect::<Vec<_>>()
+        );
         spans
     } else {
         vec![(
@@ -155,6 +162,14 @@ pub fn update_layout_ui(
                 generate_textspan_ui(&terminfo, ui_id, None)
             };
             spans.append(&mut new_spans);
+        }
+        // pad
+        while spans.len() < terminfo.size.rows {
+            spans.push((
+                TextSpan::new(" ".repeat(terminfo.size.cols) + "\n"),
+                TextSpanStyleBundle::default(),
+                ChildOf(ui_id),
+            ));
         }
         commands.spawn_batch(spans);
     }

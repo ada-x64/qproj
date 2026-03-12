@@ -27,14 +27,7 @@ fn main() {
                 height: vh(100),
                 ..Default::default()
             },
-            children![(
-                VtUi::new(term_id),
-                Node {
-                    width: px(500),
-                    height: px(500),
-                    ..Default::default()
-                },
-            )],
+            VtUi::new(term_id),
         ));
         commands.write_message(TermMsg::write(term_id, "hello\nhere are multiple lines\n"));
         commands
