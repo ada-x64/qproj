@@ -1,11 +1,8 @@
 #![allow(clippy::upper_case_acronyms)]
 
-use std::collections::VecDeque;
-
 use crate::prelude::*;
 use anstyle_parse::{Parser, Utf8Parser};
 use bevy::color::palettes::css;
-use itertools::Itertools;
 
 pub type AnsiParser = Parser<Utf8Parser>;
 
@@ -79,7 +76,7 @@ impl<'a, T: Clone> MaybeRef<'a, T> {
             MaybeRef::Borrowed(e, _) => Some(*e),
         }
     }
-    fn to_owned(&mut self) {
+    fn as_owned(&mut self) {
         if let MaybeRef::Borrowed(_, t) = self {
             *self = MaybeRef::Owned(None, t.clone());
         }
@@ -113,7 +110,7 @@ impl<'a> GridLine<'a> {
     }
     pub fn push_row(&mut self, row: GridRow<'a>) {
         self.rows.push(row);
-        self.line.to_owned();
+        self.line.as_owned();
     }
 }
 
@@ -390,8 +387,9 @@ impl<'a, 'g> AnsiPerformer<'a, 'g> {
             default_style: VtCellStyle::default(),
         }
     }
-    pub fn set_default_style(&mut self, style: VtCellStyle) {
+    pub fn reset_style(&mut self, style: VtCellStyle) {
         self.default_style = style;
+        self.style = style;
     }
 }
 impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {

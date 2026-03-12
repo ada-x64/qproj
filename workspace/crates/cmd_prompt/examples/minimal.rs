@@ -1,5 +1,7 @@
-use bevy::{prelude::*, window::WindowResolution};
+use bevy::{color::palettes::css, prelude::*, window::WindowResolution};
 use q_cmd_prompt::prelude::*;
+
+const LONG_LINE: &str = "This is a really long line! It should be wrapping. Just checking :) How are you doing today? I'm doing pretty good myself.\n";
 
 fn main() {
     let mut app = App::new();
@@ -31,9 +33,27 @@ fn main() {
             BackgroundColor(Color::BLACK),
             VtUi::new(term_id),
         ));
+        // Simple writes do not clear style or add newlinew to the end of their writes.
+        // They can be considered "raw" and typically aren't going to be your goto.
         commands.write_message(TermMsg::write(term_id, "hello\nhere are multiple lines\n"));
-        commands
-            .write_message(TermMsg::write(term_id, "This is a really long line! It should be wrapping. Just checking :) How are you doing today? I'm doing pretty good myself.\n"));
+        commands.write_message(TermMsg::write(
+            term_id,
+            "\x1b[31mthis is red text \x1b[47mwith a white background!\n",
+        ));
+        commands.write_message(TermMsg::write(term_id, "still red and white...\n"));
+        commands.write_message(TermMsg::write(term_id, "\x1b[0mbut no longer :)\n"));
+        // Writing spans is another way to directly manipulate the buffer.
+        commands.write_message(TermMsg::write_spans(
+            term_id,
+            vec![
+                TermWrite::new("you can do multiple spans too, "),
+                TermWrite::new("with style 😎\n")
+                    .with_color(css::GREEN)
+                    .with_background(css::BISQUE),
+            ],
+        ));
+        // ... but writing lines is probably what you're looking for.
+        commands.write_message(TermMsg::writeln(term_id, LONG_LINE));
     });
     app.run();
 }

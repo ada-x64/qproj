@@ -511,10 +511,21 @@ mod events {
         pub fn reflow(term_id: Entity) -> Self {
             Self::new(term_id, TermMsgKind::Reflow)
         }
-        /// Writes a simple line to the buffer. For rich text support, see [Self::writeln_rich]
-        pub fn write(term_id: Entity, line: impl ToString) -> Self {
-            let line = line.to_string();
+        /// Writes text directly to the buffer. Supports ANSI. For a rich-text
+        /// based API, see [Self::write_spans]
+        pub fn write(term_id: Entity, spans: impl ToString) -> Self {
+            let line = spans.to_string();
             Self::new(term_id, TermMsgKind::Write(vec![TermWrite::new(line)]))
+        }
+        /// Writes a simple line to the buffer. Supports ANSI. Will append a
+        /// newline at the end. Will clear styles before and after writing. For
+        /// rich text support, see [Self::write_spans]
+        pub fn writeln(term_id: Entity, line: impl ToString) -> Self {
+            let line = line.to_string();
+            Self::new(
+                term_id,
+                TermMsgKind::Write(vec![TermWrite::new(line + "\n").reset_style(true)]),
+            )
         }
         /// Writes a rich line of text to the terminal. See [`TermWrite`] for
         /// more detail.
@@ -536,30 +547,38 @@ pub mod helpers {
     #[derive(Debug, PartialEq, Reflect, Clone)]
     pub struct TermWrite {
         pub text: String,
-        pub style: VtCellStyle,
+        pub style: Option<VtCellStyle>,
+        pub reset_style: bool,
     }
     impl TermWrite {
         pub fn new(text: impl ToString) -> Self {
             Self {
                 text: text.to_string(),
-                style: VtCellStyle::default(),
+                style: None,
+                reset_style: false,
             }
         }
         pub fn with_color(self, color: impl Into<Color>) -> Self {
             Self {
-                style: VtCellStyle {
+                style: Some(VtCellStyle {
                     color: color.into(),
-                    ..self.style
-                },
+                    ..self.style.unwrap_or_default()
+                }),
                 ..self
             }
         }
         pub fn with_background(self, color: impl Into<Color>) -> Self {
             Self {
-                style: VtCellStyle {
+                style: Some(VtCellStyle {
                     background: color.into(),
-                    ..self.style
-                },
+                    ..self.style.unwrap_or_default()
+                }),
+                ..self
+            }
+        }
+        pub fn reset_style(self, reset_style: bool) -> Self {
+            Self {
+                reset_style,
                 ..self
             }
         }

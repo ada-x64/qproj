@@ -64,7 +64,11 @@ pub fn handle_messages(
             let mut stream = AnsiParser::new();
             for spawner in vec {
                 // parse ansi
-                performer.set_default_style(spawner.style);
+                if let Some(style) = spawner.style {
+                    performer.reset_style(style);
+                } else if spawner.reset_style {
+                    performer.reset_style(VtCellStyle::default());
+                }
                 for byte in spawner.text.as_bytes() {
                     stream.advance(&mut performer, *byte);
                 }
