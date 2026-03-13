@@ -235,15 +235,15 @@ mod terminal {
     /// ```
     #[derive(Component, Default, Reflect, Clone, Copy, Debug)]
     pub struct VtCursor {
-        pub line: usize,
-        pub char: usize,
+        pub row: usize,
+        pub col: usize,
         pub pending_wrap: bool,
     }
     impl VtCursor {
         pub fn new(line: usize, char: usize) -> Self {
             Self {
-                line,
-                char,
+                row: line,
+                col: char,
                 pending_wrap: false,
             }
         }

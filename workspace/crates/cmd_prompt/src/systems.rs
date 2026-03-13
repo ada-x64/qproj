@@ -1,4 +1,4 @@
-use bevy::{input::mouse::MouseScrollUnit, text::LineHeight};
+use bevy::{input::mouse::MouseScrollUnit, input_focus::InputFocus, text::LineHeight};
 use itertools::Itertools;
 
 use crate::prelude::*;
@@ -140,7 +140,9 @@ fn generate_textspan_ui(
 }
 
 /// Translates from [`VtViewportRow`] entities to the [`VtUi`]-based render.
-pub fn update_layout_ui(
+/// Completely clears out the UI, then replaces the [`TextSpan`]s based on
+/// the current viewport data.
+pub fn refresh_ui(
     q: Query<
         (TermInfo, &VtUiTarget),
         Or<(Changed<VtSize>, Changed<VtViewport>, Changed<VtScrollPos>)>,
@@ -175,81 +177,14 @@ pub fn update_layout_ui(
     }
 }
 
-// pub fn update_layout(
-//     q: Query<
-//         LayoutQueryData,
-//         (
-//             Or<(Changed<VtSize>, Changed<VtViewport>, Changed<VtScrollPos>)>,
-//             With<Terminal>,
-//         ),
-//     >,
-//     q_lines: Query<(&VtLine, &Children)>,
-//     q_vspans: Query<&VirtualTextSpan>,
-//     q_rows: Query<&VtRow>,
-//     q_wrapper: Query<Entity, With<VtTextWrapper>>,
-//     mut commands: Commands,
-// ) {
-//     trace!("update layout");
-//     for data in q {
-//         let wrapper_id = c!(data.children.iter().find(|c| q_wrapper.contains(*c)));
-//         let new_children = data
-//             .layout
-//             .iter()
-//             .rev()
-//             .skip(**data.scroll_pos)
-//             .take(**data.term_height)
-//             .filter_map(|id| {
-//                 debug!(?id);
-//                 let row = r!(q_rows.get(id));
-//                 let (line, vspans) = r!(q_lines.get(r!(row.line)));
-//                 let textval = line
-//                     .chars()
-//                     .skip(row.offset)
-//                     .take(**data.term_width)
-//                     .collect::<String>();
-//                 let ret = vspans
-//                     .iter()
-//                     .filter_map(|child| q_vspans.get(child).ok())
-//                     .enumerate()
-//                     .fold(vec![], |mut accum, (i, vspan)| {
-//                         let mut text = textval
-//                             .chars()
-//                             .skip(vspan.offset)
-//                             .take(vspan.range)
-//                             .collect::<String>();
-
-//                         if i == vspans.len() - 1 {
-//                             text += "\n";
-//                         }
-//                         let id = commands
-//                             .spawn((
-//                                 TextSpan(text),
-//                                 TextColor(vspan.style.color),
-//                                 TextBackgroundColor(vspan.style.background),
-//                                 data.font.clone(),
-//                             ))
-//                             .id();
-//                         accum.push(id);
-//                         accum
-//                     });
-//                 debug!(?ret);
-//                 Some(ret)
-//             })
-//             .rev()
-//             .flatten()
-//             .collect::<Vec<Entity>>();
-//         commands.entity(wrapper_id).despawn_children();
-//         commands.entity(wrapper_id).add_children(&new_children);
-//     }
-// }
-
+// todo: use input focus instead
 pub(crate) fn on_scroll(
     trigger: On<Pointer<Scroll>>,
-    q: Query<(&LineHeight, &TextFont), With<Terminal>>,
+    q: Query<(&LineHeight, &TextFont, &VtUi)>,
     mut commands: Commands,
 ) {
     debug!(?trigger);
-    let (line_height, text_font) = r!(q.get(trigger.entity));
+    let (line_height, text_font, ui) = r!(q.get(trigger.entity));
     let delta = match trigger.unit {
         MouseScrollUnit::Line => trigger.y,
         MouseScrollUnit::Pixel => {
@@ -260,7 +195,7 @@ pub(crate) fn on_scroll(
             line_height / trigger.y
         }
     };
-    commands.write_message(TermMsg::scroll(trigger.entity, delta as isize));
+    commands.write_message(TermMsg::scroll(ui.target(), delta as isize));
 }
 
 pub(crate) fn scroll_viewport(
@@ -271,74 +206,3 @@ pub(crate) fn scroll_viewport(
     // recreate viewport.
     // ideally only get diff from scrollback.
 }
-
-// #[test]
-// fn test_text_nodes() {
-//     let mut app = App::new();
-//     app.add_plugins(test_harness);
-//     app.add_step(0, |mut commands: Commands| {
-//         let term_id = commands
-//             .spawn((
-//                 Terminal,
-//                 TextFont {
-//                     font_size: 10.,
-//                     ..Default::default()
-//                 },
-//                 Node {
-//                     width: px(100),
-//                     height: px(50),
-//                     ..Default::default()
-//                 },
-//                 TerminalScrollPos(10),
-//             ))
-//             .id();
-//         for i in 0..100 {
-//             commands.write_message(TermMsg::write(term_id, i.to_string() + "\n"));
-//         }
-//         commands.set_state(Step(1));
-//     });
-//     app.add_step(
-//         1,
-//         (|mut commands: Commands,
-//           terminfo: Query<TermInfo>,
-//           window: Query<(&Children, &TerminalScrollPos)>,
-//           terminal: Query<(&TerminalLayout, &TermHeight), With<Terminal>>,
-//           text_spans: Query<&TextSpan>,
-//           rows: Query<&TerminalRow>,
-//           lines: Query<&TerminalLine>| {
-//             let window = window.single();
-//             if window.is_err() {
-//                 error!("TerminalWindow with Children not found!");
-//                 commands.write_message(AppExit::error());
-//                 return;
-//             }
-//             let (children, scroll_pos) = window.unwrap();
-//             let spans = children
-//                 .iter()
-//                 .filter_map(|child_id| Some(r!(text_spans.get(child_id)).0.clone()))
-//                 .collect::<Vec<_>>();
-//             let mut lines = layout
-//                 .iter()
-//                 .filter_map(|row_id| {
-//                     let row = r!(rows.get(row_id));
-//                     let line_id = r!(row.line);
-//                     let line = r!(lines.get(line_id));
-//                     Some(line.value.clone())
-//                 })
-//                 .rev()
-//                 .skip(**scroll_pos)
-//                 .take(**num_rows)
-//                 .collect::<Vec<_>>();
-//             lines.reverse();
-//             let expected = (85..=89).map(|i| i.to_string()).collect::<Vec<String>>();
-//             info!(?spans, ?lines, ?expected);
-//             if spans == lines && spans == expected {
-//                 commands.write_message(AppExit::Success);
-//             } else {
-//                 commands.write_message(AppExit::error());
-//             }
-//         })
-//         .after(TerminalSystems::PostMutation),
-//     );
-//     assert!(app.run().is_success());
-// }

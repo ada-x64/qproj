@@ -22,7 +22,7 @@ impl Plugin for TerminalPlugin {
                 update_char_width,
                 resize,
                 handle_messages,
-                update_layout_ui,
+                refresh_ui,
             )
                 .chain()
                 .after(ui_layout_system)

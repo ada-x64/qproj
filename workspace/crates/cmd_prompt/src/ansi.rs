@@ -81,23 +81,32 @@ impl<'a, T: Clone> MaybeRef<'a, T> {
             *self = MaybeRef::Owned(None, t.clone());
         }
     }
+    fn is_owned(&self) -> bool {
+        matches!(self, Self::Owned(_, _))
+    }
 }
 
 macro_rules! assert_cursor_in_view {
     ($self:ident$(, $retvalue:expr)?) => {
-        assert!($self.cursor.line <= $self.viewport_rows);
-        assert!($self.cursor.char <= $self.viewport_cols);
+        assert!($self.cursor.row <= $self.rows);
+        assert!($self.cursor.col <= $self.cols);
     };
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(PartialEq, Copy, Clone)]
 struct VisibleRowIndex {
     line_idx: usize,
     row_idx: usize,
 }
+impl std::fmt::Debug for VisibleRowIndex {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("({:?}, {:?})", self.line_idx, self.row_idx))
+    }
+}
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(PartialEq, Clone, Deref, DerefMut)]
 struct GridLine<'a> {
+    #[deref]
     line: MaybeRef<'a, VtLine>,
     rows: Vec<GridRow<'a>>,
 }
@@ -113,18 +122,29 @@ impl<'a> GridLine<'a> {
         self.line.as_owned();
     }
 }
+impl<'a> std::fmt::Debug for GridLine<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let borrowed = if self.line.is_owned() { "" } else { "&" };
+        let val = self.line.value().as_string();
+        f.write_fmt(format_args!("<{borrowed}\"{val:?}\", {:?}>", self.rows))
+    }
+}
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(PartialEq, Clone, Deref, DerefMut)]
 struct GridRow<'a> {
     row: MaybeRef<'a, VtRow>,
-    visible: bool,
 }
 impl<'a> GridRow<'a> {
-    pub fn new(offset: usize, visible: bool) -> Self {
+    pub fn new(offset: usize) -> Self {
         Self {
             row: MaybeRef::Owned(None, VtRow::new(Entity::PLACEHOLDER, offset)),
-            visible,
         }
+    }
+}
+impl<'a> std::fmt::Debug for GridRow<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let borrowed = if self.row.is_owned() { "" } else { "&" };
+        f.write_fmt(format_args!("{borrowed}(>>{:?})", self.row.value().offset))
     }
 }
 
@@ -133,8 +153,9 @@ impl<'a> GridRow<'a> {
 #[derive(Debug)]
 pub struct Grid<'a> {
     lines: Vec<GridLine<'a>>,
-    viewport_cols: usize,
-    viewport_rows: usize,
+    viewport_entities: Vec<Entity>,
+    cols: usize,
+    rows: usize,
     scroll_pos: usize,
     cursor: VtCursor,
     term_id: Entity,
@@ -143,16 +164,15 @@ impl<'a> Grid<'a> {
     pub fn new<'w, 's>(
         terminfo: &TermInfoItem<'w, 's>,
         q_lines: &'a Query<(Entity, &VtLine, &VtRowTarget)>,
-        q_rows: &'a Query<(Entity, &VtRow, Option<&VtViewportRow>)>,
+        q_rows: &'a Query<(Entity, &VtRow)>,
     ) -> Self {
         let lines = q_lines
             .iter_many(terminfo.line_target.entities())
             .map(|(line_id, line, row_target)| {
                 let rows = q_rows
                     .iter_many(row_target.entities())
-                    .map(|(row_id, row, maybe_vrow)| GridRow {
+                    .map(|(row_id, row)| GridRow {
                         row: MaybeRef::Borrowed(row_id, row),
-                        visible: maybe_vrow.is_some(),
                     })
                     .collect::<Vec<_>>();
                 GridLine {
@@ -164,37 +184,62 @@ impl<'a> Grid<'a> {
 
         Self {
             lines,
-            viewport_cols: terminfo.size.cols,
-            viewport_rows: terminfo.size.rows,
+            viewport_entities: terminfo.viewport.to_vec(),
+            cols: terminfo.size.cols,
+            rows: terminfo.size.rows,
             scroll_pos: terminfo.scroll_pos.0,
             cursor: *terminfo.cursor,
             term_id: terminfo.id,
         }
     }
 
-    fn visible_lines_as_string(&self) -> String {
+    fn visible_lines_as_string(&self, to_write: Option<char>) -> String {
         self.visible_rows()
             .iter()
-            .flat_map(|vrow| {
+            .enumerate()
+            .flat_map(|(i, vrow)| {
                 let line = self.lines.get(vrow.line_idx).unwrap();
                 let row = line.rows.get(vrow.row_idx).unwrap();
                 let mut string = line
-                    .line
                     .value()
                     .as_string()
                     .chars()
                     .skip(row.row.value().offset)
-                    .take(self.viewport_cols)
+                    .take(self.cols)
                     .collect::<String>();
                 if let Some(last) = string.chars().last()
                     && last != '\n'
-                    && string.len() == self.viewport_cols
+                    && string.len() == self.cols
                 {
                     string.push_str("[WRAP]\n");
                 }
+                string = string.replace('\n', "\\n");
+                if i == self.cursor.row {
+                    let newval = if let Some(to_write) = to_write {
+                        let to_write = if to_write == '\n' {
+                            "\\n".to_string()
+                        } else {
+                            to_write.to_string()
+                        };
+                        format!("[{to_write}]")
+                    } else {
+                        "_".to_string()
+                    };
+                    if string.get(self.cursor.col..self.cursor.col).is_some() {
+                        if self.cursor.col == string.len() {
+                            string.push_str(&newval);
+                        } else {
+                            string.remove(self.cursor.col);
+                            string.insert_str(self.cursor.col, &newval);
+                        }
+                    } else {
+                        string.push_str(&newval);
+                    }
+                }
+                string = format!("{string:<width$} | {vrow:?}\n", width = self.cols);
                 string.chars().collect::<Vec<char>>()
             })
-            .collect()
+            .collect::<String>()
     }
 
     pub fn scroll_viewport(&mut self, dir: isize) {
@@ -202,11 +247,11 @@ impl<'a> Grid<'a> {
     }
 
     pub fn increment_char(&mut self, wrap: bool) {
-        self.cursor.char = (self.cursor.char + 1).min(self.viewport_cols);
-        if wrap && self.cursor.char >= self.viewport_cols {
+        self.cursor.col = (self.cursor.col + 1).min(self.cols);
+        if wrap && self.cursor.col >= self.cols {
             if self.cursor.pending_wrap {
-                self.cursor.char = 0;
-                self.increment_line(wrap);
+                self.cursor.col = 0;
+                self.increment_line();
             } else {
                 self.cursor.pending_wrap = true;
             }
@@ -214,29 +259,21 @@ impl<'a> Grid<'a> {
         assert_cursor_in_view!(self);
     }
     pub fn decrement_char(&mut self, wrap: bool) {
-        if self.cursor.char == 0 && wrap {
-            self.decrement_line(true);
-            self.cursor.char = self.viewport_cols;
+        if self.cursor.col == 0 && wrap {
+            self.decrement_line();
+            self.cursor.col = self.cols;
             self.cursor.pending_wrap = true;
         } else {
-            self.cursor.char = self.cursor.char.saturating_sub(1);
+            self.cursor.col = self.cursor.col.saturating_sub(1);
         }
         assert_cursor_in_view!(self);
     }
-    pub fn increment_line(&mut self, scroll: bool) {
-        self.cursor.line = (self.cursor.line + 1).clamp(0, self.viewport_rows);
-        if scroll && self.cursor.line >= self.viewport_rows {
-            self.scroll_pos += 1;
-            self.cursor.line -= 1;
-        }
+    pub fn increment_line(&mut self) {
+        self.cursor.row = (self.cursor.row + 1).clamp(0, self.rows - 1);
         assert_cursor_in_view!(self);
     }
-    pub fn decrement_line(&mut self, scroll: bool) {
-        if scroll && self.cursor.line == 0 {
-            self.scroll_pos -= 1;
-        } else {
-            self.cursor.char = self.cursor.line.saturating_sub(1);
-        }
+    pub fn decrement_line(&mut self) {
+        self.cursor.col = self.cursor.row.saturating_sub(1);
         assert_cursor_in_view!(self);
     }
 
@@ -244,7 +281,7 @@ impl<'a> Grid<'a> {
     /// row_idx is relative to the line
     fn visible_rows(&self) -> Vec<VisibleRowIndex> {
         assert_cursor_in_view!(self, vec![]);
-        let mut lines = self
+        let lines = self
             .lines
             .iter()
             .enumerate()
@@ -255,47 +292,30 @@ impl<'a> Grid<'a> {
                     .map(|(row_idx, _)| VisibleRowIndex { line_idx, row_idx })
                     .collect::<Vec<_>>()
             })
+            .collect::<Vec<_>>();
+        let mut lines = lines
+            .into_iter()
             .rev()
             .skip(self.scroll_pos)
-            .take(self.viewport_rows)
+            .take(self.rows)
             .collect::<Vec<_>>();
         lines.reverse();
         lines
     }
 
     pub fn write(&mut self, c: char, style: VtCellStyle) {
-        trace!(?c, ?self.cursor, "write\n------\n{}\n------\n", self.visible_lines_as_string());
         if self.cursor.pending_wrap {
-            self.cursor.char = 0;
-            self.increment_line(true);
+            self.cursor.col = 0;
+            self.increment_line();
             self.cursor.pending_wrap = false;
+            self.lines
+                .push(GridLine::new(self.term_id, vec![GridRow::new(0)]));
         }
         let mut visible_rows = self.visible_rows();
-        while visible_rows.len() <= self.cursor.line {
-            // if there is a last line and it does not end with \n ...
-            if let Some(last_line) = self.lines.last_mut()
-                && (last_line
-                    .line
-                    .value()
-                    .cells()
-                    .last()
-                    .map(|cell| cell.value != '\n')
-                    .unwrap_or(true))
-            {
-                trace!(
-                    ?last_line.rows,
-                    "add new row :: {:?}",
-                    last_line.line.value().as_string(),
-                );
-                // ... add a new row
-                let num_cells = last_line.line.value().cells().len();
-                last_line.push_row(GridRow::new(num_cells, true));
-            } else {
-                trace!("add new line (len = {:?})", self.lines.len());
-                // ... otherwise add a new line
-                self.lines
-                    .push(GridLine::new(self.term_id, vec![GridRow::new(0, true)]));
-            }
+        while visible_rows.len() <= self.cursor.row {
+            trace!("add new line (len = {:?})", self.lines.len());
+            self.lines
+                .push(GridLine::new(self.term_id, vec![GridRow::new(0)]));
             // guaranteed to exist as we just added it
             let last_line = self.lines.last().unwrap();
             visible_rows.push(VisibleRowIndex {
@@ -304,12 +324,20 @@ impl<'a> Grid<'a> {
             });
         }
 
-        trace!(?visible_rows);
-        let VisibleRowIndex { line_idx, row_idx } = r!(visible_rows.get(self.cursor.line));
+        #[cfg(debug_assertions)]
+        {
+            let line = "-".repeat(self.cols);
+            let output = self.visible_lines_as_string(Some(c));
+            trace!(
+                "write {c:?}@<{},{},[{}]>({}x{})\n{line}\n{output}\n{line}\n",
+                self.cursor.col, self.cursor.row, self.scroll_pos, self.cols, self.rows,
+            );
+        }
+        let VisibleRowIndex { line_idx, row_idx } = visible_rows.get(self.cursor.row).unwrap();
         trace!(?line_idx, ?row_idx, "got visible row idx:");
         let gridline = self.lines.get_mut(*line_idx).unwrap();
         let gridrow = gridline.rows.get_mut(*row_idx).unwrap();
-        let pos = gridrow.row.value().offset + self.cursor.char;
+        let pos = gridrow.value().offset + self.cursor.col;
         // update line cells
         let mut cells = gridline.line.value().cells().to_vec();
         cells.insert(pos, VtCell::new(c).with_style(style));
@@ -335,12 +363,18 @@ impl<'a> Grid<'a> {
     /// [`World`]. Will update the corresponding [`VtRow`], [`VtLine`],
     /// [`VtCursor`], [`VtScrollPos`], and other components.
     pub fn sync(self, commands: &mut Commands) {
-        let visible_rows = self.visible_rows();
+        // clear out visible row cache in order to refresh it here
+        commands
+            .entity(self.term_id)
+            .remove_related::<VtViewportRow>(&self.viewport_entities);
+
         // cache viewport info
         commands
             .entity(self.term_id)
             .insert((self.cursor, VtScrollPos(self.scroll_pos)));
+
         // update grid entities
+        let visible_rows = self.visible_rows();
         for (line_idx, gridline) in self.lines.into_iter().enumerate() {
             let line_id = match gridline.line {
                 MaybeRef::Owned(Some(entity), line) => commands.entity(entity).insert(line).id(),
@@ -407,12 +441,14 @@ impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {
             }
             byte if byte == ControlCodes::LF as u8 => {
                 trace!("LF");
-                self.grid.write('\n', self.style);
-                self.grid.increment_line(true);
-                self.grid.cursor.char = 0;
+                self.grid
+                    .lines
+                    .push(GridLine::new(self.grid.term_id, vec![GridRow::new(0)]));
+                self.grid.increment_line();
+                self.grid.cursor.col = 0;
             }
             byte if byte == ControlCodes::CR as u8 => {
-                self.grid.cursor.char = 0;
+                self.grid.cursor.col = 0;
             }
             _ => {
                 info_once!(
@@ -458,7 +494,7 @@ impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {
                     return;
                 };
                 for _ in 0..*next {
-                    self.grid.decrement_line(false);
+                    self.grid.decrement_line();
                 }
             }
             action if action == CsiAction::CUD as u8 => {
@@ -466,7 +502,7 @@ impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {
                     return;
                 };
                 for _ in 0..*next {
-                    self.grid.increment_line(false);
+                    self.grid.increment_line();
                 }
             }
             action if action == CsiAction::CUF as u8 => {
@@ -489,32 +525,32 @@ impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {
                 let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
                     return;
                 };
-                self.grid.cursor.char = 0;
+                self.grid.cursor.col = 0;
                 for _ in 0..*next {
-                    self.grid.increment_line(false);
+                    self.grid.increment_line();
                 }
             }
             action if action == CsiAction::CPL as u8 => {
                 let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
                     return;
                 };
-                self.grid.cursor.char = 0;
+                self.grid.cursor.col = 0;
                 for _ in 0..*next {
-                    self.grid.decrement_line(false);
+                    self.grid.decrement_line();
                 }
             }
             action if action == CsiAction::CHA as u8 => {
                 let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
                     return;
                 };
-                self.grid.cursor.char = (*next as usize).clamp(0, self.grid.viewport_cols);
+                self.grid.cursor.col = (*next as usize).clamp(0, self.grid.cols);
             }
             action if action == CsiAction::CUP as u8 || action == CsiAction::HVP as u8 => {
                 let [line, char, ..] = param_iter.next().unwrap_or(&[0u16]) else {
                     return;
                 };
-                self.grid.cursor.line = (*line as usize).clamp(0, self.grid.viewport_rows);
-                self.grid.cursor.char = (*char as usize).clamp(0, self.grid.viewport_cols);
+                self.grid.cursor.row = (*line as usize).clamp(0, self.grid.rows);
+                self.grid.cursor.col = (*char as usize).clamp(0, self.grid.cols);
             }
             // action if action == CsiAction::ED as u8 => {
             //     self.actions.push(AnsiAction::Erase { mode: iter.next().unwrap_or(0) as usize });

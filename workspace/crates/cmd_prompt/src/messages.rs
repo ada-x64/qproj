@@ -19,7 +19,7 @@ pub fn handle_messages(
     mut commands: Commands,
     q_terminfo: Query<TermInfo>,
     q_lines: Query<(Entity, &VtLine, &VtRowTarget)>,
-    q_rows: Query<(Entity, &VtRow, Option<&VtViewportRow>)>,
+    q_rows: Query<(Entity, &VtRow)>,
 ) {
     trace!("handle window message");
     let mut to_reflow = vec![];
@@ -141,102 +141,3 @@ fn reflow(
     }
     trace!("spawned viewport rows");
 }
-
-// fn scroll(
-//     In((window_id, val)): In<(Entity, isize)>,
-//     q: Query<(&VtScrollPos, &VtLayout, &Children)>,
-//     mut commands: Commands,
-// ) {
-//     let (prev, rows, children) = r!(q.get(window_id));
-//     commands.entity(window_id).insert(VtScrollPos(
-//         prev.saturating_add_signed(val)
-//             .clamp(0, rows.len().saturating_sub(children.len())),
-//     ));
-// }
-
-// fn jump_to_bottom(In(target): In<Entity>, mut commands: Commands) {
-//     commands.entity(target).insert(VtScrollPos(0));
-// }
-
-// #[test]
-// fn test_reflow() {
-//     let mut app = App::new();
-//     app.add_plugins(test_harness);
-//     let term = app.world_mut().spawn(Terminal).id();
-//     let term_window = app
-//         .world_mut()
-//         .spawn((
-//             Terminal,
-//             Node {
-//                 width: px(150),
-//                 height: px(500),
-//                 ..Default::default()
-//             },
-//             TextFont {
-//                 font_size: 10.,
-//                 ..Default::default()
-//             },
-//         ))
-//         .id();
-
-//     app.add_step(0, move |mut commands: Commands| {
-//         commands.write_message(TermMsg::write(
-//             term_window,
-//             "this line has more than 15 characters\n",
-//         ));
-//         commands.write_message(TermMsg::write(term, "not me tho\n"));
-//         commands.write_message(TermMsg::write(term, "nor i\n"));
-//         commands.write_message(TermMsg::reflow(term_window));
-//         commands.set_state(Step(1));
-//     });
-//     // TODO: This test will need updated when supporting rich text.
-//     let get_rows = |layout: &TerminalLayout,
-//                     rows: Query<&TerminalRow>,
-//                     lines: Query<&TerminalLine>,
-//                     num_cols: usize| {
-//         layout
-//             .iter()
-//             .filter_map(|row_id| {
-//                 let row = rows.get(row_id.entity()).ok()?;
-//                 row.line
-//                     .map(|id| {
-//                         lines
-//                             .get(id)
-//                             .unwrap()
-//                             .value
-//                             .chars()
-//                             .skip(row.offset)
-//                             .take(num_cols)
-//                             .collect::<String>()
-//                     })
-//                     .or(Some(String::new()))
-//             })
-//             .collect::<Vec<String>>()
-//     };
-//     let expected = vec![
-//         "this line has m",
-//         "ore than 15 cha",
-//         "racters",
-//         "not me tho",
-//         "nor i",
-//     ];
-//     app.add_step(
-//         1,
-//         (move |mut commands: Commands,
-//                q_term: Query<(&TerminalLayout, &TermWidth)>,
-//                rows: Query<&TerminalRow>,
-//                lines: Query<&TerminalLine>| {
-//             let (layout, num_cols) = q_term.get(term).unwrap();
-//             let rows = get_rows(layout, rows, lines, **num_cols);
-//             info!("Assert layout.");
-//             if rows != expected {
-//                 error!(?rows, ?expected);
-//                 commands.write_message(AppExit::error());
-//             } else {
-//                 commands.write_message(AppExit::Success);
-//             }
-//         })
-//         .after(TerminalSystems::PostMutation),
-//     );
-//     assert!(app.run().is_success())
-// }

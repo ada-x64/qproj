@@ -33,6 +33,12 @@ fn main() {
             BackgroundColor(Color::BLACK),
             VtUi::new(term_id),
         ));
+
+        // test scrolling...
+        for i in 0..50 {
+            commands.write_message(TermMsg::writeln(term_id, format!("{i}")));
+        }
+
         // Simple writes do not clear style or add newlinew to the end of their writes.
         // They can be considered "raw" and typically aren't going to be your goto.
         commands.write_message(TermMsg::write(term_id, "hello\nhere are multiple lines\n"));
@@ -55,5 +61,15 @@ fn main() {
         // ... but writing lines is probably what you're looking for.
         commands.write_message(TermMsg::writeln(term_id, LONG_LINE));
     });
+    app.add_systems(
+        PostUpdate,
+        |mut commands: Commands, mut ran: Local<bool>| {
+            if *ran {
+                // commands.write_message(AppExit::Success);
+            } else {
+                *ran = true;
+            }
+        },
+    );
     app.run();
 }
