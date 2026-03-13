@@ -66,8 +66,6 @@ pub fn resize(
         commands
             .entity(vt_ui.target())
             .insert(VtSize { cols, rows });
-        debug!("Got node size: {size:?}");
-        debug!("Set new term size to {cols} x {rows}");
     }
 }
 
@@ -125,10 +123,6 @@ fn generate_textspan_ui(
         {
             span.0.push('\n')
         }
-        debug!(
-            "spans => {:?}",
-            spans.iter().map(|(span, _, _)| &span.0).collect::<Vec<_>>()
-        );
         spans
     } else {
         vec![(
@@ -151,7 +145,7 @@ pub fn refresh_ui(
     q_viewport: Query<(&VtViewportRow, Option<Ref<VtRow>>)>,
     mut commands: Commands,
 ) {
-    trace!("update_layout_ui");
+    trace!("refresh_ui (spawn textspans)");
     for (terminfo, ui_target) in q {
         let ui_id = ui_target.target();
         commands.entity(ui_id).despawn_children();
@@ -183,7 +177,6 @@ pub(crate) fn on_scroll(
     q: Query<(&LineHeight, &TextFont, &VtUi)>,
     mut commands: Commands,
 ) {
-    debug!(?trigger);
     let (line_height, text_font, ui) = r!(q.get(trigger.entity));
     let delta = match trigger.unit {
         MouseScrollUnit::Line => trigger.y,
@@ -199,10 +192,27 @@ pub(crate) fn on_scroll(
 }
 
 pub(crate) fn scroll_viewport(
+    mut commands: Commands,
     terminfo: Query<TermInfo, Changed<VtScrollPos>>,
-    q_viewport: Query<&VtViewportRow>,
-    q_rows: Query<&VtRow>,
+    q_rowtargets: Query<&VtRowTarget, With<VtLine>>,
+    q_rows: Query<(Entity, &VtRow)>,
 ) {
-    // recreate viewport.
-    // ideally only get diff from scrollback.
+    trace!("scroll_viewport");
+    for terminfo in terminfo {
+        commands
+            .entity(terminfo.id)
+            .remove_related::<VtViewportRow>(terminfo.viewport);
+        let rows = terminfo.rows(&q_rowtargets, &q_rows).collect::<Vec<_>>();
+        let to_insert = rows
+            .into_iter()
+            .rev()
+            .skip(**terminfo.scroll_pos)
+            .take(terminfo.size.rows)
+            .collect::<Vec<_>>();
+        to_insert.into_iter().rev().for_each(|(entity, _row)| {
+            commands
+                .entity(entity)
+                .insert(VtViewportRow::new(terminfo.id));
+        });
+    }
 }

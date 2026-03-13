@@ -21,6 +21,7 @@ impl Plugin for TerminalPlugin {
                 update_font,
                 update_char_width,
                 resize,
+                scroll_viewport,
                 handle_messages,
                 refresh_ui,
             )

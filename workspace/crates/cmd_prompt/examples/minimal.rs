@@ -35,7 +35,7 @@ fn main() {
         ));
 
         // test scrolling...
-        for i in 0..50 {
+        for i in 0..20 {
             commands.write_message(TermMsg::writeln(term_id, format!("{i}")));
         }
 
@@ -60,6 +60,9 @@ fn main() {
         ));
         // ... but writing lines is probably what you're looking for.
         commands.write_message(TermMsg::writeln(term_id, LONG_LINE));
+
+        // commands.write_message(TermMsg::scroll(term_id, 10));
+        // commands.write_message(TermMsg::scroll(term_id, -5));
     });
     app.add_systems(
         PostUpdate,

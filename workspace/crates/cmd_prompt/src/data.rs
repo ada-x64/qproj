@@ -34,8 +34,8 @@ mod terminfo {
         pub fn rows<'a>(
             &self,
             q_row_targets: &'a Query<&VtRowTarget, With<VtLine>>,
-            q_rows: &'a Query<(Entity, &VtRow, Option<&VtViewportRow>)>,
-        ) -> impl Iterator<Item = (Entity, &'a VtRow, Option<&'a VtViewportRow>)> {
+            q_rows: &'a Query<(Entity, &VtRow)>,
+        ) -> impl Iterator<Item = (Entity, &'a VtRow)> {
             self.line_target.iter().flat_map(|line_id| {
                 let target = r!(q_row_targets.get(line_id).ok());
                 q_rows.iter_many(target.entities()).collect::<Vec<_>>()

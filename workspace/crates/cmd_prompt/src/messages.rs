@@ -1,4 +1,4 @@
-use bevy::platform::collections::HashMap;
+use bevy::{ecs::system::QueryLens, platform::collections::HashMap};
 
 use crate::prelude::*;
 
@@ -20,6 +20,7 @@ pub fn handle_messages(
     q_terminfo: Query<TermInfo>,
     q_lines: Query<(Entity, &VtLine, &VtRowTarget)>,
     q_rows: Query<(Entity, &VtRow)>,
+    q_rowtargets: Query<&VtRowTarget, With<VtLine>>,
 ) {
     trace!("handle window message");
     let mut to_reflow = vec![];
@@ -39,9 +40,15 @@ pub fn handle_messages(
                     continue;
                 }
                 let terminfo = terminfo.unwrap();
-                commands
-                    .entity(terminfo.id)
-                    .insert(VtScrollPos(terminfo.scroll_pos.saturating_sub_signed(*dir)));
+                let num_rows = terminfo
+                    .rows(&q_rowtargets, &q_rows)
+                    .collect::<Vec<_>>()
+                    .len();
+                let pos = terminfo
+                    .scroll_pos
+                    .saturating_sub_signed(*dir)
+                    .clamp(0, num_rows.saturating_sub(terminfo.size.rows));
+                commands.entity(terminfo.id).insert(VtScrollPos(pos));
             }
             TermMsgKind::JumpToBottom => {
                 commands.entity(msg.target).insert(VtScrollPos(0));
