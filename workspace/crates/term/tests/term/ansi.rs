@@ -1,4 +1,4 @@
-use bevy::color::palettes::css;
+use bevy::color::palettes::{basic, css};
 use crate::prelude::*;
 
 /// Verifies that 24-bit ANSI color escapes (SGR 38;2;r;g;b for foreground,
@@ -68,16 +68,16 @@ fn truecolor() {
 fn palette_foreground() {
     let mut app = get_test_app();
 
-    // Standard ANSI palette mapping (digit → dark, bright)
+    // Standard ANSI palette: (standard, bright)
     let expected: [(Srgba, Srgba); 8] = [
-        (css::BLACK, css::BLACK),         // 0: black
-        (css::DARK_RED, css::RED),        // 1: red
-        (css::DARK_GREEN, css::GREEN),    // 2: green
-        (css::DARK_GOLDENROD, css::YELLOW), // 3: yellow
-        (css::DARK_BLUE, css::BLUE),      // 4: blue
-        (css::DARK_MAGENTA, css::MAGENTA), // 5: magenta
-        (css::DARK_CYAN, css::LIGHT_CYAN), // 6: cyan
-        (css::GRAY, css::WHITE),          // 7: white
+        (basic::BLACK, basic::GRAY),      // 0: black
+        (css::DARK_RED, basic::RED),      // 1: red
+        (basic::GREEN, basic::LIME),      // 2: green
+        (basic::OLIVE, basic::YELLOW),    // 3: yellow
+        (basic::NAVY, basic::BLUE),       // 4: blue
+        (basic::PURPLE, basic::FUCHSIA),  // 5: magenta
+        (basic::TEAL, css::AQUA),         // 6: cyan
+        (basic::SILVER, basic::WHITE),    // 7: white
     ];
 
     // Build input: \x1b[30mA\x1b[31mB...\x1b[37mH\x1b[90mI...\x1b[97mP\x1b[0mQ

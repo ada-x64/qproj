@@ -2,7 +2,7 @@
 
 use crate::prelude::*;
 use anstyle_parse::{Parser, Utf8Parser};
-use bevy::color::palettes::css;
+use bevy::color::palettes::{basic, css};
 
 pub type AnsiParser = Parser<Utf8Parser>;
 
@@ -607,7 +607,7 @@ impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {
                             || (*x >= 90 && *x <= 97)
                             || (*x >= 100 && *x <= 107) =>
                         {
-                            let is_dark = x / 10 == 3 || x / 10 == 4;
+                            let is_standard = x / 10 == 3 || x / 10 == 4;
                             let is_bg = x / 10 == 4 || x / 10 == 10;
                             if *x == 39 || *x == 49 {
                                 if is_bg {
@@ -617,26 +617,27 @@ impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {
                                 }
                                 continue;
                             }
+                            // Standard (30–37, 40–47) → xterm dark variants
+                            // Bright (90–97, 100–107) → xterm bright variants
                             // todo : TerminalPalette component or resource - per window or global?
-                            let color = match (x % 10, is_dark) {
-                                (0, _) => css::BLACK,
+                            let color = match (x % 10, is_standard) {
+                                (0, true) => basic::BLACK,
+                                (0, false) => basic::GRAY,
                                 (1, true) => css::DARK_RED,
-                                (1, false) => css::RED,
-                                (2, true) => css::DARK_GREEN,
-                                (2, false) => css::GREEN,
-                                (3, true) => css::DARK_GOLDENROD,
-                                (3, false) => css::YELLOW,
-                                (4, true) => css::DARK_BLUE,
-                                (4, false) => css::BLUE,
-                                (5, true) => css::DARK_MAGENTA,
-                                (5, false) => css::MAGENTA,
-                                (6, true) => css::DARK_CYAN,
-                                (6, false) => css::LIGHT_CYAN,
-                                (7, true) => css::GRAY,
-                                (7, false) => css::WHITE,
-                                _ => {
-                                    unreachable!()
-                                }
+                                (1, false) => basic::RED,
+                                (2, true) => basic::GREEN,
+                                (2, false) => basic::LIME,
+                                (3, true) => basic::OLIVE,
+                                (3, false) => basic::YELLOW,
+                                (4, true) => basic::NAVY,
+                                (4, false) => basic::BLUE,
+                                (5, true) => basic::PURPLE,
+                                (5, false) => basic::FUCHSIA,
+                                (6, true) => basic::TEAL,
+                                (6, false) => css::AQUA,
+                                (7, true) => basic::SILVER,
+                                (7, false) => basic::WHITE,
+                                _ => unreachable!(),
                             };
                             if is_bg {
                                 self.style.background = color.into();
