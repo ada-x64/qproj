@@ -273,7 +273,7 @@ impl<'a> Grid<'a> {
         assert_cursor_in_view!(self);
     }
     pub fn decrement_line(&mut self) {
-        self.cursor.col = self.cursor.row.saturating_sub(1);
+        self.cursor.row = self.cursor.row.saturating_sub(1);
         assert_cursor_in_view!(self);
     }
 
@@ -338,25 +338,38 @@ impl<'a> Grid<'a> {
         let gridline = self.lines.get_mut(*line_idx).unwrap();
         let gridrow = gridline.rows.get_mut(*row_idx).unwrap();
         let pos = gridrow.value().offset + self.cursor.col;
-        // update line cells
         let mut cells = gridline.line.value().cells().to_vec();
-        cells.insert(pos, VtCell::new(c).with_style(style));
+        let prev_len = cells.len();
+        if pos < cells.len() {
+            // overwrite existing cell
+            cells[pos] = VtCell::new(c).with_style(style);
+        } else {
+            // extend: pad with empty cells, then append
+            while cells.len() < pos {
+                cells.push(VtCell::default());
+            }
+            cells.push(VtCell::new(c).with_style(style));
+        }
         gridline.line = MaybeRef::Owned(
             gridline.line.entity(),
             VtLine::from_cells(self.term_id, cells),
         );
-        // bump following offsets
-        gridline
-            .rows
-            .iter_mut()
-            .enumerate()
-            .for_each(|(idx, gridrow)| {
-                if idx > *row_idx {
-                    let line_id = gridrow.row.value().line();
-                    let offset = gridrow.row.value().offset + 1;
-                    gridrow.row = MaybeRef::Owned(gridrow.row.entity(), VtRow::new(line_id, offset))
-                }
-            });
+        // bump following row offsets by the number of cells inserted
+        let growth = gridline.line.value().cells().len() - prev_len;
+        if growth > 0 {
+            gridline
+                .rows
+                .iter_mut()
+                .enumerate()
+                .for_each(|(idx, gridrow)| {
+                    if idx > *row_idx {
+                        let line_id = gridrow.row.value().line();
+                        let offset = gridrow.row.value().offset + growth;
+                        gridrow.row =
+                            MaybeRef::Owned(gridrow.row.entity(), VtRow::new(line_id, offset))
+                    }
+                });
+        }
     }
 
     /// Synchronize the [`Grid`] with the [`Terminal`] component in the
@@ -540,17 +553,28 @@ impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {
                 }
             }
             action if action == CsiAction::CHA as u8 => {
-                let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
-                    return;
-                };
-                self.grid.cursor.col = (*next as usize).clamp(0, self.grid.cols);
+                // CHA is 1-indexed; 0 treated as 1 per ANSI spec
+                let col = param_iter
+                    .next()
+                    .and_then(|p| p.first().copied())
+                    .unwrap_or(1)
+                    .max(1) as usize;
+                self.grid.cursor.col = (col - 1).min(self.grid.cols.saturating_sub(1));
             }
             action if action == CsiAction::CUP as u8 || action == CsiAction::HVP as u8 => {
-                let [line, char, ..] = param_iter.next().unwrap_or(&[0u16]) else {
-                    return;
-                };
-                self.grid.cursor.row = (*line as usize).clamp(0, self.grid.rows);
-                self.grid.cursor.col = (*char as usize).clamp(0, self.grid.cols);
+                // CUP params are semicolon-separated (two groups) and 1-indexed
+                let row = param_iter
+                    .next()
+                    .and_then(|p| p.first().copied())
+                    .unwrap_or(1)
+                    .max(1) as usize;
+                let col = param_iter
+                    .next()
+                    .and_then(|p| p.first().copied())
+                    .unwrap_or(1)
+                    .max(1) as usize;
+                self.grid.cursor.row = (row - 1).min(self.grid.rows.saturating_sub(1));
+                self.grid.cursor.col = (col - 1).min(self.grid.cols.saturating_sub(1));
             }
             // action if action == CsiAction::ED as u8 => {
             //     self.actions.push(AnsiAction::Erase { mode: iter.next().unwrap_or(0) as usize });
