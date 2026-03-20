@@ -559,66 +559,91 @@ impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {
             //     self.actions.push(AnsiAction::Erase { mode: iter.next().unwrap_or(0) as usize });
             // }
             action if action == CsiAction::SGR as u8 => {
-                match param_iter.next() {
-                    Some([0]) => self.style = self.default_style,
-                    Some([8]) => info_once!("Conceal color mode not yet implemented"),
-                    // palette mode
-                    Some([x])
-                        if (*x >= 30 && *x <= 37)
+                // SGR may contain multiple attributes in a single CSI
+                // sequence (e.g. \x1b[38;2;R;G;B;48;2;R;G;Bm), so we loop.
+                while let Some(param) = param_iter.next() {
+                    match param {
+                        [0] => self.style = self.default_style,
+                        [8] => info_once!("Conceal color mode not yet implemented"),
+                        // 24-bit color via colon subparams: \x1b[38:2:R:G:Bm
+                        // TODO?: x == 58 for underline styling
+                        [x, 2, r, g, b] if *x == 38 || *x == 48 => {
+                            let color = Color::srgb_u8(*r as u8, *g as u8, *b as u8);
+                            if *x == 38 {
+                                self.style.color = color;
+                            } else {
+                                self.style.background = color;
+                            }
+                        }
+                        // 256 color via colon subparams: \x1b[38:5:Nm
+                        [x, 5, _n] if *x == 38 || *x == 48 => {
+                            info_once!("256 color mode not currently supported.")
+                        }
+                        // 24-bit or 256 color via semicolons: \x1b[38;2;R;G;Bm
+                        [x] if *x == 38 || *x == 48 => {
+                            let mode = param_iter.next().and_then(|p| p.first().copied());
+                            match mode {
+                                Some(2) => {
+                                    let r = param_iter.next().and_then(|p| p.first().copied()).unwrap_or(0);
+                                    let g = param_iter.next().and_then(|p| p.first().copied()).unwrap_or(0);
+                                    let b = param_iter.next().and_then(|p| p.first().copied()).unwrap_or(0);
+                                    let color = Color::srgb_u8(r as u8, g as u8, b as u8);
+                                    if *x == 38 {
+                                        self.style.color = color;
+                                    } else {
+                                        self.style.background = color;
+                                    }
+                                }
+                                Some(5) => {
+                                    let _ = param_iter.next(); // consume color index
+                                    info_once!("256 color mode not currently supported.")
+                                }
+                                _ => {}
+                            }
+                        }
+                        // palette mode
+                        [x] if (*x >= 30 && *x <= 37)
                             || (*x >= 40 && *x <= 47)
                             || (*x >= 90 && *x <= 97)
                             || (*x >= 100 && *x <= 107) =>
-                    {
-                        let is_dark = x / 10 == 3 || x / 10 == 4;
-                        let is_bg = x / 10 == 4 || x / 10 == 10;
-                        if x % 10 == 9 {
+                        {
+                            let is_dark = x / 10 == 3 || x / 10 == 4;
+                            let is_bg = x / 10 == 4 || x / 10 == 10;
+                            if x % 10 == 9 {
+                                if is_bg {
+                                    self.style.background = self.default_style.background;
+                                } else {
+                                    self.style.color = self.default_style.color;
+                                }
+                                continue;
+                            }
+                            // todo : TerminalPalette component or resource - per window or global?
+                            let color = match (x % 10, is_dark) {
+                                (0, _) => css::BLACK,
+                                (1, false) => css::RED,
+                                (1, true) => css::DARK_RED,
+                                (2, false) => css::GREEN,
+                                (3, true) => css::DARK_GREEN,
+                                (4, false) => css::LIGHT_YELLOW,
+                                (4, true) => css::YELLOW,
+                                (5, false) => css::MAGENTA,
+                                (5, true) => css::DARK_MAGENTA,
+                                (6, false) => css::LIGHT_CYAN,
+                                (6, true) => css::DARK_CYAN,
+                                (7, false) => css::WHITE,
+                                (7, true) => css::GRAY,
+                                _ => {
+                                    unreachable!()
+                                }
+                            };
                             if is_bg {
-                                self.style.background = self.default_style.background;
+                                self.style.background = color.into();
                             } else {
-                                self.style.color = self.default_style.color;
+                                self.style.color = color.into();
                             }
-                            return;
                         }
-                        // todo : TerminalPalette component or resource - per window or global?
-                        let color = match (x % 10, is_dark) {
-                            (0, _) => css::BLACK,
-                            (1, false) => css::RED,
-                            (1, true) => css::DARK_RED,
-                            (2, false) => css::GREEN,
-                            (3, true) => css::DARK_GREEN,
-                            (4, false) => css::LIGHT_YELLOW,
-                            (4, true) => css::YELLOW,
-                            (5, false) => css::MAGENTA,
-                            (5, true) => css::DARK_MAGENTA,
-                            (6, false) => css::LIGHT_CYAN,
-                            (6, true) => css::DARK_CYAN,
-                            (7, false) => css::WHITE,
-                            (7, true) => css::GRAY,
-                            _ => {
-                                unreachable!()
-                            }
-                        };
-                        if is_bg {
-                            self.style.background = color.into();
-                        } else {
-                            self.style.color = color.into();
-                        }
+                        _ => {}
                     }
-                    // 256 color mode
-                    Some([38, 5, _n]) => {
-                        info_once!("256 color mode not currently supported.")
-                    }
-                    // 24-bit color
-                    // TODO?: x == 58 for underline styling
-                    Some([x, 2, r, g, b]) if *x == 38 || *x == 48 => {
-                        let color = Color::srgb_u8(*r as u8, *g as u8, *b as u8);
-                        if *x == 38 {
-                            self.style.color = color;
-                        } else {
-                            self.style.background = color;
-                        }
-                    }
-                    _ => {}
                 }
             }
             _ => {}
