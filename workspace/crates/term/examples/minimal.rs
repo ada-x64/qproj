@@ -1,5 +1,5 @@
 use bevy::{color::palettes::css, prelude::*, window::WindowResolution};
-use q_cmd_prompt::prelude::*;
+use q_term::prelude::*;
 
 const LONG_LINE: &str = "This is a really long line! It should be wrapping. Just checking :) How are you doing today? I'm doing pretty good myself.\n";
 

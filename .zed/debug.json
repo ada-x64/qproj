@@ -17,11 +17,11 @@
     "adapter": "CodeLLDB",
     "build": {
       "command": "mise",
-      "args": ["build", "-p", "q_cmd_prompt", "--example", "minimal"],
+      "args": ["build", "-p", "q_term", "--example", "minimal"],
     },
     "sourceLanguages": ["rust"],
     "env": {
-      "RUST_LOG": "q_cmd_prompt=trace",
+      "RUST_LOG": "q_term=trace",
     },
     "program": "workspace/target/debug/examples/minimal",
     "request": "launch",

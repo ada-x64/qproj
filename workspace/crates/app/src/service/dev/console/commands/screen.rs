@@ -1,5 +1,5 @@
 use clap::Parser;
-use q_cmd_prompt::prelude::*;
+use q_term::prelude::*;
 
 use crate::prelude::*;
 

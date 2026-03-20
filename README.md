@@ -11,8 +11,8 @@ _This continues the work started [here.](https://github.com/ada-x64/qproj_OLD)_
 ## Crates
 
 <div align="center">
-    <a href="./crates/cmd_prompt/README.md">
-        <img src="./.doc/q_cmd_prompt.png" height=200 title="q_cmd_prompt" />
+    <a href="./crates/term/README.md">
+        <img src="./.doc/q_term.png" height=200 title="q_term" />
     </a>
     <a href="./crates/template/README.md">
         <img src="./.doc/tfw.png" height=200 title="tfw" />

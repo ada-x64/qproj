@@ -3,7 +3,7 @@
 
 use crate::prelude::*;
 use bevy::input_focus::InputFocus;
-use q_cmd_prompt::prelude::*;
+use q_term::prelude::*;
 
 fn toggle_console(
     keys: Res<ButtonInput<KeyCode>>,

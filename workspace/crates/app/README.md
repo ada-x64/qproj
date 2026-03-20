@@ -18,7 +18,7 @@ Features:
 - [x] Service-oriented framework
   - [x] Screen-scoped systems
 - [x] Devex
-  - [x] Lightweight console (with [q_cmd_prompt](../cmd_prompt))
+  - [x] Lightweight console (with [q_term](../term))
     - [ ] Screen integration
     - [ ] Utility commands
   - [x] CLI

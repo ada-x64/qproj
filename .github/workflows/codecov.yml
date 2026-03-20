@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        package: [q_screens, q_cmd_prompt, q_test_harness]
+        package: [q_screens, q_term, q_test_harness]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -71,4 +71,4 @@ jobs:
         uses: coverallsapp/github-action@v2
         with:
           parallel-finished: true
-          carryforward: "q_screens,q_cmd_prompt,q_test_harness" # MUST MATCH ALL MATRIX VALUES
+          carryforward: "q_screens,q_term,q_test_harness" # MUST MATCH ALL MATRIX VALUES

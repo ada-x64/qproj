@@ -1,5 +1,5 @@
 [package]
-name = "q_cmd_prompt"
+name = "q_term"
 version = "0.1.0"
 edition = "2024"
 
