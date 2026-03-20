@@ -603,13 +603,13 @@ impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {
                         }
                         // palette mode
                         [x] if (*x >= 30 && *x <= 37)
-                            || (*x >= 40 && *x <= 47)
+                            || (*x >= 39 && *x <= 49)
                             || (*x >= 90 && *x <= 97)
                             || (*x >= 100 && *x <= 107) =>
                         {
                             let is_dark = x / 10 == 3 || x / 10 == 4;
                             let is_bg = x / 10 == 4 || x / 10 == 10;
-                            if x % 10 == 9 {
+                            if *x == 39 || *x == 49 {
                                 if is_bg {
                                     self.style.background = self.default_style.background;
                                 } else {
@@ -620,18 +620,20 @@ impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {
                             // todo : TerminalPalette component or resource - per window or global?
                             let color = match (x % 10, is_dark) {
                                 (0, _) => css::BLACK,
-                                (1, false) => css::RED,
                                 (1, true) => css::DARK_RED,
+                                (1, false) => css::RED,
+                                (2, true) => css::DARK_GREEN,
                                 (2, false) => css::GREEN,
-                                (3, true) => css::DARK_GREEN,
-                                (4, false) => css::LIGHT_YELLOW,
-                                (4, true) => css::YELLOW,
-                                (5, false) => css::MAGENTA,
+                                (3, true) => css::DARK_GOLDENROD,
+                                (3, false) => css::YELLOW,
+                                (4, true) => css::DARK_BLUE,
+                                (4, false) => css::BLUE,
                                 (5, true) => css::DARK_MAGENTA,
-                                (6, false) => css::LIGHT_CYAN,
+                                (5, false) => css::MAGENTA,
                                 (6, true) => css::DARK_CYAN,
-                                (7, false) => css::WHITE,
+                                (6, false) => css::LIGHT_CYAN,
                                 (7, true) => css::GRAY,
+                                (7, false) => css::WHITE,
                                 _ => {
                                     unreachable!()
                                 }
