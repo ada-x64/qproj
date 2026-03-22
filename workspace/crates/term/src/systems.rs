@@ -1,4 +1,4 @@
-use bevy::{input::mouse::MouseScrollUnit, input_focus::InputFocus, text::LineHeight};
+use bevy::{input::mouse::MouseScrollUnit, text::LineHeight};
 use itertools::Itertools;
 
 use crate::prelude::*;
@@ -150,7 +150,9 @@ pub fn refresh_ui(
         let ui_id = ui_target.target();
         commands.entity(ui_id).despawn_children();
         let mut spans = vec![];
+        let mut row_count = 0;
         for (_, maybe_row) in q_viewport.iter_many(terminfo.viewport.iter()) {
+            row_count += 1;
             let mut new_spans = if let Some(row) = maybe_row {
                 let line = c!(q_lines.get(row.line()));
                 generate_textspan_ui(&terminfo, ui_id, Some((row.as_ref(), line)))
@@ -160,7 +162,8 @@ pub fn refresh_ui(
             spans.append(&mut new_spans);
         }
         // pad
-        while spans.len() < terminfo.size.rows {
+        while row_count < terminfo.size.rows {
+            row_count += 1;
             spans.push((
                 TextSpan::new(" ".repeat(terminfo.size.cols) + "\n"),
                 TextSpanStyleBundle::default(),
@@ -185,7 +188,7 @@ pub(crate) fn on_scroll(
                 LineHeight::Px(line_height) => *line_height,
                 LineHeight::RelativeToFont(rel) => rel * text_font.font_size,
             };
-            line_height / trigger.y
+            trigger.y / line_height
         }
     };
     commands.write_message(TermMsg::scroll(ui.target(), delta as isize));

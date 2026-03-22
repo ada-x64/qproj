@@ -15,8 +15,16 @@ pub trait CommandsExt {
         value: C,
         invert: bool,
     );
+    fn assert<S: ToString>(&mut self, condition: bool, error_message: S) -> bool;
 }
 impl<'w, 's> CommandsExt for Commands<'w, 's> {
+    fn assert<S: ToString>(&mut self, condition: bool, error_message: S) -> bool {
+        if !condition {
+            error!("{}", error_message.to_string());
+            self.write_message(AppExit::error());
+        }
+        condition
+    }
     fn log_hierarchy(&mut self) {
         self.run_system_cached(|world: &mut World| {
             let mut root_query = world.query_filtered::<Entity, Without<ChildOf>>();

@@ -76,11 +76,6 @@ impl<'a, T: Clone> MaybeRef<'a, T> {
             MaybeRef::Borrowed(e, _) => Some(*e),
         }
     }
-    fn as_owned(&mut self) {
-        if let MaybeRef::Borrowed(_, t) = self {
-            *self = MaybeRef::Owned(None, t.clone());
-        }
-    }
     fn is_owned(&self) -> bool {
         matches!(self, Self::Owned(_, _))
     }
@@ -116,10 +111,6 @@ impl<'a> GridLine<'a> {
             line: MaybeRef::Owned(None, VtLine::new(term_id)),
             rows,
         }
-    }
-    pub fn push_row(&mut self, row: GridRow<'a>) {
-        self.rows.push(row);
-        self.line.as_owned();
     }
 }
 impl<'a> std::fmt::Debug for GridLine<'a> {
@@ -248,12 +239,16 @@ impl<'a> Grid<'a> {
 
     pub fn increment_char(&mut self, wrap: bool) {
         self.cursor.col = (self.cursor.col + 1).min(self.cols);
-        if wrap && self.cursor.col >= self.cols {
-            if self.cursor.pending_wrap {
-                self.cursor.col = 0;
-                self.increment_line();
+        if self.cursor.col >= self.cols {
+            if wrap {
+                if self.cursor.pending_wrap {
+                    self.cursor.col = 0;
+                    self.increment_line();
+                } else {
+                    self.cursor.pending_wrap = true;
+                }
             } else {
-                self.cursor.pending_wrap = true;
+                self.cursor.col = self.cols.saturating_sub(1);
             }
         }
         assert_cursor_in_view!(self);
@@ -261,8 +256,7 @@ impl<'a> Grid<'a> {
     pub fn decrement_char(&mut self, wrap: bool) {
         if self.cursor.col == 0 && wrap {
             self.decrement_line();
-            self.cursor.col = self.cols;
-            self.cursor.pending_wrap = true;
+            self.cursor.col = self.cols.saturating_sub(1);
         } else {
             self.cursor.col = self.cursor.col.saturating_sub(1);
         }
@@ -506,7 +500,8 @@ impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {
                 let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
                     return;
                 };
-                for _ in 0..*next {
+                let next = (*next).max(1);
+                for _ in 0..next {
                     self.grid.decrement_line();
                 }
             }
@@ -514,7 +509,8 @@ impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {
                 let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
                     return;
                 };
-                for _ in 0..*next {
+                let next = (*next).max(1);
+                for _ in 0..next {
                     self.grid.increment_line();
                 }
             }
@@ -522,7 +518,8 @@ impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {
                 let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
                     return;
                 };
-                for _ in 0..*next {
+                let next = (*next).max(1);
+                for _ in 0..next {
                     self.grid.increment_char(false);
                 }
             }
@@ -530,7 +527,8 @@ impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {
                 let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
                     return;
                 };
-                for _ in 0..*next {
+                let next = (*next).max(1);
+                for _ in 0..next {
                     self.grid.decrement_char(false);
                 }
             }
@@ -538,8 +536,9 @@ impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {
                 let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
                     return;
                 };
+                let next = (*next).max(1);
                 self.grid.cursor.col = 0;
-                for _ in 0..*next {
+                for _ in 0..next {
                     self.grid.increment_line();
                 }
             }
@@ -547,8 +546,9 @@ impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {
                 let [next, ..] = param_iter.next().unwrap_or(&[0u16]) else {
                     return;
                 };
+                let next = (*next).max(1);
                 self.grid.cursor.col = 0;
-                for _ in 0..*next {
+                for _ in 0..next {
                     self.grid.decrement_line();
                 }
             }
@@ -608,9 +608,18 @@ impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {
                             let mode = param_iter.next().and_then(|p| p.first().copied());
                             match mode {
                                 Some(2) => {
-                                    let r = param_iter.next().and_then(|p| p.first().copied()).unwrap_or(0);
-                                    let g = param_iter.next().and_then(|p| p.first().copied()).unwrap_or(0);
-                                    let b = param_iter.next().and_then(|p| p.first().copied()).unwrap_or(0);
+                                    let r = param_iter
+                                        .next()
+                                        .and_then(|p| p.first().copied())
+                                        .unwrap_or(0);
+                                    let g = param_iter
+                                        .next()
+                                        .and_then(|p| p.first().copied())
+                                        .unwrap_or(0);
+                                    let b = param_iter
+                                        .next()
+                                        .and_then(|p| p.first().copied())
+                                        .unwrap_or(0);
                                     let color = Color::srgb_u8(r as u8, g as u8, b as u8);
                                     if *x == 38 {
                                         self.style.color = color;
@@ -627,7 +636,8 @@ impl<'a, 'g> anstyle_parse::Perform for AnsiPerformer<'a, 'g> {
                         }
                         // palette mode
                         [x] if (*x >= 30 && *x <= 37)
-                            || (*x >= 39 && *x <= 49)
+                            || (*x >= 39 && *x <= 47)
+                            || *x == 49
                             || (*x >= 90 && *x <= 97)
                             || (*x >= 100 && *x <= 107) =>
                         {

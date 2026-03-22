@@ -1,4 +1,4 @@
-use bevy::{ecs::system::QueryLens, platform::collections::HashMap};
+use bevy::platform::collections::HashMap;
 
 use crate::prelude::*;
 
@@ -113,15 +113,19 @@ fn reflow(
     id: In<Entity>,
     terminfo: Query<TermInfo>,
     q_lines: Query<(Entity, &VtLine)>,
-    q_rows: Query<Entity, (With<VtRow>, Without<VtViewportRow>)>,
+    q_rowtargets: Query<&VtRowTarget, With<VtLine>>,
     mut commands: Commands,
 ) {
     trace!("Reflow");
     let terminfo = r!(terminfo.get(*id));
-    // clear terminal display cache
-    q_rows.iter().for_each(|row_id| {
-        commands.entity(row_id).despawn();
-    });
+    // clear terminal display cache (only rows belonging to this terminal)
+    for (line_id, _) in terminfo.lines(&q_lines) {
+        if let Ok(row_target) = q_rowtargets.get(line_id) {
+            for &row_id in row_target.entities() {
+                commands.entity(row_id).despawn();
+            }
+        }
+    }
     commands.entity(*id).despawn_related::<VtViewport>();
     // exit early if nothing to do
     if terminfo.size.cols == 0 || terminfo.size.rows == 0 {
