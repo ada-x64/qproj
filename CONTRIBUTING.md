@@ -22,35 +22,48 @@ qproj/
 │       ├── term/            # q_term — in-game terminal plugin
 │       └── test_harness/    # q_test_harness — shared test utilities
 ├── submod/bevy          # Bevy git submodule (reference only)
+├── flake.nix            # Nix flake (dev shell, tools, bevy_lint)
+├── justfile             # Task runner recipes
+├── scripts/             # Task scripts invoked by justfile
+├── .envrc               # direnv integration
 ├── .config/
-│   ├── mise.toml        # Task runner and tool configuration
-│   ├── nextest.toml     # Test runner config
-│   └── env.sh           # Environment variables
+│   └── nextest.toml     # Test runner config
 ├── .cargo/config.toml   # Cargo build settings (cranelift, mold)
 ├── deny.toml            # cargo-deny dependency policy
 └── .github/workflows/   # CI definitions
 ```
 
 All Cargo commands should target `workspace/Cargo.toml`, e.g.
-`cargo build --manifest-path=./workspace/Cargo.toml`. The mise tasks handle
-this automatically.
+`cargo build --manifest-path=./workspace/Cargo.toml`. The justfile recipes
+handle this automatically.
 
 ## Setup
 
-Install [mise](https://mise.jdx.dev/), then:
+Install [Nix](https://nixos.org/download/) and
+[direnv](https://direnv.net/docs/installation.html), then:
 
 ```sh
 git clone --recurse-submodules https://github.com/ada-x64/qproj.git
 cd qproj
-mise install    # Installs Rust nightly, sccache, mold, cargo-binstall
-mise run        # Lists all available tasks
+direnv allow     # Activates the Nix dev shell automatically
+just             # Lists all available tasks
 ```
 
-`mise install` sets up the full toolchain:
+Alternatively, without direnv:
+
+```sh
+nix develop      # Enter the dev shell manually
+just             # Lists all available tasks
+```
+
+The Nix dev shell provides the full toolchain:
 
 - **Rust nightly-2026-01-22** with cranelift, llvm-tools, and clippy
 - **sccache** for compilation caching
 - **mold** linker (Linux)
+- **bevy_lint** (built from source)
+- **cargo-nextest**, **cargo-deny**, **cargo-llvm-cov**
+- **just** task runner
 
 ### System dependencies (Linux)
 
@@ -60,22 +73,22 @@ sudo apt-get install -y libasound2-dev libudev-dev libwayland-dev
 
 ## Building and running
 
-| Command           | Description                              |
-| ----------------- | ---------------------------------------- |
-| `mise build`      | Build the workspace                      |
-| `mise play`       | Run the application                      |
-| `mise check`      | Lint with Clippy and bevy_lint           |
-| `mise check:deps` | Check dependencies with cargo-deny       |
-| `mise test`       | Run tests via cargo-nextest              |
-| `mise coverage`   | Generate test coverage report            |
-| `mise ci`         | Run CI locally with [act](https://github.com/nektos/act) |
+| Command        | Description                              |
+| -------------- | ---------------------------------------- |
+| `just build`   | Build the workspace                      |
+| `just play`    | Run the application                      |
+| `just check`   | Lint with Clippy and bevy_lint           |
+| `just deny`    | Check dependencies with cargo-deny       |
+| `just test`    | Run tests via cargo-nextest              |
+| `just coverage` | Generate test coverage report           |
+| `just ci`      | Run CI locally with [act](https://github.com/nektos/act) |
 
 You can pass arguments through to the underlying tools. For example:
 
 ```sh
-mise test r -p q_term              # Test a specific package
-mise build --release               # Release build
-mise check -- -p q_screens         # Lint a specific package
+just test r -p q_term              # Test a specific package
+just build --release               # Release build
+just clippy -p q_screens           # Lint a specific package
 ```
 
 ## Testing
@@ -112,9 +125,9 @@ mod test {
 ### Running CI locally
 
 ```sh
-mise ci
+just ci
 # Or target a specific workflow/matrix:
-mise ci -W ./.github/workflows/ci.yml --matrix target:x86_64-unknown-linux-gnu
+just ci -W ./.github/workflows/ci.yml --matrix target:x86_64-unknown-linux-gnu
 ```
 
 ## Code style
@@ -135,7 +148,7 @@ mise ci -W ./.github/workflows/ci.yml --matrix target:x86_64-unknown-linux-gnu
 CI runs both `clippy` and `bevy_lint`. Make sure both pass before submitting:
 
 ```sh
-mise check
+just check
 ```
 
 ### Build profiles
