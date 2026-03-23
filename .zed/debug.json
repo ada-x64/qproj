@@ -7,7 +7,7 @@
     "label": "Debug game",
     "adapter": "CodeLLDB",
     "build": {
-      "command": "cargo",
+      "command": "just",
       "args": ["build"],
     },
     "sourceLanguages": ["rust"],
@@ -16,7 +16,7 @@
     "label": "Debug example - q_term::minimal",
     "adapter": "CodeLLDB",
     "build": {
-      "command": "mise",
+      "command": "just",
       "args": ["build", "-p", "q_term", "--example", "minimal"],
     },
     "sourceLanguages": ["rust"],
