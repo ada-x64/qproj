@@ -1,0 +1,12 @@
+[package]
+name = "lint-test"
+version = "0.1.0"
+edition = "2024"
+
+[package.metadata.bevy_lint]
+missing_reflect = { level = "warn" }
+panicking_methods = { level = "warn" }
+
+[dependencies]
+# Keep this up to date
+bevy = "0.18.1"

@@ -38,6 +38,8 @@
             "rustc-dev"
             "llvm-tools-preview"
             "clippy"
+            "rust-analyzer"
+            "rust-src"
           ];
           targets = [
             "x86_64-pc-windows-msvc"
@@ -57,13 +59,13 @@
           cargoExtraArgs = "-p bevy_lint";
           doCheck = false;
 
-          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [rustToolchain];
+          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [rustToolchain pkgs.zlib];
           nativeBuildInputs = [pkgs.makeWrapper];
 
           postInstall = ''
             for bin in $out/bin/bevy_lint $out/bin/bevy_lint_driver; do
               [ -f "$bin" ] && wrapProgram "$bin" \
-                --prefix LD_LIBRARY_PATH : "${rustToolchain}/lib"
+                --prefix LD_LIBRARY_PATH : "${pkgs.lib.makeLibraryPath [rustToolchain pkgs.zlib]}"
             done
           '';
         };
