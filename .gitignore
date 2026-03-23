@@ -6,3 +6,9 @@
 diff
 
 __pycache__
+
+local.env
+
+# Nix
+/result
+.direnv/

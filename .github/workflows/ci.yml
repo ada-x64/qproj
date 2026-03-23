@@ -6,7 +6,6 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  MISE_ENV: ci
   SCCACHE_GHA_ENABLED: true
 
 jobs:
@@ -20,7 +19,25 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Cache
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            extra-experimental-features = nix-command flakes
+
+      - name: Cache Nix store
+        uses: actions/cache@v4
+        with:
+          path: /tmp/nix-cache
+          key: nix-${{ matrix.target }}-${{ hashFiles('flake.lock') }}
+          restore-keys: nix-${{ matrix.target }}-
+
+      - name: Import Nix cache
+        run: |
+          if [ -f /tmp/nix-cache/archive.nar ]; then
+            nix-store --import < /tmp/nix-cache/archive.nar || true
+          fi
+
+      - name: Cache Cargo
         uses: actions/cache@v4
         with:
           path: |
@@ -44,19 +61,13 @@ jobs:
           libwayland-dev
           ;
 
-      - name: Install rust
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: nightly-2026-01-22
-          components: rustc-codegen-cranelift-preview,rustc-dev,llvm-tools-preview,clippy
+      - run: nix develop --command just build
+      - run: nix develop --command just clippy
+      - run: nix develop --command just bevy-lint
+      - run: nix develop --command just test
 
-      - uses: cargo-bins/cargo-binstall@main
-
-      - uses: jdx/mise-action@v3
-        with:
-          log_level: info
-
-      - run: "mise build"
-      - run: "mise clippy"
-      - run: "mise bevy_lint"
-      - run: "mise test"
+      - name: Export Nix cache
+        if: always()
+        run: |
+          mkdir -p /tmp/nix-cache
+          nix-store --export $(nix-store -qR $(nix develop --command bash -c 'echo $buildInputs $nativeBuildInputs' 2>/dev/null) 2>/dev/null) > /tmp/nix-cache/archive.nar 2>/dev/null || true
