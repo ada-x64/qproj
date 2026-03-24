@@ -91,6 +91,7 @@
           packages = with pkgs; [
             sccache
             mold
+            patchelf
             cargo-nextest
             cargo-deny
             cargo-llvm-cov

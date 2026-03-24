@@ -32,6 +32,7 @@ else
 fi
 
 if [ -n "${SSH_CLIENT:-}" ]; then
+    patchelf --set-interpreter /lib64/ld-linux-x86-64.so.2 --remove-rpath "$TARGET_PATH"
     set -x
     PSYNC_LOG=debug uvx --from cubething_psync psync \
         "$TARGET_PATH" -e "${ENV_VARS}" -a "${CMD_ARGS}" -A "${ASSETS}"
