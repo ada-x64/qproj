@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
 
+just build $@
+
 EXAMPLE=""
 BUILD_ARGS="-F dylib"
 FILE="workspace/target/debug/app"
@@ -22,8 +24,6 @@ done
 if [ -n "$EXAMPLE" ]; then
     CARGO_EXAMPLE="--example $EXAMPLE"
 fi
-
-just build ${BUILD_ARGS:-} ${CARGO_EXAMPLE:-}
 
 if [ -n "$EXAMPLE" ]; then
     TARGET_PATH="./workspace/target/debug/examples/$EXAMPLE"
