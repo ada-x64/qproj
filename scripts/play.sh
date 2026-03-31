@@ -4,11 +4,13 @@ set -e
 just build $@
 
 EXAMPLE=""
-BUILD_ARGS="-F dylib"
+DYLIB="-F dylib"
+BUILD_ARGS=""
 FILE="workspace/target/debug/app"
 ENV_VARS=""
 CMD_ARGS=""
 ASSETS="./workspace/assets"
+RELEASE=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -17,6 +19,8 @@ while [[ $# -gt 0 ]]; do
         -e|--env) ENV_VARS="$2"; shift 2 ;;
         -a|--args) CMD_ARGS="$2"; shift 2 ;;
         -A|--assets) ASSETS="$2"; shift 2 ;;
+        -r|--release) RELEASE="--release"; DYLIB=""; ;;
+        -D|--no-dylib) DYLIB=""; ;;
         *) FILE="$1"; shift ;;
     esac
 done
@@ -51,7 +55,7 @@ function patch_elf() {
 }
 
 if [ -n "${SSH_CLIENT:-}" ]; then
-    patch_elf
+    if [ -n "$DYLIB" ]; then patch_elf(); fi
     set -x
     uvx --from cubething_psync psync \
         "$TARGET_PATH" -e "${ENV_VARS}" -a "${CMD_ARGS}" -A "${ASSETS}"

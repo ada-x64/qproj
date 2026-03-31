@@ -2,11 +2,13 @@
 set -euo pipefail
 
 EXAMPLE=""
-BUILD_ARGS="-F dylib"
+DYLIB="-F dylib"
+BUILD_ARGS=""
 FILE="workspace/target/debug/app"
 ENV_VARS=""
 CMD_ARGS=""
 ASSETS="./workspace/assets"
+RELEASE=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -15,6 +17,8 @@ while [[ $# -gt 0 ]]; do
         -e|--env) ENV_VARS="$2"; shift 2 ;;
         -a|--args) CMD_ARGS="$2"; shift 2 ;;
         -A|--assets) ASSETS="$2"; shift 2 ;;
+        -r|--release) RELEASE="--release"; DYLIB=""; shift ;;
+        -D|--no-dylib) DYLIB=""; shift ;;
         *) FILE="$1"; shift ;;
     esac
 done
@@ -23,4 +27,4 @@ if [ -n "$EXAMPLE" ]; then
     EXAMPLE="--example $EXAMPLE"
 fi
 
-cargo build --manifest-path=./workspace/Cargo.toml $BUILD_ARGS $EXAMPLE
+cargo build --manifest-path=./workspace/Cargo.toml $BUILD_ARGS $EXAMPLE $RELEASE $DYLIB
