@@ -100,11 +100,13 @@
             uv
           ];
 
-          shellHook = ''
-            export CARGO_TERM_COLOR="always"
-            export PYTHONUNBUFFERED=1
-            export RUSTC_WRAPPER="sccache"
+          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath linuxDeps;
+          BEVY_LINT_SYSROOT = "${rustToolchain}";
+          CARGO_TERM_COLOR="always";
+          PYTHONUNBUFFERED=1;
+          RUSTC_WRAPPER="sccache";
 
+          shellHook = ''
             if [ -n "$SSH_CLIENT" ]; then
               export FEATURES=""
             else
@@ -116,7 +118,6 @@
             fi
           '';
 
-          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath linuxDeps;
         };
       }
     );
