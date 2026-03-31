@@ -107,12 +107,6 @@
           RUSTC_WRAPPER="sccache";
 
           shellHook = ''
-            if [ -n "$SSH_CLIENT" ]; then
-              export FEATURES=""
-            else
-              export FEATURES="dylib"
-            fi
-
             if [ -f ".env.local" ]; then
               source ".env.local"
             fi
